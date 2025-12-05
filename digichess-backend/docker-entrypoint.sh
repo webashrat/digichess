@@ -1,6 +1,29 @@
 #!/bin/bash
 set -e
 
+# Commands that don't need database/Redis connection
+NO_DB_COMMANDS=("check" "makemigrations" "help" "version" "compilemessages" "makemessages" "--help" "-h")
+
+# Check if the command needs database
+needs_database() {
+    if [ $# -eq 0 ]; then
+        return 0  # Default command (daphne) needs database
+    fi
+    
+    # Convert all arguments to a string for easier checking
+    local cmd_line="$*"
+    
+    # Check if this is a management command that doesn't need DB
+    for no_db_cmd in "${NO_DB_COMMANDS[@]}"; do
+        # Check if command contains the no-db command (e.g., "manage.py check")
+        if [[ "$cmd_line" == *"manage.py $no_db_cmd"* ]] || [[ "$cmd_line" == *"$no_db_cmd"* ]]; then
+            return 1  # Doesn't need database
+        fi
+    done
+    
+    return 0  # Needs database
+}
+
 # Function to wait for database
 wait_for_db() {
     if [ -z "$DB_HOST" ]; then
@@ -79,21 +102,29 @@ sys.exit(1)
     echo "Redis is ready!"
 }
 
-# Wait for dependencies
-wait_for_db
-wait_for_redis
+# Check if we should skip database setup
+SKIP_DB=${SKIP_DB_SETUP:-"false"}
 
-# Run database migrations
-echo "Running database migrations..."
-python manage.py migrate --noinput
-
-# Collect static files (if not in production, this might fail - that's ok)
-echo "Collecting static files..."
-python manage.py collectstatic --noinput || echo "Warning: Static files collection failed (this is ok for development)"
-
-# Create/update bots (DIGI, JDR, RAJ)
-echo "Creating/updating bots..."
-python manage.py create_bots || echo "Warning: Bot creation failed (this is ok if bots already exist)"
+# Check if command needs database
+if [ "$SKIP_DB" = "true" ] || ! needs_database "$@"; then
+    echo "Skipping database setup for command: $@"
+else
+    # Wait for dependencies
+    wait_for_db
+    wait_for_redis
+    
+    # Run database migrations
+    echo "Running database migrations..."
+    python manage.py migrate --noinput || echo "Warning: Migrations failed (this is ok if database is not available)"
+    
+    # Collect static files (if not in production, this might fail - that's ok)
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput || echo "Warning: Static files collection failed (this is ok for development)"
+    
+    # Create/update bots (DIGI, JDR, RAJ)
+    echo "Creating/updating bots..."
+    python manage.py create_bots || echo "Warning: Bot creation failed (this is ok if bots already exist)"
+fi
 
 # Execute the command passed to the container
 exec "$@"
