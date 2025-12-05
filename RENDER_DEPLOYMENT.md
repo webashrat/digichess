@@ -111,8 +111,47 @@ Render supports Docker deployments. Your Dockerfile is ready!
    
    **Leave Pre-Deploy Command EMPTY** - your entrypoint script handles everything! ✅
 
-7. **Health Check**
-   - Render will auto-detect port 8000 from Dockerfile EXPOSE
+7. **Health Check Path** ✅ **RECOMMENDED**
+   
+   Set to: `/healthz`
+   
+   - This endpoint checks database connectivity and returns 200 if healthy
+   - Available at: `https://your-app.onrender.com/healthz`
+   - Also available: `/readyz` for readiness checks
+   - Render will ping this endpoint periodically to monitor service health
+
+8. **Pre-Deploy Command** ⚠️ **NOT NEEDED** (Already covered above)
+
+9. **Auto-Deploy** ✅ **KEEP ENABLED**
+   - Leave default: "On Commit"
+   - This automatically deploys when you push to your connected branch
+
+10. **Build Filters** ✅ **OPTIONAL - Recommended**
+    
+    **Ignored Paths** (paths that won't trigger rebuilds):
+    ```
+    README.md
+    **/*.md
+    .gitignore
+    docs/**
+    *.log
+    ```
+    
+    **Included Paths** (optional - only needed if you want to limit):
+    - Leave empty to rebuild on any change
+    - Or specify: `digichess-backend/**` to only rebuild on backend changes
+
+11. **Secret Files** ⚠️ **NOT NEEDED** (Use Environment Variables Instead)
+    
+    **Recommendation: Don't use Secret Files**
+    
+    Instead, use Render's **Environment Variables** (which you're already using):
+    - ✅ More secure
+    - ✅ Easier to manage
+    - ✅ Can be updated without redeploying
+    - ✅ Better for Docker deployments
+    
+    Your sensitive values (DJANGO_SECRET_KEY, DB_PASSWORD, etc.) should be in Environment Variables, not Secret Files.
 
 ### Option 2: Native Python Deployment
 
@@ -274,5 +313,54 @@ docker exec <container> ls -la /app/games/maia_models/
 - **Background Tasks**: Celery workers can run as separate services
 
 Your chess engine paths are **correct** - no changes needed! 🎉
+
+## Render Configuration Quick Reference
+
+### ✅ Recommended Settings
+
+| Setting | Value | Notes |
+|---------|-------|-------|
+| **Health Check Path** | `/healthz` | Checks database connectivity |
+| **Pre-Deploy Command** | *(Leave EMPTY)* | Entrypoint script handles migrations |
+| **Auto-Deploy** | ✅ Enabled | Deploys on commit automatically |
+| **Secret Files** | ❌ Don't use | Use Environment Variables instead |
+| **Build Filters - Ignored Paths** | `**/*.md`, `README.md` | Skip docs when rebuilding |
+
+### Health Check Endpoints
+
+Your app now includes two health check endpoints:
+
+1. **`/healthz`** - Health check (use for Render)
+   - Returns: `200 OK` if healthy, `500` if unhealthy
+   - Checks: Database connectivity
+
+2. **`/readyz`** - Readiness check (optional)
+   - Returns: `200 OK` if ready, `503` if not ready
+   - Checks: Database connectivity
+
+Both endpoints are unauthenticated and safe for load balancers/monitoring.
+
+### Build Filters Example
+
+To ignore documentation changes:
+
+**Ignored Paths:**
+```
+**/*.md
+README.md
+.gitignore
+docs/**
+*.log
+```
+
+This prevents rebuilds when you only update documentation.
+
+### Why Not Secret Files?
+
+Secret Files are for storing files like `.env` or private keys. For Docker deployments:
+- ✅ Use Environment Variables (already configured)
+- ✅ More secure and manageable
+- ✅ Can be updated without redeploying
+- ❌ Secret Files are better for native deployments, not Docker
 
 
