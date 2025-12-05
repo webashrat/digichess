@@ -1,0 +1,17 @@
+node_modules/
+dist/
+lila/
+
+.env
+*.env
+*.log
+.vscode/
+.DS_Store
+
+**/__pycache__/
+**/*.pyc
+*.sqlite3
+*.db
+
+git-lfs-*/
+git-lfs.tar.gz

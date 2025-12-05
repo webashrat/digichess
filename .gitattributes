@@ -1,0 +1,2 @@
+digichess-backend/Stockfish/src/*.nnue filter=lfs diff=lfs merge=lfs -text
+digichess-backend/Stockfish/src/stockfish filter=lfs diff=lfs merge=lfs -text

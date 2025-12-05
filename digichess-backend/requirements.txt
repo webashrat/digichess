@@ -1,0 +1,11 @@
+Django>=4.2
+djangorestframework>=3.14
+psycopg2-binary>=2.9
+requests>=2.31
+python-dotenv>=1.0
+python-chess>=1.999
+channels>=4.0
+channels-redis>=4.1
+redis>=5.0
+django-cors-headers>=4.6
+daphne>=4.0

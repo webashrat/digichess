@@ -1,0 +1,952 @@
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Chess } from 'chess.js';
+import { ChessPiece } from './ChessPieces';
+
+type Square = { piece: string | null; color: 'light' | 'dark'; coord: string; pieceType?: string };
+
+type BoardTheme = {
+  name: string;
+  light: string;
+  dark: string;
+  lightPiece: string;
+  darkPiece: string;
+};
+
+type PieceSet = {
+  name: string;
+  value: string;
+};
+
+const pieceSets: PieceSet[] = [
+  { name: 'Custom (SVG)', value: 'custom' },
+  { name: 'Cburnett', value: 'cburnett' },
+  { name: 'Merida', value: 'merida' },
+  { name: 'Alpha', value: 'alpha' },
+  { name: 'Mono', value: 'mono' },
+  { name: 'Firi', value: 'firi' },
+  { name: 'Pirouetti', value: 'pirouetti' },
+  { name: 'Chessnut', value: 'chessnut' },
+  { name: 'Chess7', value: 'chess7' },
+  { name: 'Reilly', value: 'reillycraig' },
+  { name: 'Companion', value: 'companion' },
+  { name: 'Spatial', value: 'spatial' },
+  { name: 'California', value: 'california' },
+  { name: 'Pixel', value: 'pixel' },
+  { name: 'Letter', value: 'letter' },
+  { name: 'Cases', value: 'cases' },
+  { name: 'Clay', value: 'clay' },
+  { name: 'Horsey', value: 'horsey' },
+  { name: 'Shapes', value: 'shapes' },
+  { name: 'Cardinal', value: 'cardinal' },
+  { name: 'Gioco', value: 'gioco' },
+  { name: 'Staunty', value: 'staunty' },
+  { name: 'Governor', value: 'governor' },
+  { name: 'Dubrovny', value: 'dubrovny' },
+  { name: 'Icpieces', value: 'icpieces' },
+  { name: 'Riohacha', value: 'riohacha' },
+  { name: 'Kosal', value: 'kosal' },
+  { name: 'Libra', value: 'libra' },
+  { name: 'Maestro', value: 'maestro' },
+  { name: 'Caliente', value: 'caliente' }
+];
+
+const themes: BoardTheme[] = [
+  {
+    name: 'Classic',
+    light: '#f0d9b5',
+    dark: '#b58863',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Blue',
+    light: '#dee3e6',
+    dark: '#8ca2ad',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Green',
+    light: '#f0f0f0',
+    dark: '#86a666',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Marble',
+    light: '#eeeed2',
+    dark: '#769656',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Wood',
+    light: '#d18b47',
+    dark: '#aa6c39',
+    lightPiece: '#f4f6ff',
+    darkPiece: '#0b1020'
+  },
+  {
+    name: 'Dark',
+    light: '#3a3a3a',
+    dark: '#1a1a1a',
+    lightPiece: '#f4f6ff',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Lichess',
+    light: '#edeed1',
+    dark: '#779952',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Brown',
+    light: '#f0d9b5',
+    dark: '#b58863',
+    lightPiece: '#0b1020',
+    darkPiece: '#f4f6ff'
+  },
+  {
+    name: 'Leather',
+    light: '#d18b47',
+    dark: '#8b4513',
+    lightPiece: '#f4f6ff',
+    darkPiece: '#0b1020'
+  },
+  {
+    name: 'Metal',
+    light: '#c9c9c9',
+    dark: '#808080',
+    lightPiece: '#0b1020',
+    darkPiece: '#0b1020'
+  }
+];
+
+function parseFen(fen?: string): Square[] {
+  const normalized =
+    !fen || fen === 'start'
+      ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+      : fen;
+  const board: Square[] = [];
+  const rows = (normalized || '').split(' ')[0] || '8/8/8/8/8/8/8/8';
+  const ranks = rows.split('/');
+  for (let r = 0; r < 8; r++) {
+    const rank = ranks[r] || '';
+    let file = 0;
+    for (const ch of rank) {
+      if (Number.isInteger(Number(ch))) {
+        const empty = parseInt(ch, 10);
+        for (let i = 0; i < empty; i++) {
+          const isDark = (r + file) % 2 === 1;
+          const coord = String.fromCharCode(97 + file) + (8 - r);
+          board.push({ piece: null, color: isDark ? 'dark' : 'light', coord });
+          file++;
+        }
+      } else {
+        const isDark = (r + file) % 2 === 1;
+        const coord = String.fromCharCode(97 + file) + (8 - r);
+        board.push({ 
+          piece: ch, // Store the FEN character for piece type
+          color: isDark ? 'dark' : 'light', 
+          coord,
+          pieceType: ch
+        });
+        file++;
+      }
+    }
+    while (file < 8) {
+      const isDark = (r + file) % 2 === 1;
+      const coord = String.fromCharCode(97 + file) + (8 - r);
+      board.push({ piece: null, color: isDark ? 'dark' : 'light', coord });
+      file++;
+    }
+  }
+  return board;
+}
+
+export function ChessBoard({
+  fen,
+  lastMove,
+  onMove,
+  legalMoves,
+  orientation = 'white',
+  theme = 0,
+  onThemeChange,
+  pieceSet = 'cburnett',
+  onPieceSetChange
+}: {
+  fen?: string;
+  lastMove?: string;
+  onMove?: (move: string) => void;
+  legalMoves?: string[];
+  orientation?: 'white' | 'black';
+  theme?: number;
+  onThemeChange?: (theme: number) => void;
+  pieceSet?: string;
+  onPieceSetChange?: (pieceSet: string) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [draggedPiece, setDraggedPiece] = useState<{ coord: string; piece: string; pieceType: string } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [validMoves, setValidMoves] = useState<string[]>([]);
+  const [wasDragged, setWasDragged] = useState(false);
+  const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
+  const [boardSize, setBoardSize] = useState<number>(500);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chessRef = useRef<Chess | null>(null);
+  
+  // Calculate board size based on container - Lichess style: use maximum available space
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const container = containerRef.current;
+        // Use full container space, accounting for minimal padding
+        const containerWidth = container.clientWidth - 8; // Minimal padding (reduced from 16)
+        const containerHeight = container.clientHeight - ((onThemeChange || onPieceSetChange) ? 32 : 0); // Reduced from 40
+        // Use the smaller dimension to maintain square aspect ratio, but allow much larger sizes
+        const size = Math.min(containerWidth, containerHeight);
+        // Min 300px, but allow up to 1000px or more based on viewport
+        // On large screens, board can be 800-1000px easily
+        const maxSize = Math.min(1200, Math.max(containerWidth, containerHeight) * 0.9);
+        setBoardSize(Math.max(300, Math.min(size, maxSize)));
+      }
+    };
+    
+    updateSize();
+    const resizeObserver = new ResizeObserver(updateSize);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    window.addEventListener('resize', updateSize);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, [onThemeChange]);
+
+  // Initialize chess.js for move validation - reset selection when FEN changes
+  // Use a ref to track the previous FEN to detect when a move completes
+  const previousFenRef = useRef<string | undefined>(fen);
+  const clearDraggedPieceTimeoutRef = useRef<number | null>(null);
+  const pendingMoveRef = useRef<{ from: string; to: string } | null>(null);
+  
+  useEffect(() => {
+    try {
+      const normalizedFen = !fen || fen === 'start' 
+        ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+        : fen;
+      
+      // Check if FEN actually changed (new move made)
+      const fenChanged = previousFenRef.current !== normalizedFen;
+      previousFenRef.current = normalizedFen;
+      
+      chessRef.current = new Chess(normalizedFen);
+      
+      // Only clear selection and valid moves if FEN changed (new move made)
+      if (fenChanged) {
+        // If we had a pending move (drag or click), delay clearing to prevent flicker
+        if (pendingMoveRef.current) {
+          // Clear any existing timeout
+          if (clearDraggedPieceTimeoutRef.current) {
+            clearTimeout(clearDraggedPieceTimeoutRef.current);
+          }
+          // Delay clearing draggedPiece and selection to allow the new board state to render first
+          clearDraggedPieceTimeoutRef.current = window.setTimeout(() => {
+            if (draggedPiece) {
+              setDraggedPiece(null);
+              setWasDragged(false);
+            }
+            setSelected(null);
+            setValidMoves([]);
+            pendingMoveRef.current = null;
+            clearDraggedPieceTimeoutRef.current = null;
+          }, 400); // Increased delay to ensure board fully renders
+        } else {
+          // No pending move, clear immediately
+          setSelected(null);
+          setValidMoves([]);
+        }
+      }
+    } catch {
+      chessRef.current = new Chess();
+      const normalizedFen = !fen || fen === 'start' 
+        ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+        : fen;
+      const fenChanged = previousFenRef.current !== normalizedFen;
+      previousFenRef.current = normalizedFen;
+      
+      if (fenChanged) {
+        if (pendingMoveRef.current && draggedPiece) {
+          if (clearDraggedPieceTimeoutRef.current) {
+            clearTimeout(clearDraggedPieceTimeoutRef.current);
+          }
+          clearDraggedPieceTimeoutRef.current = window.setTimeout(() => {
+            setDraggedPiece(null);
+            setWasDragged(false);
+            setSelected(null);
+            setValidMoves([]);
+            pendingMoveRef.current = null;
+            clearDraggedPieceTimeoutRef.current = null;
+          }, 350);
+        } else {
+          setSelected(null);
+          setValidMoves([]);
+        }
+      }
+    }
+    
+    return () => {
+      if (clearDraggedPieceTimeoutRef.current) {
+        clearTimeout(clearDraggedPieceTimeoutRef.current);
+      }
+    };
+  }, [fen]);
+
+  // Update valid moves when selection changes
+  useEffect(() => {
+    if (!selected || !chessRef.current || !onMove) {
+      setValidMoves([]);
+      return;
+    }
+
+    // Get valid moves from chess.js
+    const moves = chessRef.current.moves({ square: selected as any, verbose: true });
+    const validSquares: string[] = moves.map(m => m.to);
+    let combinedMoves: string[] = [...validSquares];
+
+    // Also check legalMoves prop (from server)
+    if (legalMoves && legalMoves.length > 0) {
+      const fromLegal = legalMoves.filter(m => m.startsWith(selected));
+      const toSquares = fromLegal.map(m => m.slice(2, 4));
+      combinedMoves = [...new Set([...combinedMoves, ...toSquares])];
+    }
+    
+    setValidMoves(combinedMoves);
+  }, [selected, legalMoves, onMove]);
+
+  const squares = parseFen(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  const last = lastMove ? lastMove.toLowerCase() : '';
+  const currentTheme = themes[theme] || themes[0];
+  
+  // Detect check
+  const isInCheck = useMemo(() => {
+    if (!chessRef.current) return false;
+    return chessRef.current.inCheck();
+  }, [fen]);
+  
+  const kingSquare = useMemo(() => {
+    if (!chessRef.current || !isInCheck) return null;
+    const turn = chessRef.current.turn();
+    const board = chessRef.current.board();
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        const piece = board[i][j];
+        if (piece && piece.type === 'k' && piece.color === turn) {
+          const file = String.fromCharCode(97 + j);
+          const rank = 8 - i;
+          return file + rank;
+        }
+      }
+    }
+    return null;
+  }, [fen, isInCheck]);
+
+  // Get square coordinates based on orientation
+  const getSquareCoords = (idx: number) => {
+    const row = Math.floor(idx / 8);
+    const col = idx % 8;
+    if (orientation === 'black') {
+      return { row: 7 - row, col: 7 - col };
+    }
+    return { row, col };
+  };
+
+  const getCoordFromIndex = (idx: number) => {
+    const { row, col } = getSquareCoords(idx);
+    return String.fromCharCode(97 + col) + (8 - row);
+  };
+
+  const handleSquareClick = (coord: string, pieceType: string | null) => {
+    if (!onMove) return;
+
+    if (!selected) {
+      // Select piece if it's the player's turn
+      if (pieceType) {
+        const isWhitePiece = pieceType === pieceType.toUpperCase();
+        const turn = chessRef.current?.turn();
+        if ((turn === 'w' && isWhitePiece) || (turn === 'b' && !isWhitePiece)) {
+      setSelected(coord);
+        }
+      }
+    } else {
+      if (coord === selected) {
+        // Deselect if clicking the same square
+        setSelected(null);
+        return;
+      }
+      
+      // If clicking on another piece of the same color, select that instead
+      if (pieceType) {
+        const isWhitePiece = pieceType === pieceType.toUpperCase();
+        const turn = chessRef.current?.turn();
+        if ((turn === 'w' && isWhitePiece) || (turn === 'b' && !isWhitePiece)) {
+          setSelected(coord);
+          return;
+        }
+      }
+      
+      // Validate move with chess.js before submitting
+      const moveStr = `${selected}${coord}`;
+      let moveObj = null;
+      
+      // Double-check chess.js board is initialized and in sync
+      if (!chessRef.current) {
+        setSelected(null);
+        return;
+      }
+      
+      try {
+        // Verify it's the correct turn
+        const currentTurn = chessRef.current.turn();
+        const square = squares.find(s => s.coord === selected);
+        if (!square || !square.pieceType) {
+          setSelected(null);
+          return;
+        }
+        const isWhitePiece = square.pieceType === square.pieceType.toUpperCase();
+        
+        // Strict turn validation
+        if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) {
+          // Wrong turn, don't submit
+          console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, selected, coord });
+          setSelected(null);
+          return;
+        }
+        
+        // Try to parse and validate the move - this will throw if invalid
+        moveObj = chessRef.current.move({ from: selected as any, to: coord as any });
+        if (!moveObj) {
+          // Invalid move, don't submit
+          console.warn('Move rejected: invalid move', { selected, coord });
+          setSelected(null);
+          return;
+        }
+      } catch (err: any) {
+        // Invalid move, don't submit
+        console.warn('Move validation failed:', err?.message || err, { selected, coord });
+        setSelected(null);
+        return;
+      }
+      
+      // Check if promotion is needed (pawn to last rank)
+      const square = squares.find(s => s.coord === selected);
+      let finalMove = moveStr;
+      if (square?.pieceType === 'p' && coord[1] === '8') {
+        // Auto-promote to queen
+        finalMove = `${moveStr}q`;
+      } else if (square?.pieceType === 'P' && coord[1] === '1') {
+        finalMove = `${moveStr}Q`;
+      }
+      
+      // Call onMove callback
+      // Store the move so we know to clear selection when FEN updates
+      pendingMoveRef.current = { from: selected, to: coord };
+      
+      try {
+        onMove(finalMove);
+        // Don't clear selected/validMoves immediately - let FEN update handle it
+        // The FEN update useEffect will handle clearing them after a delay
+      } catch (err) {
+        console.error('Move failed:', err);
+        // Only clear on error
+        pendingMoveRef.current = null;
+        setSelected(null);
+        setValidMoves([]);
+      }
+      
+      // Don't clear selected here - let FEN update handle it
+      // Keep draggedPiece visible until FEN updates
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent | React.TouchEvent, coord: string, piece: string, pieceType: string) => {
+    if (!onMove) return;
+    
+    const square = squares.find(s => s.coord === coord);
+    if (!square || !square.piece) return;
+
+    const isWhitePiece = pieceType === pieceType.toUpperCase();
+    const turn = chessRef.current?.turn();
+    if ((turn === 'w' && !isWhitePiece) || (turn === 'b' && isWhitePiece)) {
+      return; // Not player's piece
+    }
+
+    setWasDragged(true);
+    setDraggedPiece({ coord, piece, pieceType });
+    setSelected(coord);
+
+    if ('touches' in e) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = boardRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDragOffset({
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        });
+      }
+    } else {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    }
+  };
+
+
+  const handleDrop = (e: React.DragEvent | React.TouchEvent, targetCoord: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedPiece || !onMove) {
+      // Clear dragged piece state
+      setDraggedPiece(null);
+      setSelected(null);
+      setWasDragged(false);
+      return;
+    }
+
+    if (targetCoord === draggedPiece.coord) {
+      // Clear dragged piece state
+      setDraggedPiece(null);
+      setSelected(null);
+      setWasDragged(false);
+      return;
+    }
+
+    // Validate move with chess.js before submitting
+    const moveStr = `${draggedPiece.coord}${targetCoord}`;
+    let moveObj = null;
+    
+    // Double-check chess.js board is initialized and in sync
+    if (!chessRef.current) {
+      // Clear dragged piece state
+      setDraggedPiece(null);
+      setSelected(null);
+      setWasDragged(false);
+      return;
+    }
+    
+    try {
+      // Verify it's the correct turn
+      const currentTurn = chessRef.current.turn();
+      const square = squares.find(s => s.coord === draggedPiece.coord);
+      if (!square || !square.pieceType) {
+        setDraggedPiece(null);
+        setSelected(null);
+        setWasDragged(false);
+        return;
+      }
+      const isWhitePiece = square.pieceType === square.pieceType.toUpperCase();
+      
+      // Strict turn validation
+      if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) {
+        // Wrong turn, don't submit
+        console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, from: draggedPiece.coord, to: targetCoord });
+        setDraggedPiece(null);
+        setSelected(null);
+        setWasDragged(false);
+        return;
+      }
+      
+      // Try to parse and validate the move - this will throw if invalid
+      moveObj = chessRef.current.move({ from: draggedPiece.coord as any, to: targetCoord as any });
+      if (!moveObj) {
+        // Invalid move, don't submit
+        console.warn('Move rejected: invalid move', { from: draggedPiece.coord, to: targetCoord });
+        setDraggedPiece(null);
+        setSelected(null);
+        setWasDragged(false);
+        return;
+      }
+    } catch (err: any) {
+      // Invalid move, don't submit
+      console.warn('Move validation failed:', err?.message || err, { from: draggedPiece?.coord, to: targetCoord });
+      // Clear dragged piece state
+      setDraggedPiece(null);
+      setSelected(null);
+      setWasDragged(false);
+      return;
+    }
+
+    const square = squares.find(s => s.coord === draggedPiece.coord);
+    
+    // Handle promotion
+    let finalMove = moveStr;
+    if (square?.pieceType === 'p' && targetCoord[1] === '8') {
+      finalMove = `${moveStr}q`;
+    } else if (square?.pieceType === 'P' && targetCoord[1] === '1') {
+      finalMove = `${moveStr}Q`;
+    }
+    
+    // Call onMove callback
+    try {
+      onMove(finalMove);
+    } catch (err) {
+      console.error('Move failed:', err);
+    }
+
+    setDraggedPiece(null);
+    setSelected(null);
+    setWasDragged(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!draggedPiece || !boardRef.current) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = boardRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!draggedPiece || !boardRef.current) {
+      setDraggedPiece(null);
+      setDragOffset(null);
+      setSelected(null);
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.changedTouches[0];
+    const rect = boardRef.current.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Calculate which square was touched
+    const squareSize = rect.width / 8;
+    let col = Math.floor(x / squareSize);
+    let row = Math.floor(y / squareSize);
+    
+    // Clamp to valid range
+    col = Math.max(0, Math.min(7, col));
+    row = Math.max(0, Math.min(7, row));
+    
+    // Calculate target coordinate based on orientation
+    let targetCoord: string;
+    if (orientation === 'black') {
+      // Board is reversed, so invert coordinates
+      const file = 7 - col;
+      const rank = 8 - row;
+      targetCoord = String.fromCharCode(97 + file) + rank;
+    } else {
+      const file = col;
+      const rank = 8 - row;
+      targetCoord = String.fromCharCode(97 + file) + rank;
+    }
+    
+    handleDrop(e, targetCoord);
+  };
+
+  // Create display squares based on orientation - reverse for black
+  const displaySquares = useMemo(() => {
+    if (orientation === 'black') {
+      // Reverse the entire array to flip the board
+      return [...squares].reverse();
+    }
+    return squares;
+  }, [squares, orientation]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', width: '100%', height: '100%', minHeight: 0, justifyContent: 'center' }}>
+      {(onThemeChange || onPieceSetChange) && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 4, flexShrink: 0, alignItems: 'center' }}>
+          {onThemeChange && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 500 }}>Board:</label>
+              <select
+                value={theme}
+                onChange={(e) => onThemeChange(Number(e.target.value))}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: 11,
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  minWidth: 100
+                }}
+              >
+                {themes.map((t, idx) => (
+                  <option key={idx} value={idx}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {onPieceSetChange && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 500 }}>Pieces:</label>
+              <select
+                value={pieceSet}
+                onChange={(e) => onPieceSetChange(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: 11,
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  minWidth: 120
+                }}
+              >
+                {pieceSets.map((ps) => (
+                  <option key={ps.value} value={ps.value}>
+                    {ps.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+      <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '4px', position: 'relative' }}>
+        <div
+          ref={boardRef}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(8, 1fr)',
+            gridTemplateRows: 'repeat(8, 1fr)',
+            width: `${boardSize}px`,
+            height: `${boardSize}px`,
+            borderRadius: 8,
+            overflow: 'hidden',
+            border: '3px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
+            position: 'relative',
+            userSelect: 'none',
+            boxSizing: 'border-box',
+            background: 'rgba(0, 0, 0, 0.2)',
+            flexShrink: 0
+          }}
+        >
+        {displaySquares.map((sq: Square, idx: number) => {
+          const isSelected = selected === sq.coord;
+          const isValidMove = validMoves.includes(sq.coord);
+          const isLastMoveFrom = last && last.startsWith(sq.coord);
+          const isLastMoveTo = last && last.endsWith(sq.coord);
+          const isDragging = draggedPiece?.coord === sq.coord;
+
+          return (
+            <div
+              key={sq.coord}
+              draggable={!!sq.piece && !!onMove && !isDragging}
+              onDragStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
+              onDragEnd={(e) => {
+                // If drop didn't happen, reset after a delay
+                setTimeout(() => {
+                  if (draggedPiece) {
+                    setDraggedPiece(null);
+                    setSelected(null);
+                    setWasDragged(false);
+                  }
+                }, 100);
+                setDragOffset(null);
+              }}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, sq.coord)}
+              onTouchStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseEnter={() => onMove && setHoveredSquare(sq.coord)}
+              onMouseLeave={() => setHoveredSquare(null)}
+          style={{
+                background: isValidMove
+                  ? sq.color === 'dark'
+                    ? 'rgba(44, 230, 194, 0.5)'
+                    : 'rgba(44, 230, 194, 0.4)'
+                  : kingSquare === sq.coord && isInCheck
+                  ? sq.color === 'dark'
+                    ? 'rgba(255, 0, 0, 0.6)'
+                    : 'rgba(255, 0, 0, 0.5)'
+                  : sq.color === 'dark'
+                  ? currentTheme.dark
+                  : currentTheme.light,
+            outline:
+                  isSelected
+                    ? '3px solid #1d8bff'
+                    : kingSquare === sq.coord && isInCheck
+                    ? '3px solid #ff0000'
+                    : isLastMoveFrom || isLastMoveTo
+                ? '2px solid #f0ad4e'
+                : 'none',
+                outlineOffset: '-2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+                cursor: onMove && sq.piece ? 'grab' : onMove ? 'pointer' : 'default',
+                transition: 'background 200ms cubic-bezier(0.4, 0, 0.2, 1), outline 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                opacity: isDragging ? 0.4 : 1,
+                aspectRatio: '1 / 1',
+                minWidth: 0,
+                minHeight: 0,
+                boxSizing: 'border-box',
+                transform: isSelected ? 'scale(0.97)' : 'scale(1)',
+                willChange: isSelected || isValidMove ? 'transform, background' : 'auto'
+              }}
+              onClick={(e) => {
+                // Don't trigger click if we just completed a drag
+                if (wasDragged) {
+                  setWasDragged(false);
+                  return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                handleSquareClick(sq.coord, sq.pieceType ?? null);
+              }}
+            >
+              {sq.piece && sq.pieceType && (
+                <div
+                  style={{
+                    transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: hoveredSquare === sq.coord && onMove && !isDragging ? 'scale(1.08)' : 'scale(1)',
+                    cursor: onMove ? 'grab' : 'default'
+                  }}
+                >
+                  <ChessPiece 
+                    piece={sq.pieceType} 
+                    size={Math.min(60, window.innerWidth / 10)} 
+                    color={sq.pieceType === sq.pieceType.toUpperCase() ? 'white' : 'black'}
+                    pieceSet={pieceSet}
+                  />
+                </div>
+              )}
+              {isValidMove && !sq.piece && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: '40%',
+                    height: '40%',
+                    borderRadius: '50%',
+                    background: sq.color === 'dark' 
+                      ? 'rgba(44, 230, 194, 0.85)' 
+                      : 'rgba(44, 230, 194, 0.75)',
+                    pointerEvents: 'none',
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.2)',
+                    animation: 'fadeIn 150ms ease-out'
+                  }}
+                />
+              )}
+              {isValidMove && sq.piece && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: '6%',
+                    borderRadius: '50%',
+                    outline: '4px solid rgba(44, 230, 194, 0.95)',
+                    outlineOffset: '-4px',
+                    pointerEvents: 'none',
+                    boxShadow: '0 3px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.15)',
+                    animation: 'fadeIn 150ms ease-out'
+                  }}
+                />
+              )}
+              {hoveredSquare === sq.coord && sq.piece && onMove && !isDragging && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: sq.color === 'dark'
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : 'rgba(0, 0, 0, 0.05)',
+                    pointerEvents: 'none',
+                    transition: 'opacity 150ms ease'
+                  }}
+                />
+              )}
+              {kingSquare === sq.coord && isInCheck && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,0,0,0.3) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                    animation: 'pulse 1s ease-in-out infinite'
+                  }}
+                />
+              )}
+              {/* File and rank labels - Lichess style */}
+              {((orientation === 'white' && (idx % 8 === 0 || idx >= 56)) || 
+                (orientation === 'black' && ((idx % 8 === 7) || idx < 8))) && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: sq.color === 'dark' ? currentTheme.light : currentTheme.dark,
+                    opacity: 0.85,
+                    textShadow: sq.color === 'dark' 
+                      ? '0 1px 2px rgba(0,0,0,0.3)' 
+                      : '0 1px 2px rgba(255,255,255,0.5)',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    letterSpacing: '0.5px',
+                    ...(orientation === 'white' 
+                      ? { ...(idx % 8 === 0 ? { left: 5, bottom: 3 } : {}), ...(idx >= 56 ? { right: 5, top: 3 } : {}) }
+                      : { ...(idx % 8 === 7 ? { right: 5, top: 3 } : {}), ...(idx < 8 ? { left: 5, bottom: 3 } : {}) }
+                    )
+                  }}
+                >
+                  {orientation === 'white' 
+                    ? (idx % 8 === 0 && String(8 - Math.floor(idx / 8))) || (idx >= 56 && String.fromCharCode(97 + (idx % 8)))
+                    : (idx % 8 === 7 && String(Math.floor(idx / 8) + 1)) || (idx < 8 && String.fromCharCode(97 + (7 - (idx % 8))))
+                  }
+                </span>
+              )}
+            </div>
+          );
+        })}
+        </div>
+      </div>
+      {/* Ghost piece during drag - Lichess style */}
+      {draggedPiece && dragOffset && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${dragOffset.x - 30}px`,
+            top: `${dragOffset.y - 30}px`,
+            pointerEvents: 'none',
+            zIndex: 10000,
+            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+            opacity: 0.9,
+            transform: 'scale(1.05)',
+            transition: 'transform 100ms ease-out, opacity 100ms ease-out',
+            willChange: 'transform'
+          }}
+        >
+          <ChessPiece 
+            piece={draggedPiece.pieceType} 
+            size={60}
+            color={draggedPiece.pieceType === draggedPiece.pieceType.toUpperCase() ? 'white' : 'black'}
+            pieceSet={pieceSet}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
