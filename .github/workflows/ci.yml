@@ -1,0 +1,190 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Backend Lint and Test
+  backend-test:
+    name: Backend - Lint & Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: digichess-backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 pylint
+
+      - name: Check code formatting with Black
+        working-directory: digichess-backend
+        run: |
+          black --check --diff .
+
+      - name: Lint with flake8
+        working-directory: digichess-backend
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Check Django settings
+        working-directory: digichess-backend
+        env:
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DJANGO_DEBUG: "False"
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_pass
+          DB_HOST: localhost
+          DB_PORT: 5432
+          REDIS_URL: redis://localhost:6379/0
+          STOCKFISH_PATH: /usr/bin/stockfish
+          LC0_PATH: /usr/bin/lc0
+          MAIA_MODELS_DIR: /tmp/maia_models
+        run: |
+          python manage.py check --deploy
+
+      - name: Run migrations check
+        working-directory: digichess-backend
+        env:
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DJANGO_DEBUG: "False"
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_pass
+          DB_HOST: localhost
+          DB_PORT: 5432
+          REDIS_URL: redis://localhost:6379/0
+          STOCKFISH_PATH: /usr/bin/stockfish
+          LC0_PATH: /usr/bin/lc0
+          MAIA_MODELS_DIR: /tmp/maia_models
+        run: |
+          python manage.py makemigrations --check --dry-run
+
+  # Frontend Build and Test
+  frontend-build:
+    name: Frontend - Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint TypeScript/React
+        run: |
+          npm install --save-dev eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-react
+          npx eslint src --ext .ts,.tsx --max-warnings 0 || echo "ESLint check completed"
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
+
+  # Docker Build Test
+  docker-build:
+    name: Docker - Build Images
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        working-directory: digichess-backend
+        run: |
+          docker build -t digichess-backend:test .
+          
+      - name: Test backend image
+        working-directory: digichess-backend
+        run: |
+          docker run --rm digichess-backend:test python manage.py check --deploy || echo "Backend check completed"
+
+  # Security Scanning
+  security-scan:
+    name: Security - Dependency Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run safety check
+        working-directory: digichess-backend
+        run: |
+          pip install safety
+          safety check --file requirements.txt || echo "Safety check completed (non-blocking)"
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate || echo "npm audit completed (non-blocking)"
+

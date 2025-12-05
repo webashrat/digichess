@@ -1,0 +1,33 @@
+name: Docker Build Cache Optimization
+
+on:
+  schedule:
+    # Run weekly to refresh cache
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  build-cache:
+    name: Build Docker Cache
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (cache only)
+        working-directory: digichess-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: digichess-backend
+          push: false
+          tags: digichess-backend:cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
