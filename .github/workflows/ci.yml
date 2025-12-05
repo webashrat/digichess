@@ -124,19 +124,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          # Disable cache to avoid authentication issues
 
-      - name: Clear npm cache
+      - name: Remove package-lock.json with private registry
         run: |
-          npm cache clean --force || true
-          rm -rf ~/.npm/_cacache || true
+          # package-lock.json contains private registry references
+          # Remove it and regenerate from package.json (public packages only)
+          rm -f package-lock.json
           
-      - name: Remove .npmrc if exists
+      - name: Set npm registry to public
         run: |
-          rm -f .npmrc || true
+          npm config set registry https://registry.npmjs.org/
           
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install --no-audit --legacy-peer-deps
 
       - name: Lint TypeScript/React
         run: |
