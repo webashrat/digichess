@@ -1,0 +1,27 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  backend:
+    volumes:
+      # Mount code for live reload (optional, requires watchdog)
+      - .:/app
+    environment:
+      DJANGO_DEBUG: "True"
+      # Allow hot reload
+      PYTHONUNBUFFERED: "1"
+
+  celery:
+    volumes:
+      - .:/app
+    environment:
+      PYTHONUNBUFFERED: "1"
+
+  celery-beat:
+    volumes:
+      - .:/app
+    environment:
+      PYTHONUNBUFFERED: "1"
+

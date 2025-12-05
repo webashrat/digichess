@@ -120,11 +120,8 @@ class GameMoveView(APIView):
                     game.finish(result)
                     game.refresh_from_db()
                     if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        try:
-                            from games.tasks import update_ratings_async
-                            update_ratings_async.delay(game.id, result)
-                        except Exception:
-                            FinishGameView().update_ratings(game, result)
+                        # Always update ratings synchronously to ensure they're updated immediately
+                        FinishGameView().update_ratings(game, result)
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
@@ -148,11 +145,8 @@ class GameMoveView(APIView):
                     game.finish(result)
                     game.refresh_from_db()
                     if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        try:
-                            from games.tasks import update_ratings_async
-                            update_ratings_async.delay(game.id, result)
-                        except Exception:
-                            FinishGameView().update_ratings(game, result)
+                        # Always update ratings synchronously to ensure they're updated immediately
+                        FinishGameView().update_ratings(game, result)
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
@@ -287,11 +281,9 @@ class GameMoveView(APIView):
         
         # Update ratings for rated games when game finishes
         if result and game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-            try:
-                from games.tasks import update_ratings_async
-                update_ratings_async.delay(game.id, result)
-            except Exception:
-                FinishGameView().update_ratings(game, result)
+            # Always update ratings synchronously to ensure they're updated immediately
+            # Celery tasks can be unreliable if not configured properly
+            FinishGameView().update_ratings(game, result)
         
         # Broadcast game_finished event
         if result:
@@ -355,14 +347,8 @@ class GameMoveView(APIView):
                     game.refresh_from_db()
                     # Update ratings for rated games
                     if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        try:
-                            from games.tasks import update_ratings_async
-                            update_ratings_async.delay(game.id, result)
-                        except Exception as e:
-                            # If async task fails, update synchronously
-                            import sys
-                            print(f"[rating] Async task failed, updating synchronously: {e}", file=sys.stderr)
-                            FinishGameView().update_ratings(game, result)
+                        # Always update ratings synchronously to ensure they're updated immediately
+                        FinishGameView().update_ratings(game, result)
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
@@ -388,14 +374,8 @@ class GameMoveView(APIView):
                     game.refresh_from_db()
                     # Update ratings for rated games
                     if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        try:
-                            from games.tasks import update_ratings_async
-                            update_ratings_async.delay(game.id, result)
-                        except Exception as e:
-                            # If async task fails, update synchronously
-                            import sys
-                            print(f"[rating] Async task failed, updating synchronously: {e}", file=sys.stderr)
-                            FinishGameView().update_ratings(game, result)
+                        # Always update ratings synchronously to ensure they're updated immediately
+                        FinishGameView().update_ratings(game, result)
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
@@ -494,14 +474,8 @@ class FinishGameView(APIView):
             Game.RESULT_BLACK,
             Game.RESULT_DRAW,
         }:
-            try:
-                from games.tasks import update_ratings_async
-                update_ratings_async.delay(game.id, result)
-            except Exception as e:
-                # If async task fails, update synchronously
-                import sys
-                print(f"[rating] Async task failed, updating synchronously: {e}", file=sys.stderr)
-                self.update_ratings(game, result)
+            # Always update ratings synchronously to ensure they're updated immediately
+            self.update_ratings(game, result)
         # Resolve predictions
         try:
             from games.models_prediction import Prediction
@@ -534,14 +508,24 @@ class FinishGameView(APIView):
         pass
 
     def update_ratings(self, game: Game, result: str):
+        import sys
+        
         # Only update ratings for rated games
         if not game.rated:
-            import sys
             print(f"[rating] Game {game.id} is not rated, skipping rating update", file=sys.stderr)
             return
         
-        import sys
-        print(f"[rating] Updating ratings for game {game.id}, result: {result}, time_control: {game.time_control}", file=sys.stderr)
+        # Check if game has valid players
+        if not game.white or not game.black:
+            print(f"[rating] Game {game.id} missing players (white={game.white}, black={game.black}), skipping rating update", file=sys.stderr)
+            return
+        
+        # Check if result is valid
+        if result not in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
+            print(f"[rating] Game {game.id} has invalid result: {result}, skipping rating update", file=sys.stderr)
+            return
+        
+        print(f"[rating] Updating ratings for game {game.id}, result: {result}, time_control: {game.time_control}, white: {game.white.username or game.white.id}, black: {game.black.username or game.black.id}", file=sys.stderr)
         
         # Simplified Glicko-2 (single update step)
         def glicko2_update(ra, rd, vol, rb, rdb, score):
@@ -566,6 +550,8 @@ class FinishGameView(APIView):
         fields = control_map.get(game.time_control)
         if not fields:
             # Time control not in map (e.g., TIME_CUSTOM), skip rating update
+            import sys
+            print(f"[rating] Game {game.id} has unsupported time_control: {game.time_control}, skipping rating update", file=sys.stderr)
             return
         
         r_field, rd_field, vol_field = fields
@@ -596,19 +582,30 @@ class FinishGameView(APIView):
         )
         
         # Update and save white player ratings
-        setattr(game.white, r_field, new_w_r)
-        setattr(game.white, rd_field, new_w_rd)
-        setattr(game.white, vol_field, new_w_vol)
-        game.white.save(update_fields=[r_field, rd_field, vol_field])
+        try:
+            setattr(game.white, r_field, new_w_r)
+            setattr(game.white, rd_field, new_w_rd)
+            setattr(game.white, vol_field, new_w_vol)
+            game.white.save(update_fields=[r_field, rd_field, vol_field])
+            print(f"[rating] Successfully updated white player ({game.white.username or game.white.id}) ratings: {white_rating} -> {new_w_r}", file=sys.stderr)
+        except Exception as e:
+            print(f"[rating] Error updating white player ratings: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
         
         # Update and save black player ratings
-        setattr(game.black, r_field, new_b_r)
-        setattr(game.black, rd_field, new_b_rd)
-        setattr(game.black, vol_field, new_b_vol)
-        game.black.save(update_fields=[r_field, rd_field, vol_field])
+        try:
+            setattr(game.black, r_field, new_b_r)
+            setattr(game.black, rd_field, new_b_rd)
+            setattr(game.black, vol_field, new_b_vol)
+            game.black.save(update_fields=[r_field, rd_field, vol_field])
+            print(f"[rating] Successfully updated black player ({game.black.username or game.black.id}) ratings: {black_rating} -> {new_b_r}", file=sys.stderr)
+        except Exception as e:
+            print(f"[rating] Error updating black player ratings: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
         
-        import sys
-        print(f"[rating] Updated ratings - White ({game.white.username or game.white.id}): {white_rating} -> {new_w_r}, Black ({game.black.username or game.black.id}): {black_rating} -> {new_b_r}", file=sys.stderr)
+        print(f"[rating] Rating update complete for game {game.id}", file=sys.stderr)
 
 
 class AcceptGameView(APIView):
@@ -828,11 +825,8 @@ class GameDrawRespondView(APIView):
             game.refresh_from_db()
             # Update ratings for rated games
             if game.rated:
-                try:
-                    from games.tasks import update_ratings_async
-                    update_ratings_async.delay(game.id, result)
-                except Exception:
-                    FinishGameView().update_ratings(game, result)
+                # Always update ratings synchronously to ensure they're updated immediately
+                FinishGameView().update_ratings(game, result)
             # Broadcast game_finished event for draw
             channel_layer = get_channel_layer()
             game_data = GameSerializer(game).data
@@ -880,14 +874,8 @@ class GameResignView(APIView):
         
         # Update ratings for rated games
         if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-            try:
-                from games.tasks import update_ratings_async
-                update_ratings_async.delay(game.id, result)
-            except Exception as e:
-                # If async task fails, update synchronously
-                import sys
-                print(f"[rating] Async task failed, updating synchronously: {e}", file=sys.stderr)
-                FinishGameView().update_ratings(game, result)
+            # Always update ratings synchronously to ensure they're updated immediately
+            FinishGameView().update_ratings(game, result)
         
         channel_layer = get_channel_layer()
         game_data = GameSerializer(game).data
@@ -930,11 +918,8 @@ class GameClaimDrawView(APIView):
         game.refresh_from_db()
         # Update ratings for rated games
         if game.rated:
-            try:
-                from games.tasks import update_ratings_async
-                update_ratings_async.delay(game.id, result)
-            except Exception:
-                FinishGameView().update_ratings(game, result)
+            # Always update ratings synchronously to ensure they're updated immediately
+            FinishGameView().update_ratings(game, result)
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f"game_{game.id}",

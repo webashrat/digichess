@@ -27,3 +27,4 @@ class Bot(User):
         return queryset.order_by(rating_field)
 
 
+

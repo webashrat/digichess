@@ -9,3 +9,4 @@ channels-redis>=4.1
 redis>=5.0
 django-cors-headers>=4.6
 daphne>=4.0
+celery>=5.3.0

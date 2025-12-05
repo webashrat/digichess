@@ -233,6 +233,26 @@ export function ChessBoard({
   const clearDraggedPieceTimeoutRef = useRef<number | null>(null);
   const pendingMoveRef = useRef<{ from: string; to: string } | null>(null);
   
+  // Global mouse move handler for drag tracking
+  useEffect(() => {
+    if (!draggedPiece || !wasDragged) return;
+    
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (draggedPiece && boardRef.current) {
+        const rect = boardRef.current.getBoundingClientRect();
+        setDragOffset({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      }
+    };
+    
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [draggedPiece, wasDragged]);
+  
   useEffect(() => {
     try {
       const normalizedFen = !fen || fen === 'start' 
@@ -254,18 +274,22 @@ export function ChessBoard({
             clearTimeout(clearDraggedPieceTimeoutRef.current);
           }
           // Delay clearing draggedPiece and selection to allow the new board state to render first
+          // Reduced delay to prevent pieces from disappearing
           clearDraggedPieceTimeoutRef.current = window.setTimeout(() => {
-            if (draggedPiece) {
-              setDraggedPiece(null);
-              setWasDragged(false);
+            // Only clear if FEN actually changed (move completed)
+            if (previousFenRef.current === normalizedFen) {
+              if (draggedPiece) {
+                setDraggedPiece(null);
+                setWasDragged(false);
+              }
+              setSelected(null);
+              setValidMoves([]);
             }
-            setSelected(null);
-            setValidMoves([]);
             pendingMoveRef.current = null;
             clearDraggedPieceTimeoutRef.current = null;
-          }, 400); // Increased delay to ensure board fully renders
+          }, 50); // Further reduced delay for smoother transitions
         } else {
-          // No pending move, clear immediately
+          // No pending move, clear immediately but smoothly
           setSelected(null);
           setValidMoves([]);
         }
@@ -327,7 +351,10 @@ export function ChessBoard({
     setValidMoves(combinedMoves);
   }, [selected, legalMoves, onMove]);
 
-  const squares = parseFen(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  // Memoize squares to prevent unnecessary re-renders
+  const squares = useMemo(() => {
+    return parseFen(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  }, [fen]);
   const last = lastMove ? lastMove.toLowerCase() : '';
   const currentTheme = themes[theme] || themes[0];
   
@@ -499,8 +526,20 @@ export function ChessBoard({
         });
       }
     } else {
+      // For mouse drag, set initial drag offset
+      const rect = boardRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDragOffset({
+          x: (e as React.DragEvent).clientX - rect.left,
+          y: (e as React.DragEvent).clientY - rect.top
+        });
+      }
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', '');
+      // Hide the default drag image
+      const img = new Image();
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      e.dataTransfer.setDragImage(img, 0, 0);
     }
   };
 
@@ -755,20 +794,36 @@ export function ChessBoard({
             <div
               key={sq.coord}
               draggable={!!sq.piece && !!onMove && !isDragging}
-              onDragStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
+              onDragStart={(e) => {
+                if (sq.piece && sq.pieceType) {
+                  handleDragStart(e, sq.coord, sq.piece, sq.pieceType);
+                }
+              }}
+              onDrag={(e) => {
+                // Update drag offset during mouse drag
+                if (draggedPiece && boardRef.current) {
+                  const rect = boardRef.current.getBoundingClientRect();
+                  setDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                  });
+                }
+              }}
               onDragEnd={(e) => {
-                // If drop didn't happen, reset after a delay
-                setTimeout(() => {
-                  if (draggedPiece) {
-                    setDraggedPiece(null);
-                    setSelected(null);
-                    setWasDragged(false);
-                  }
-                }, 100);
+                // Clear drag state immediately
+                setDraggedPiece(null);
+                setSelected(null);
+                setWasDragged(false);
                 setDragOffset(null);
               }}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, sq.coord)}
+              onDrop={(e) => {
+                handleDrop(e, sq.coord);
+                // Clear drag state after drop
+                setDraggedPiece(null);
+                setDragOffset(null);
+                setWasDragged(false);
+              }}
               onTouchStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -923,8 +978,8 @@ export function ChessBoard({
         })}
         </div>
       </div>
-      {/* Ghost piece during drag - Lichess style */}
-      {draggedPiece && dragOffset && (
+      {/* Ghost piece during drag - Lichess style - Only show when actually dragging */}
+      {draggedPiece && dragOffset && wasDragged && (
         <div
           style={{
             position: 'fixed',
@@ -933,10 +988,10 @@ export function ChessBoard({
             pointerEvents: 'none',
             zIndex: 10000,
             filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
-            opacity: 0.9,
-            transform: 'scale(1.05)',
-            transition: 'transform 100ms ease-out, opacity 100ms ease-out',
-            willChange: 'transform'
+            opacity: 0.95,
+            transform: 'scale(1.1)',
+            transition: 'none', // No transition during drag for smooth following
+            willChange: 'transform, left, top'
           }}
         >
           <ChessPiece 

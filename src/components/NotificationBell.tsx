@@ -404,6 +404,35 @@ export default function NotificationBell() {
         });
       });
   };
+  const handleDelete = (notificationId: string, gameId?: number) => {
+    // Remove from UI immediately
+    setItems((prev) => prev.filter((n) => n.id !== notificationId));
+    
+    // Mark as read if it's an API notification
+    if (notificationId && !notificationId.startsWith('chal-') && !notificationId.startsWith('msg-')) {
+      markNotificationRead(notificationId).catch(() => {});
+    }
+    
+    // Add to ignored list to prevent it from showing again
+    setIgnoredIds((prev) => {
+      const next = [...new Set([...prev, notificationId])];
+      if (gameId) {
+        next.push(`chal-${gameId}`);
+      }
+      persistIgnored(ignoredChallenges, next);
+      return next;
+    });
+    
+    // If it's a challenge/rematch notification, also add gameId to ignored challenges
+    if (gameId) {
+      setIgnoredChallenges((prev) => {
+        const next = prev.includes(gameId) ? prev : [...prev, gameId];
+        persistIgnored(next, ignoredIds);
+        return next;
+      });
+    }
+  };
+
   const handleReject = (id?: number, notificationType?: string) => {
     if (!id) return;
     
@@ -581,10 +610,58 @@ export default function NotificationBell() {
                 flexDirection: 'column',
                 gap: 6,
                 wordBreak: 'break-word',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(44, 230, 194, 0.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
               }}
             >
-              <div style={{ fontWeight: 600 }}>{n.title || (n.type === 'message' ? 'Message' : n.type === 'challenge' ? 'Challenge' : 'Notification')}</div>
+              {/* Delete button - red cross */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(n.id, n.gameId);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(239, 83, 80, 0.1)',
+                  color: '#ef5350',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  transition: 'all 0.2s ease',
+                  zIndex: 1,
+                  padding: 0,
+                  lineHeight: 1
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 83, 80, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 83, 80, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Delete notification"
+              >
+                ×
+              </button>
+              <div style={{ fontWeight: 600, paddingRight: 28 }}>{n.title || (n.type === 'message' ? 'Message' : n.type === 'challenge' ? 'Challenge' : 'Notification')}</div>
               <div style={{ color: 'var(--muted)', fontSize: 13, whiteSpace: 'pre-wrap' }}>{n.text}</div>
               {(() => {
                 const isChallenge = n.type === 'challenge' && n.gameId;

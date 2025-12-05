@@ -4,6 +4,7 @@ import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/default
 interface Props {
   user: UserLookup;
   rating?: number;
+  ratingChange?: number; // Rating change after game (positive for win, negative for loss)
   mode?: Mode;
   rightText?: string;
   isActive?: boolean;
@@ -25,7 +26,11 @@ const countryFlag = (code?: string) => {
   return '🌍';
 };
 
-export default function IdentityStrip({ user, rating, mode, rightText, isActive, isMyTurn }: Props) {
+export default function IdentityStrip({ user, rating, ratingChange, mode, rightText, isActive, isMyTurn }: Props) {
+  // Check if this is DIGI bot and use DIGIBOT.jpg
+  const isDigiBot = (user.first_name === 'DIGI' || user.username === 'DIGI' || user.username?.toUpperCase() === 'DIGI');
+  const profilePic = isDigiBot ? '/DIGIBOT.jpg' : (user.profile_pic || undefined);
+  
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       {/* Profile picture */}
@@ -36,7 +41,7 @@ export default function IdentityStrip({ user, rating, mode, rightText, isActive,
           height: 40,
           borderRadius: '50%',
           border: '2px solid ' + (isActive && isMyTurn ? 'var(--accent)' : 'var(--border)'),
-          backgroundImage: user.profile_pic ? `url(${user.profile_pic})` : undefined,
+          backgroundImage: profilePic ? `url(${profilePic})` : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           flexShrink: 0,
@@ -47,10 +52,10 @@ export default function IdentityStrip({ user, rating, mode, rightText, isActive,
           cursor: 'pointer',
           textDecoration: 'none',
           overflow: 'hidden',
-          ...(user.profile_pic ? {} : getDefaultAvatarStyle(user.username, user.first_name, user.last_name, 40))
+          ...(profilePic ? {} : getDefaultAvatarStyle(user.username, user.first_name, user.last_name, 40))
         }}
       >
-        {!user.profile_pic && (
+        {!profilePic && (
           <span style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 16 }}>
             {getDefaultAvatarContent(user.username, user.first_name, user.last_name)}
           </span>
@@ -100,9 +105,22 @@ export default function IdentityStrip({ user, rating, mode, rightText, isActive,
               fontWeight: 600, 
               color: 'var(--text)',
               flexShrink: 0,
-              marginLeft: 4
+              marginLeft: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
             }}>
-              {rating}
+              <span>{rating}</span>
+              {ratingChange !== undefined && ratingChange !== null && ratingChange !== 0 && (
+                <span style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: ratingChange > 0 ? '#4caf50' : '#f44336',
+                  marginLeft: 2
+                }}>
+                  {ratingChange > 0 ? '+' : ''}{ratingChange}
+                </span>
+              )}
             </span>
           )}
         </div>

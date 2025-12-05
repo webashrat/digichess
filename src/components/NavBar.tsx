@@ -46,8 +46,31 @@ export default function NavBar() {
   };
 
   return (
-    <header style={{ borderBottom: '0.5px solid var(--border)', padding: '4px 0' }}>
-      <div className="layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', paddingTop: '6px', paddingBottom: '6px' }}>
+    <header style={{ 
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000,
+      backgroundColor: 'var(--bg)',
+      borderBottom: '1px solid var(--border)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        gap: 16,
+        paddingTop: '10px', 
+        paddingBottom: '10px',
+        paddingLeft: '24px',
+        paddingRight: '24px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        width: '100%',
+        position: 'relative'
+      }}>
+        {/* Logo Section */}
         <Link 
           to="/" 
           style={{ 
@@ -59,7 +82,9 @@ export default function NavBar() {
             fontWeight: 700,
             fontSize: 20,
             letterSpacing: 0.5,
-            transition: 'opacity 0.2s ease'
+            transition: 'opacity 0.2s ease',
+            flexShrink: 0,
+            minWidth: 'fit-content'
           }}
           onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -84,18 +109,38 @@ export default function NavBar() {
           <span style={{ 
             color: '#9CA6B8',
             fontWeight: 800,
-            letterSpacing: 1
+            letterSpacing: 1,
+            whiteSpace: 'nowrap'
           }}>
             DigiChess
           </span>
         </Link>
-        <nav style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        
+        {/* Navigation Menu - Centered */}
+        <nav style={{ 
+          display: 'flex', 
+          gap: 6, 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flex: 1,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          padding: '0 16px',
+          maxWidth: '100%'
+        }}>
+          <style>{`
+            nav::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
           {links.map((l) => (
             <Link
               key={l.to}
               to={l.to}
               style={{
-                padding: '8px 12px',
+                padding: '8px 14px',
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 600,
@@ -106,7 +151,9 @@ export default function NavBar() {
                 alignItems: 'center',
                 gap: 6,
                 transition: 'all 0.2s ease',
-                textDecoration: 'none'
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => {
                 if (pathname !== l.to) {
@@ -121,12 +168,20 @@ export default function NavBar() {
                 }
               }}
             >
-              <span>{l.icon}</span>
+              <span style={{ fontSize: 14 }}>{l.icon}</span>
               <span>{l.label}</span>
             </Link>
           ))}
         </nav>
-        <div className="auth-actions" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        
+        {/* User Actions Section */}
+        <div className="auth-actions" style={{ 
+          display: 'flex', 
+          gap: 8, 
+          alignItems: 'center',
+          flexShrink: 0,
+          minWidth: 'fit-content'
+        }}>
           {!authed && (
             <>
               <Link className="btn btn-ghost" to="/login" style={{ fontSize: 12, padding: '6px 12px' }}>Log in</Link>
@@ -136,13 +191,30 @@ export default function NavBar() {
           {authed && (
             <>
               <NotificationBell />
-              <Link to={`/profile/${me?.username || ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Link 
+                to={`/profile/${me?.username || ''}`} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 8,
+                  textDecoration: 'none',
+                  padding: '4px 8px',
+                  borderRadius: 8,
+                  transition: 'background 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 <div
                   style={{
-                    width: 28,
-                    height: 28,
+                    width: 32,
+                    height: 32,
                     borderRadius: '50%',
-                    border: '1px solid var(--border)',
+                    border: '2px solid var(--border)',
                     backgroundImage: me?.profile_pic ? `url(${me.profile_pic})` : undefined,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -151,16 +223,25 @@ export default function NavBar() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    ...(me?.profile_pic ? {} : getDefaultAvatarStyle(me?.username || 'Account', undefined, undefined, 28))
+                    flexShrink: 0,
+                    ...(me?.profile_pic ? {} : getDefaultAvatarStyle(me?.username || 'Account', undefined, undefined, 32))
                   }}
                 >
                   {!me?.profile_pic && me?.username && (
-                    <span style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 12 }}>
+                    <span style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 13 }}>
                       {getDefaultAvatarContent(me.username)}
                     </span>
                   )}
                 </div>
-                <span style={{ cursor: 'pointer', fontSize: 13 }}>{me?.username || 'Account'}</span>
+                <span style={{ 
+                  cursor: 'pointer', 
+                  fontSize: 13, 
+                  fontWeight: 500,
+                  color: 'var(--text)',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {me?.username || 'Account'}
+                </span>
               </Link>
               <button 
                 className="btn" 

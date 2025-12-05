@@ -94,6 +94,8 @@ export default function GameView() {
   const [drawConfirm, setDrawConfirm] = useState(false);
   const [whiteRating, setWhiteRating] = useState<number | null>(null);
   const [blackRating, setBlackRating] = useState<number | null>(null);
+  const [initialWhiteRating, setInitialWhiteRating] = useState<number | null>(null);
+  const [initialBlackRating, setInitialBlackRating] = useState<number | null>(null);
   const refreshInProgressRef = useRef(false);
   const lastRefreshTimeRef = useRef<number>(0);
   const [playerStatus, setPlayerStatus] = useState<{
@@ -130,6 +132,19 @@ export default function GameView() {
     if (game.black?.id === me.id) return 'black';
     return null;
   }, [me, game]);
+
+  // Calculate rating changes (only show when game is finished and rated)
+  const whiteRatingChange = useMemo(() => {
+    if (game?.status !== 'finished' || !game?.rated) return undefined;
+    if (initialWhiteRating === null || whiteRating === null) return undefined;
+    return whiteRating - initialWhiteRating;
+  }, [game?.status, game?.rated, initialWhiteRating, whiteRating]);
+
+  const blackRatingChange = useMemo(() => {
+    if (game?.status !== 'finished' || !game?.rated) return undefined;
+    if (initialBlackRating === null || blackRating === null) return undefined;
+    return blackRating - initialBlackRating;
+  }, [game?.status, game?.rated, initialBlackRating, blackRating]);
 
   const isMyTurn = useMemo(() => {
     if (!game || !myColor || game.status !== 'active') return false;
@@ -186,7 +201,12 @@ export default function GameView() {
           const userData = await fetchAccountDetail(game.white.username);
           const rating = userData[ratingField as keyof typeof userData] as number | undefined;
           console.log('White rating fetched:', { username: game.white.username, mode, ratingField, rating, userData });
-          setWhiteRating(rating !== undefined && rating !== null ? rating : null);
+          const ratingValue = rating !== undefined && rating !== null ? rating : null;
+          setWhiteRating(ratingValue);
+          // Store initial rating if game is active and we don't have it yet, or if it's a new game
+          if (game.status === 'active' && (initialWhiteRating === null || game.id !== Number(id))) {
+            setInitialWhiteRating(ratingValue);
+          }
         } catch (err) {
           console.error('Failed to fetch white rating:', err);
           setWhiteRating(null);
@@ -201,7 +221,12 @@ export default function GameView() {
           const userData = await fetchAccountDetail(game.black.username);
           const rating = userData[ratingField as keyof typeof userData] as number | undefined;
           console.log('Black rating fetched:', { username: game.black.username, mode, ratingField, rating, userData });
-          setBlackRating(rating !== undefined && rating !== null ? rating : null);
+          const ratingValue = rating !== undefined && rating !== null ? rating : null;
+          setBlackRating(ratingValue);
+          // Store initial rating if game is active and we don't have it yet, or if it's a new game
+          if (game.status === 'active' && (initialBlackRating === null || game.id !== Number(id))) {
+            setInitialBlackRating(ratingValue);
+          }
         } catch (err) {
           console.error('Failed to fetch black rating:', err);
           setBlackRating(null);
@@ -219,6 +244,12 @@ export default function GameView() {
         fetchRatings();
       }, 2000); // Wait 2 seconds for rating update to complete
       return () => clearTimeout(timeout);
+    }
+    
+    // Reset initial ratings when starting a new game
+    if (game?.status === 'active' && game?.id) {
+      // Reset initial ratings if this is a new game (different game ID)
+      // This will be set when ratings are fetched above
     }
   }, [game?.id, game?.mode, game?.white?.username, game?.black?.username, game?.status]);
 
@@ -238,6 +269,14 @@ export default function GameView() {
     const interval = setInterval(loadStatus, 2000); // Poll every 2 seconds
     return () => clearInterval(interval);
   }, [id, game?.status, isPlayer]);
+  
+  // Reset initial ratings when game ID changes (new game)
+  useEffect(() => {
+    if (id) {
+      setInitialWhiteRating(null);
+      setInitialBlackRating(null);
+    }
+  }, [id]);
 
   // Clock update - Lichess-style smart scheduling with setTimeout
   useEffect(() => {
@@ -311,22 +350,20 @@ export default function GameView() {
       // For active player: use calculated remaining time
       // For inactive player: use stored time from server (doesn't change during opponent's turn)
       setClock(prev => {
+        // Always ensure we have valid values - never return undefined
         const whiteTime = activeColor === 'white' 
           ? remaining / 1000 
-          : (clockTimesRef.current?.white ?? prev.white_time_left ?? clock.white_time_left ?? 0) / 1000;
+          : (clockTimesRef.current?.white ?? prev?.white_time_left ?? 0) / 1000;
         const blackTime = activeColor === 'black' 
           ? remaining / 1000 
-          : (clockTimesRef.current?.black ?? prev.black_time_left ?? clock.black_time_left ?? 0) / 1000;
+          : (clockTimesRef.current?.black ?? prev?.black_time_left ?? 0) / 1000;
         
-        // Only update if we have valid values
-        if (whiteTime === undefined || blackTime === undefined) {
-          return prev;
-        }
-        
+        // Always return valid values - never undefined
         return {
-          white_time_left: whiteTime,
-          black_time_left: blackTime,
-          turn: clockTimesRef.current?.activeColor || prev.turn || clock.turn
+          white_time_left: Math.max(0, whiteTime),
+          black_time_left: Math.max(0, blackTime),
+          turn: clockTimesRef.current?.activeColor || prev?.turn || clock?.turn || 'white',
+          lastUpdate: prev?.lastUpdate || performance.now()
         };
       });
       
@@ -572,35 +609,58 @@ export default function GameView() {
               })();
               
               // Update game state immediately - include legal moves if provided in payload (like Lichess)
+              // Preserve all existing state to prevent flickering
               setGame((prevGame) => {
                 if (!prevGame) return prevGame;
                 const updated = {
                   ...prevGame,
                   current_fen: payload.fen,
                   moves: payload.moves,
+                  // Preserve other game state
                 };
                 
                 // If legal moves are included in WebSocket payload (backend optimization), use them immediately
                 if (payload.legal_moves && Array.isArray(payload.legal_moves)) {
                   updated.legal_moves = payload.legal_moves;
+                } else if (prevGame.legal_moves) {
+                  // Preserve existing legal moves if not in payload
+                  updated.legal_moves = prevGame.legal_moves;
                 }
                 
                 return updated;
               });
               
-              // Update clock immediately from payload
-              if (payload.white_time_left !== undefined && payload.black_time_left !== undefined) {
-                setClock({
-                  white_time_left: payload.white_time_left,
-                  black_time_left: payload.black_time_left,
+              // Update clock immediately from payload - preserve existing values if new ones aren't available
+              setClock((prevClock) => {
+                const newClock = {
+                  white_time_left: payload.white_time_left !== undefined 
+                    ? payload.white_time_left 
+                    : (prevClock?.white_time_left ?? 0),
+                  black_time_left: payload.black_time_left !== undefined 
+                    ? payload.black_time_left 
+                    : (prevClock?.black_time_left ?? 0),
                   turn: turnColor,
                   lastUpdate: performance.now()
-                });
-                // Force a re-render by updating clockTimesRef
+                };
+                
+                // Update clockTimesRef for smooth ticking
                 if (clockTimesRef.current) {
+                  clockTimesRef.current.white = newClock.white_time_left * 1000;
+                  clockTimesRef.current.black = newClock.black_time_left * 1000;
                   clockTimesRef.current.activeColor = turnColor;
+                  clockTimesRef.current.lastUpdate = newClock.lastUpdate;
+                } else {
+                  // Initialize if not exists
+                  clockTimesRef.current = {
+                    white: newClock.white_time_left * 1000,
+                    black: newClock.black_time_left * 1000,
+                    activeColor: turnColor,
+                    lastUpdate: newClock.lastUpdate
+                  };
                 }
-              }
+                
+                return newClock;
+              });
               
               // If legal moves weren't in payload and it's user's turn, fetch them immediately
               if (isUserTurn && game?.status === 'active' && !payload.legal_moves) {
@@ -628,7 +688,21 @@ export default function GameView() {
             
             // Update clock without triggering browser indicators
             updateClock();
-          } else if (['draw_offer', 'draw_response', 'resign', 'claim_draw', 'rematch_offer'].includes(t)) {
+          } else if (t === 'draw_response') {
+            // Handle draw response - refresh game to get updated draw_offer_by state
+            fetchGameDetail(id!)
+              .then((updatedGame) => {
+                setGame(updatedGame);
+                const decision = payload.decision;
+                if (decision === 'decline') {
+                  setActionMsg('Draw offer declined');
+                } else if (decision === 'accept') {
+                  // Draw accepted - game will finish, handled by game_finished event
+                }
+              })
+              .catch(() => {});
+            updateClock();
+          } else if (['draw_offer', 'resign', 'claim_draw', 'rematch_offer'].includes(t)) {
             refreshGame(true); // Silent refresh for background updates
             updateClock();
           } else if (t === 'game_finished') {
@@ -671,6 +745,14 @@ export default function GameView() {
             
             // Refresh ratings after game finishes (for rated games, wait a bit for backend to update)
             if (game?.rated) {
+              // Store initial ratings if we don't have them yet (game just finished)
+              if (initialWhiteRating === null && whiteRating !== null) {
+                setInitialWhiteRating(whiteRating);
+              }
+              if (initialBlackRating === null && blackRating !== null) {
+                setInitialBlackRating(blackRating);
+              }
+              
               setTimeout(() => {
                 // Re-fetch ratings
                 const mode = game.mode;
@@ -686,7 +768,12 @@ export default function GameView() {
                   fetchAccountDetail(game.white.username)
                     .then((userData) => {
                       const rating = userData[ratingField as keyof typeof userData] as number | undefined;
-                      setWhiteRating(rating !== undefined && rating !== null ? rating : null);
+                      const newRating = rating !== undefined && rating !== null ? rating : null;
+                      setWhiteRating(newRating);
+                      // Update initial rating if we still don't have it (fallback)
+                      if (initialWhiteRating === null && newRating !== null) {
+                        setInitialWhiteRating(newRating);
+                      }
                     })
                     .catch(() => {});
                 }
@@ -694,7 +781,12 @@ export default function GameView() {
                   fetchAccountDetail(game.black.username)
                     .then((userData) => {
                       const rating = userData[ratingField as keyof typeof userData] as number | undefined;
-                      setBlackRating(rating !== undefined && rating !== null ? rating : null);
+                      const newRating = rating !== undefined && rating !== null ? rating : null;
+                      setBlackRating(newRating);
+                      // Update initial rating if we still don't have it (fallback)
+                      if (initialBlackRating === null && newRating !== null) {
+                        setInitialBlackRating(newRating);
+                      }
                     })
                     .catch(() => {});
                 }
@@ -1073,11 +1165,7 @@ export default function GameView() {
                 )}
               </div>
             </div>
-            {game?.draw_offer_by && (
-              <div style={{ background: '#1c2433', border: '1px solid var(--border)', padding: 6, borderRadius: 6, color: 'var(--gold)', fontSize: 10 }}>
-                Draw offered by {game.draw_offer_by === game.white?.id ? 'White' : 'Black'}
-              </div>
-            )}
+            {/* Draw offer status removed - now shown in action buttons section */}
           </div>
 
           {/* Chat Section */}
@@ -1210,6 +1298,7 @@ export default function GameView() {
                         user={game.black} 
                         mode={game.mode} 
                         rating={blackRating ?? undefined}
+                        ratingChange={blackRatingChange}
                         isActive={game.status === 'active'}
                         isMyTurn={clock.turn === 'black' && game.status === 'active' && myColor === 'black'}
                       />
@@ -1226,7 +1315,7 @@ export default function GameView() {
                         letterSpacing: '0.5px',
                       }}
                     >
-                      {formatTime(clock.black_time_left, (clock.black_time_left ?? 0) < 10)}
+                      {formatTime(clock?.black_time_left ?? 0, (clock?.black_time_left ?? 0) < 10)}
                     </div>
                   </div>
                   <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
@@ -1258,6 +1347,7 @@ export default function GameView() {
                         user={game.white} 
                         mode={game.mode} 
                         rating={whiteRating ?? undefined}
+                        ratingChange={whiteRatingChange}
                         isActive={game.status === 'active'}
                         isMyTurn={clock.turn === 'white' && game.status === 'active' && myColor === 'white'}
                       />
@@ -1274,7 +1364,7 @@ export default function GameView() {
                         letterSpacing: '0.5px',
                       }}
                     >
-                      {formatTime(clock.white_time_left, (clock.white_time_left ?? 0) < 10)}
+                      {formatTime(clock?.white_time_left ?? 0, (clock?.white_time_left ?? 0) < 10)}
                     </div>
                   </div>
                   <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
@@ -1315,7 +1405,7 @@ export default function GameView() {
             </div>
           )}
           <ChessBoard
-            key={`board-${game?.id}-${game?.moves?.split(' ').length || 0}`}
+            key={`board-${game?.id}`}
             fen={game?.current_fen || 'start'}
             lastMove={undefined}
             onMove={
@@ -1396,6 +1486,7 @@ export default function GameView() {
                         user={game.white} 
                         mode={game.mode} 
                         rating={whiteRating ?? undefined}
+                        ratingChange={whiteRatingChange}
                         isActive={game.status === 'active'}
                         isMyTurn={clock.turn === 'white' && game.status === 'active' && myColor === 'white'}
                       />
@@ -1412,7 +1503,7 @@ export default function GameView() {
                         letterSpacing: '0.5px',
                       }}
                     >
-                      {formatTime(clock.white_time_left, (clock.white_time_left ?? 0) < 10)}
+                      {formatTime(clock?.white_time_left ?? 0, (clock?.white_time_left ?? 0) < 10)}
                     </div>
                   </div>
                 </div>
@@ -1444,6 +1535,7 @@ export default function GameView() {
                         user={game.black} 
                         mode={game.mode} 
                         rating={blackRating ?? undefined}
+                        ratingChange={blackRatingChange}
                         isActive={game.status === 'active'}
                         isMyTurn={clock.turn === 'black' && game.status === 'active' && myColor === 'black'}
                       />
@@ -1460,7 +1552,7 @@ export default function GameView() {
                         letterSpacing: '0.5px',
                       }}
                     >
-                      {formatTime(clock.black_time_left, (clock.black_time_left ?? 0) < 10)}
+                      {formatTime(clock?.black_time_left ?? 0, (clock?.black_time_left ?? 0) < 10)}
                     </div>
                   </div>
           </div>
@@ -1671,7 +1763,29 @@ export default function GameView() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
                   <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', fontWeight: 500 }}>Offer draw?</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-warning" type="button" onClick={() => { setDrawConfirm(false); doAction(() => offerDraw(id!), 'Draw offer sent'); }} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }}>
+                    <button className="btn btn-warning" type="button" onClick={() => { 
+                      setDrawConfirm(false); 
+                      offerDraw(id!)
+                        .then(() => {
+                          setActionMsg('Draw offer sent');
+                          // Update game state to reflect draw offer without replacing entire game
+                          if (game && me) {
+                            setGame({ ...game, draw_offer_by: me.id });
+                          }
+                          // Refresh game to get updated state from server
+                          fetchGameDetail(id!)
+                            .then((data) => {
+                              setGame(data);
+                            })
+                            .catch(() => {
+                              // Fallback: just update draw_offer_by locally
+                              if (game && me) {
+                                setGame({ ...game, draw_offer_by: me.id });
+                              }
+                            });
+                        })
+                        .catch((err) => setActionErr(err.response?.data?.detail || 'Failed to send draw offer'));
+                    }} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }}>
                       Yes
                     </button>
                     <button className="btn btn-info" type="button" onClick={() => setDrawConfirm(false)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }}>
@@ -1679,27 +1793,91 @@ export default function GameView() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <>
-                  {game.draw_offer_by && game.draw_offer_by !== me?.id && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                      <button className="btn btn-success" type="button" onClick={() => doAction(() => respondDraw(id!, 'accept'), 'Draw accepted')} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Accept draw">
-                        ✓ Accept Draw
-                      </button>
-                      <button className="btn btn-danger" type="button" onClick={() => doAction(() => respondDraw(id!, 'decline'), 'Draw declined')} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Decline draw">
-                        ✗ Decline
-                      </button>
-            </div>
-                  )}
+              ) : game.draw_offer_by && game.draw_offer_by === me?.id ? (
+                // User sent draw offer - show "Draw offer sent" message
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 8, 
+                  width: '100%',
+                  padding: '12px',
+                  background: 'rgba(255, 152, 0, 0.1)',
+                  border: '1px solid rgba(255, 152, 0, 0.3)',
+                  borderRadius: 8,
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: 13, color: '#ff9800', fontWeight: 600 }}>
+                    ✓ Draw offer sent
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                    Waiting for opponent's response...
+                  </div>
+                  <button className="btn btn-info" type="button" onClick={() => setResignConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600 }} title="Resign">
+                    🏳 Resign
+                  </button>
+                </div>
+              ) : game.draw_offer_by && game.draw_offer_by !== me?.id ? (
+                // User received draw offer - show Accept/Reject buttons
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                  <div style={{ 
+                    fontSize: 13, 
+                    color: '#ff9800', 
+                    fontWeight: 600, 
+                    textAlign: 'center',
+                    padding: '8px',
+                    background: 'rgba(255, 152, 0, 0.1)',
+                    border: '1px solid rgba(255, 152, 0, 0.3)',
+                    borderRadius: 6
+                  }}>
+                    Draw offer received
+                  </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-warning" type="button" onClick={() => setDrawConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Offer draw">
-                      ½ Draw
+                    <button 
+                      className="btn btn-success" 
+                      type="button" 
+                      onClick={() => {
+                        respondDraw(id!, 'accept')
+                          .then((res) => {
+                            setActionMsg('Draw accepted');
+                            if (res) setGame(res);
+                            // Game will end in draw, WebSocket will handle the game_finished event
+                          })
+                          .catch((err) => setActionErr(err.response?.data?.detail || 'Failed to accept draw'));
+                      }} 
+                      style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} 
+                      title="Accept draw"
+                    >
+                      ✓ Accept Draw
                     </button>
-                    <button className="btn btn-danger" type="button" onClick={() => setResignConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Resign">
-                      🏳 Resign
+                    <button 
+                      className="btn btn-danger" 
+                      type="button" 
+                      onClick={() => {
+                        respondDraw(id!, 'decline')
+                          .then((res) => {
+                            setActionMsg('Draw declined');
+                            if (res) setGame(res);
+                            // After decline, draw_offer_by should be cleared, showing normal buttons
+                          })
+                          .catch((err) => setActionErr(err.response?.data?.detail || 'Failed to decline draw'));
+                      }} 
+                      style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} 
+                      title="Decline draw"
+                    >
+                      ✗ Decline
                     </button>
-              </div>
-                </>
+                  </div>
+                </div>
+              ) : (
+                // Normal state - show Draw and Resign buttons
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-warning" type="button" onClick={() => setDrawConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Offer draw">
+                    ½ Draw
+                  </button>
+                  <button className="btn btn-danger" type="button" onClick={() => setResignConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Resign">
+                    🏳 Resign
+                  </button>
+                </div>
             )}
             </div>
           )}

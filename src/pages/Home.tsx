@@ -345,12 +345,33 @@ export default function Home() {
 
       <div className="grid-2" style={{ flex: '1 1 auto', minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>👥</span>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: 16, 
+            flexShrink: 0,
+            gap: 12,
+            flexWrap: 'wrap'
+          }}>
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: 18, 
+              fontWeight: 700, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 10,
+              color: 'var(--text)'
+            }}>
+              <span style={{ fontSize: 20 }}>👥</span>
               <span>Online Players</span>
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 10,
+              flexWrap: 'wrap'
+            }}>
               <div style={{ position: 'relative' }} data-bots-dropdown>
                 <button
                   onClick={() => setShowBotsDropdown(!showBotsDropdown)}
@@ -367,7 +388,8 @@ export default function Home() {
                     borderRadius: 10,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(155, 89, 182, 0.3)'
+                    boxShadow: '0 4px 12px rgba(155, 89, 182, 0.3)',
+                    whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'linear-gradient(135deg, #ba68c8, #9b59b6)';
@@ -380,37 +402,101 @@ export default function Home() {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  <span>🤖</span>
+                  <span style={{ fontSize: 16 }}>🤖</span>
                   <span>Play with Bots</span>
-                  <span style={{ fontSize: 10 }}>{showBotsDropdown ? '▲' : '▼'}</span>
+                  <span style={{ fontSize: 10, marginLeft: 2 }}>{showBotsDropdown ? '▲' : '▼'}</span>
                 </button>
                 {showBotsDropdown && (
                   <div style={{
                     position: 'absolute',
                     top: '100%',
-                    right: 0,
-                    marginTop: 8,
-                    background: 'var(--bg)',
+                    left: 0,
+                    marginTop: 10,
+                    background: 'linear-gradient(160deg, rgba(22, 32, 54, 0.98), rgba(12, 18, 32, 0.98))',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
                     border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                    borderRadius: 14,
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(155, 89, 182, 0.1)',
                     zIndex: 1000,
                     minWidth: 320,
-                    maxWidth: 400,
+                    maxWidth: 'min(400px, calc(100vw - 48px))',
                     maxHeight: '70vh',
                     overflowY: 'auto',
-                    padding: 12
-                  }}>
+                    overflowX: 'hidden',
+                    padding: 16,
+                    animation: 'fadeIn 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                  className="bots-dropdown-scroll"
+                  ref={(el) => {
+                    if (el && el.parentElement) {
+                      // Get button and dropdown positions
+                      const buttonRect = el.parentElement.getBoundingClientRect();
+                      const dropdownWidth = el.offsetWidth || 320;
+                      const viewportWidth = window.innerWidth;
+                      
+                      // Calculate if dropdown would overflow on the right
+                      const rightEdge = buttonRect.left + dropdownWidth;
+                      if (rightEdge > viewportWidth - 24) {
+                        // Align to right edge of button, but ensure it doesn't go off screen
+                        el.style.left = 'auto';
+                        el.style.right = '0';
+                        // If still too wide, adjust max width
+                        if (buttonRect.right > viewportWidth - 24) {
+                          el.style.maxWidth = `${viewportWidth - buttonRect.right - 24}px`;
+                        }
+                      } else {
+                        // Default: align to left edge of button
+                        el.style.left = '0';
+                        el.style.right = 'auto';
+                      }
+                    }
+                  }}
+                  >
+                    <style>{`
+                      @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(-8px); }
+                        to { opacity: 1; transform: translateY(0); }
+                      }
+                    `}</style>
+                    <style>{`
+                      /* Custom scrollbar for bot dropdown - scoped to this dropdown */
+                      .bots-dropdown-scroll::-webkit-scrollbar {
+                        width: 8px;
+                      }
+                      .bots-dropdown-scroll::-webkit-scrollbar-track {
+                        background: rgba(26, 34, 51, 0.5);
+                        border-radius: 4px;
+                        margin: 4px 0;
+                      }
+                      .bots-dropdown-scroll::-webkit-scrollbar-thumb {
+                        background: rgba(155, 89, 182, 0.5);
+                        border-radius: 4px;
+                        border: 1px solid rgba(155, 89, 182, 0.2);
+                      }
+                      .bots-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+                        background: rgba(155, 89, 182, 0.7);
+                      }
+                      /* Firefox scrollbar */
+                      .bots-dropdown-scroll {
+                        scrollbar-width: thin;
+                        scrollbar-color: rgba(155, 89, 182, 0.5) rgba(26, 34, 51, 0.5);
+                      }
+                    `}</style>
                     <div style={{ 
-                      fontSize: 14, 
+                      fontSize: 15, 
                       fontWeight: 700, 
-                      marginBottom: 12, 
+                      marginBottom: 16, 
                       color: 'var(--text)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8
+                      gap: 10,
+                      paddingBottom: 12,
+                      borderBottom: '1px solid var(--border)'
                     }}>
-                      <span>🤖</span>
+                      <span style={{ fontSize: 18 }}>🤖</span>
                       <span>Select a Bot to Play</span>
                     </div>
                     {botsLoading ? (
@@ -422,7 +508,11 @@ export default function Home() {
                         No bots available
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: 8
+                      }}>
                         {bots.map((bot) => (
                           <button
                             key={bot.id}
@@ -431,24 +521,26 @@ export default function Home() {
                               display: 'flex',
                               alignItems: 'center',
                               gap: 12,
-                              padding: '12px 16px',
-                              background: 'transparent',
+                              padding: '14px 16px',
+                              background: 'rgba(44, 230, 194, 0.03)',
                               border: '1px solid var(--border)',
-                              borderRadius: 8,
+                              borderRadius: 10,
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
                               textAlign: 'left',
                               width: '100%'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(44, 230, 194, 0.1)';
-                              e.currentTarget.style.borderColor = 'var(--accent)';
-                              e.currentTarget.style.transform = 'translateX(-2px)';
+                              e.currentTarget.style.background = 'rgba(155, 89, 182, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(155, 89, 182, 0.4)';
+                              e.currentTarget.style.transform = 'translateX(-3px)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(155, 89, 182, 0.2)';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.background = 'rgba(44, 230, 194, 0.03)';
                               e.currentTarget.style.borderColor = 'var(--border)';
                               e.currentTarget.style.transform = 'translateX(0)';
+                              e.currentTarget.style.boxShadow = 'none';
                             }}
                           >
                             <div style={{
@@ -458,11 +550,19 @@ export default function Home() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              background: 'rgba(44, 230, 194, 0.1)',
+                              background: (bot.first_name === 'DIGI' || bot.username === 'DIGI') 
+                                ? 'transparent' 
+                                : 'rgba(44, 230, 194, 0.1)',
                               borderRadius: 8,
-                              flexShrink: 0
+                              flexShrink: 0,
+                              overflow: 'hidden',
+                              backgroundImage: (bot.first_name === 'DIGI' || bot.username === 'DIGI') 
+                                ? 'url(/DIGIBOT.jpg)' 
+                                : undefined,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center'
                             }}>
-                              {bot.bot_avatar || '🤖'}
+                              {(bot.first_name !== 'DIGI' && bot.username !== 'DIGI') && (bot.bot_avatar || '🤖')}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ 
@@ -499,41 +599,105 @@ export default function Home() {
               </div>
               <a 
                 href="/players" 
-                className="btn btn-info"
                 style={{ 
                   fontSize: 13, 
-                  padding: '8px 16px',
+                  padding: '10px 18px',
                   fontWeight: 600,
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 6
+                  gap: 8,
+                  background: 'linear-gradient(135deg, #4a90e2, #357abd)',
+                  color: '#ffffff',
+                  border: '1px solid #5ba0f2',
+                  borderRadius: 10,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #5ba0f2, #4a90e2)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(74, 144, 226, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #4a90e2, #357abd)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                View all →
+                <span>View all</span>
+                <span style={{ fontSize: 12 }}>→</span>
               </a>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
             {online.slice(0, 4).map((u) => (
-              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 8, padding: 6 }}>
+              <div 
+                key={u.id} 
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  background: 'rgba(44, 230, 194, 0.03)',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.3)';
+                  e.currentTarget.style.transform = 'translateX(2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.03)';
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.transform = 'translateX(0)';
+                }}
+                onClick={() => window.location.href = `/profile/${u.username}`}
+              >
                 <IdentityStrip user={u as any} />
-                <span style={{ color: 'var(--accent)', fontSize: 11 }}>Online</span>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 6,
+                  padding: '4px 10px',
+                  background: 'rgba(44, 230, 194, 0.15)',
+                  borderRadius: 6,
+                  border: '1px solid rgba(44, 230, 194, 0.3)'
+                }}>
+                  <span style={{ 
+                    width: 8, 
+                    height: 8, 
+                    borderRadius: '50%', 
+                    background: 'var(--accent)',
+                    boxShadow: '0 0 8px rgba(44, 230, 194, 0.6)'
+                  }}></span>
+                  <span style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 600 }}>Online</span>
+                </div>
               </div>
             ))}
             {online.length === 0 && (
               <div style={{ 
                 color: 'var(--muted)', 
-                fontSize: 13, 
+                fontSize: 14, 
                 textAlign: 'center',
-                padding: 24,
+                padding: '40px 24px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 8
+                gap: 12,
+                background: 'rgba(44, 230, 194, 0.02)',
+                borderRadius: 12,
+                border: '1px dashed var(--border)'
               }}>
-                <span style={{ fontSize: 32 }}>🌙</span>
-                <span>No one online right now</span>
+                <span style={{ fontSize: 48, filter: 'drop-shadow(0 0 10px rgba(255, 235, 59, 0.3))' }}>🌙</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>No one online right now</span>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Check back later or invite friends to play!</span>
+                </div>
               </div>
             )}
           </div>
