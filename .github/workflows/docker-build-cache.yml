@@ -21,10 +21,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build backend image (cache only)
-        working-directory: digichess-backend
         uses: docker/build-push-action@v5
         with:
-          context: digichess-backend
+          context: ./digichess-backend
+          file: ./digichess-backend/Dockerfile
           push: false
           tags: digichess-backend:cache
           cache-from: type=gha
