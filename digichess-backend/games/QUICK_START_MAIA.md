@@ -94,3 +94,4 @@ MAIA_MODELS_DIR = "/path/to/maia_models"  # Optional, default is games/maia_mode
 - Timeout is set to 1 second by default
 
 
+

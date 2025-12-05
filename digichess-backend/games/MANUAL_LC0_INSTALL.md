@@ -79,3 +79,4 @@ sudo cp lc0 /usr/local/bin/
 **The system will work WITHOUT lc0** - it will automatically use Stockfish for all bots. Installing lc0 enables Maia (human-like play) for bots rated 800-1900.
 
 
+

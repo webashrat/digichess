@@ -74,7 +74,11 @@ COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create directories for media, static files, and Maia models
-RUN mkdir -p /app/media /app/static /app/games/maia_models
+RUN mkdir -p /app/media /app/static /app/games/maia_models /app/media/bots
+
+# Copy bot profile pictures
+COPY DIGIBOT.jpg /app/media/bots/digibot.jpg
+RUN chmod 644 /app/media/bots/digibot.jpg
 
 # Set environment variables for chess engines
 ENV STOCKFISH_PATH=/usr/local/bin/stockfish

@@ -66,3 +66,4 @@ python manage.py test_maia
 ⏳ **lc0 engine**: Optional - system works without it  
 
 
+

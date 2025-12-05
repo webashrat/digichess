@@ -91,6 +91,10 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput || echo "Warning: Static files collection failed (this is ok for development)"
 
+# Create/update bots (DIGI, JDR, RAJ)
+echo "Creating/updating bots..."
+python manage.py create_bots || echo "Warning: Bot creation failed (this is ok if bots already exist)"
+
 # Execute the command passed to the container
 exec "$@"
 
