@@ -5,11 +5,18 @@ Uses Stockfish binary from the repo, compiles if needed
 import os
 import platform
 import subprocess
+import tempfile
+import urllib.request
+import zipfile
+import shutil
 from pathlib import Path
 from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Lock file path for preventing concurrent Stockfish installations
+LOCK_FILE = "/tmp/stockfish_install.lock"
 
 
 def get_stockfish_path() -> str:
