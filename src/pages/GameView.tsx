@@ -569,21 +569,35 @@ export default function GameView() {
       })
       .catch(() => {});
 
-    // WebSocket live updates
-    try {
-      // Get token from localStorage for authentication
-      const token = localStorage.getItem('token');
-      const wsUrl = token 
-        ? makeWsUrl(`/ws/game/${id}/?token=${encodeURIComponent(token)}`)
-        : makeWsUrl(`/ws/game/${id}/`);
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-      ws.onopen = () => {
-        console.log('[GameView] Game WebSocket connected for game', id);
-      };
-      ws.onerror = (error) => {
-        console.error('[GameView] Game WebSocket error:', error);
-      };
+    // WebSocket live updates with automatic reconnection (exponential backoff like Lichess)
+    let reconnectAttempts = 0;
+    let reconnectTimeout: number | null = null;
+    const maxReconnectDelay = 30000; // Max 30 seconds
+    const initialReconnectDelay = 1000; // Start with 1 second
+    
+    const connectWebSocket = () => {
+      try {
+        // Get token from localStorage for authentication
+        const token = localStorage.getItem('token');
+        const wsUrl = token 
+          ? makeWsUrl(`/ws/game/${id}/?token=${encodeURIComponent(token)}`)
+          : makeWsUrl(`/ws/game/${id}/`);
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+        
+        ws.onopen = () => {
+          console.log('[GameView] Game WebSocket connected for game', id);
+          reconnectAttempts = 0; // Reset on successful connection
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('[GameView] Game WebSocket error:', error);
+        };
+        
         ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -897,22 +911,51 @@ export default function GameView() {
         }
       };
         
-      // Initial connection
-      connectWebSocket();
-      
-      // Cleanup function
-      return () => {
-        if (reconnectTimeout) {
-          clearTimeout(reconnectTimeout);
-        }
-        if (wsRef.current) {
-          wsRef.current.close(1000, 'Component unmounting'); // Clean close
-        }
-      };
-    } catch (err) {
-      console.error('Failed to setup game WebSocket:', err);
-      wsRef.current = null;
-    }
+        ws.onclose = (event) => {
+          console.log('[GameView] Game WebSocket closed', event.code, event.reason);
+          wsRef.current = null;
+          
+          // Only reconnect if it wasn't a clean close or intentional disconnect
+          if (event.code !== 1000 && event.code !== 1001) {
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+            const delay = Math.min(
+              initialReconnectDelay * Math.pow(2, reconnectAttempts),
+              maxReconnectDelay
+            );
+            reconnectAttempts++;
+            
+            console.log(`[GameView] Reconnecting WebSocket in ${delay}ms (attempt ${reconnectAttempts})`);
+            reconnectTimeout = window.setTimeout(() => {
+              connectWebSocket();
+            }, delay);
+          }
+        };
+      } catch (err) {
+        console.error('[GameView] Failed to create WebSocket:', err);
+        // Retry after delay
+        const delay = Math.min(
+          initialReconnectDelay * Math.pow(2, reconnectAttempts),
+          maxReconnectDelay
+        );
+        reconnectAttempts++;
+        reconnectTimeout = window.setTimeout(() => {
+          connectWebSocket();
+        }, delay);
+      }
+    };
+    
+    // Initial connection
+    connectWebSocket();
+    
+    // Cleanup function
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Component unmounting'); // Clean close
+      }
+    };
 
     return () => {
       wsRef.current?.close();
