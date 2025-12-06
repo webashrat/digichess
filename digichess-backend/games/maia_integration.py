@@ -1,7 +1,7 @@
 """
 Maia Chess integration for human-like bot moves
-Uses Maia neural network models for ratings 800-1900
-Falls back to Stockfish for ratings 1900-2500
+Uses Maia neural network models for ratings 800-2400
+Stockfish has been removed - it was too fast for DB and played poorly.
 """
 import chess
 import chess.engine
@@ -44,26 +44,35 @@ MAIA_DOWNLOAD_URLS = {
 def get_maia_model_path(rating: int) -> Optional[Path]:
     """
     Get the path to the Maia model file for a given rating.
-    Maps bot rating to the closest available Maia model.
+    Maps bot rating ranges to specific Maia models:
+    - 800-1100 → maia-1100
+    - 1101-1300 → maia-1200
+    - 1301-1400 → maia-1300
+    - 1401-1500 → maia-1400
+    - 1501-1600 → maia-1500
+    - 1601-1700 → maia-1600
+    - 1701-1800 → maia-1700
+    - 1801-1900 → maia-1800
+    - 1901-2400 → maia-1900
     """
-    # Map rating to closest Maia model
-    if rating < 1050:
+    # Map rating ranges to specific Maia models
+    if rating <= 1100:
         model_rating = 1100
-    elif rating < 1250:
+    elif rating <= 1300:
         model_rating = 1200
-    elif rating < 1350:
+    elif rating <= 1400:
         model_rating = 1300
-    elif rating < 1450:
+    elif rating <= 1500:
         model_rating = 1400
-    elif rating < 1550:
+    elif rating <= 1600:
         model_rating = 1500
-    elif rating < 1650:
+    elif rating <= 1700:
         model_rating = 1600
-    elif rating < 1750:
+    elif rating <= 1800:
         model_rating = 1700
-    elif rating < 1850:
+    elif rating <= 1900:
         model_rating = 1800
-    else:
+    else:  # 1901-2400
         model_rating = 1900
     
     # Get model directory from settings or use default
@@ -180,7 +189,7 @@ def get_maia_move(board: chess.Board, bot_rating: int) -> Optional[chess.Move]:
 def should_use_maia(bot_rating: int) -> bool:
     """
     Determine if we should use Maia for this rating.
-    Use Maia for ratings 800-1900, Stockfish for 1900-2500.
+    Use Maia for ratings 800-2400 (extended range, no Stockfish).
     """
-    return 800 <= bot_rating <= 1900
+    return 800 <= bot_rating <= 2400
 

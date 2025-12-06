@@ -749,22 +749,34 @@ class GameAnalysisView(APIView):
 
         engine_info = None
         engine_path = getattr(settings, "STOCKFISH_PATH", os.getenv("STOCKFISH_PATH"))
-        if engine_path and Path(engine_path).exists():
+        if not engine_path:
+            engine_info = {"error": "STOCKFISH_PATH not configured. Set it in settings or environment variables."}
+        elif not Path(engine_path).exists():
+            engine_info = {"error": f"Stockfish not found at path: {engine_path}"}
+        elif not os.access(engine_path, os.X_OK):
+            engine_info = {"error": f"Stockfish found at {engine_path} but is not executable. Run: chmod +x {engine_path}"}
+        else:
             try:
                 with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
                     limit = chess.engine.Limit(time=0.5)
                     result = engine.analyse(board, limit)
-                    score = result.get("score")
-                    pv = result.get("pv", [])
-                    engine_info = {
-                        "best_move": board.san(pv[0]) if pv else None,
-                        "score": score.pov(board.turn).score(mate_score=100000) if score else None,
-                        "mate": score.pov(board.turn).mate() if score else None,
-                    }
+                    if result:
+                        score = result.get("score")
+                        pv = result.get("pv", [])
+                        engine_info = {
+                            "best_move": board.san(pv[0]) if pv else None,
+                            "score": score.pov(board.turn).score(mate_score=100000) if score else None,
+                            "mate": score.pov(board.turn).mate() if score else None,
+                            "depth": result.get("depth", 0),
+                        }
+                    else:
+                        engine_info = {"error": "Stockfish returned no analysis result"}
             except Exception as exc:
-                engine_info = {"error": str(exc)}
-        else:
-            engine_info = {"error": "Stockfish not configured (set STOCKFISH_PATH)."}
+                engine_info = {
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                    "engine_path": engine_path
+                }
 
         return Response(
             {

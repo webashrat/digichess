@@ -1,8 +1,7 @@
 """
 Bot utilities for generating moves with different skill levels
-Hybrid approach:
-- Maia Chess (human-like neural network) for ratings 800-1900
-- Stockfish (traditional engine) for ratings 1900-2500
+Uses Maia Chess (human-like neural network) for all ratings 800-2400.
+Stockfish has been removed - it was too fast for DB and played poorly.
 """
 import chess
 import chess.engine
@@ -104,53 +103,35 @@ def get_stockfish_config(bot_rating: int):
 def get_bot_move(board: chess.Board, bot_rating: int) -> chess.Move:
     """
     Get a move from a bot with a given rating.
-    Hybrid approach:
-    - Uses Maia Chess (human-like) for ratings 800-1900
-    - Uses Stockfish (traditional) for ratings 1900-2500
+    Uses Maia Chess (human-like neural network) for all ratings 800-2400.
+    Stockfish has been removed - it was too fast for DB and played poorly.
+    
+    Rating ranges map to Maia models:
+    - 800-1100 → maia-1100
+    - 1101-1300 → maia-1200
+    - 1301-1400 → maia-1300
+    - 1401-1500 → maia-1400
+    - 1501-1600 → maia-1500
+    - 1601-1700 → maia-1600
+    - 1701-1800 → maia-1700
+    - 1801-1900 → maia-1800
+    - 1901-2400 → maia-1900
     """
-    # Try Maia first for lower ratings (more human-like)
-    if MAIA_AVAILABLE and should_use_maia(bot_rating):
-        maia_move = get_maia_move(board, bot_rating)
-        if maia_move:
-            return maia_move
-        # Fall through to Stockfish if Maia fails
+    # Use Maia for all ratings 800-2400
+    if not MAIA_AVAILABLE:
+        raise RuntimeError("Maia is not available. Please ensure lc0 and Maia models are configured.")
     
-    # Use Stockfish for higher ratings or as fallback
-    engine_path = getattr(settings, "STOCKFISH_PATH", os.getenv("STOCKFISH_PATH"))
+    if not should_use_maia(bot_rating):
+        raise ValueError(f"Bot rating {bot_rating} is outside Maia range (800-2400)")
     
-    if not engine_path or not Path(engine_path).exists():
-        # Fallback: random legal move if Stockfish not available
-        legal_moves = list(board.legal_moves)
-        if not legal_moves:
-            raise ValueError("No legal moves available")
-        return random.choice(legal_moves)
+    maia_move = get_maia_move(board, bot_rating)
+    if not maia_move:
+        raise RuntimeError(
+            f"Failed to get Maia move for rating {bot_rating}. "
+            "Please check that lc0 is installed and Maia models are available."
+        )
     
-    try:
-        with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-            config = get_stockfish_config(bot_rating)
-            
-            # For ratings 2000+, use Elo-based strength limiting for accurate rating
-            if config.get('use_elo_limit', False):
-                # Enable Elo-based strength limiting
-                engine.configure({
-                    "UCI_LimitStrength": True,
-                    "UCI_Elo": config['elo']
-                })
-            else:
-                # For lower ratings, use Skill Level
-                engine.configure({"Skill Level": config['skill']})
-            
-            # Get best move with depth and time limits
-            limit = chess.engine.Limit(depth=config['depth'], time=config['time'])
-            result = engine.play(board, limit)
-            
-            return result.move
-    except Exception as e:
-        # Fallback to random move if engine fails
-        legal_moves = list(board.legal_moves)
-        if not legal_moves:
-            raise ValueError("No legal moves available")
-        return random.choice(legal_moves)
+    return maia_move
 
 
 def get_bot_move_with_error(board: chess.Board, bot_rating: int) -> chess.Move:

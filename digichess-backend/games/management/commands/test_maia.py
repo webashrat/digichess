@@ -49,7 +49,8 @@ class Command(BaseCommand):
             self.stdout.write("\nTesting move generation...")
             board = chess.Board()
             
-            test_ratings = [1100, 1500, 1900]
+            # Test ratings across the full Maia range (800-2400)
+            test_ratings = [1100, 1500, 1900, 2200, 2400]
             for rating in test_ratings:
                 if should_use_maia(rating):
                     self.stdout.write(f"\nTesting Maia for rating {rating}...")
@@ -64,7 +65,7 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(
                                 self.style.WARNING(
-                                    f"✗ Failed to generate move (will fallback to Stockfish)"
+                                    f"✗ Failed to generate move (will use random fallback)"
                                 )
                             )
                     except Exception as e:
@@ -74,12 +75,13 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Rating {rating} uses Stockfish (not Maia range)"
+                            f"Rating {rating} is outside Maia range (800-2400)"
                         )
                     )
         
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write("Test complete!")
+
 
 
 
