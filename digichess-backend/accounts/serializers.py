@@ -185,7 +185,12 @@ class VerifyOTPSerializer(serializers.Serializer):
 
         otp.mark_verified()
         user.is_active = True
-        user.save(update_fields=["is_active"])
+        # Update last_login (Django's built-in field) and online status
+        from django.utils import timezone
+        user.last_login = timezone.now()
+        user.is_online = True
+        user.last_seen_at = timezone.now()
+        user.save(update_fields=["is_active", "last_login", "is_online", "last_seen_at"])
 
         token, _ = Token.objects.get_or_create(user=user)
         return {"user": user, "token": token.key}
@@ -230,6 +235,12 @@ class LoginSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         user = validated_data["user"]
+        # Update last_login (Django's built-in field)
+        from django.utils import timezone
+        user.last_login = timezone.now()
+        user.is_online = True
+        user.last_seen_at = timezone.now()
+        user.save(update_fields=["last_login", "is_online", "last_seen_at"])
         token, _ = Token.objects.get_or_create(user=user)
         return {"user": user, "token": token.key}
 

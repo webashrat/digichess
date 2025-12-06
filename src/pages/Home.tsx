@@ -67,6 +67,20 @@ export default function Home() {
     
     // Load bots
     loadBots();
+    
+    // Setup presence ping - ping every 60 seconds to keep user online
+    const pingInterval = setInterval(() => {
+      if (localStorage.getItem('token')) {
+        api.post('/api/accounts/ping/').catch(() => {});
+      }
+    }, 60000); // Ping every 60 seconds
+    
+    // Ping immediately on mount
+    if (localStorage.getItem('token')) {
+      api.post('/api/accounts/ping/').catch(() => {});
+    }
+    
+    return () => clearInterval(pingInterval);
   }, [mode]);
   
   const loadBots = async () => {

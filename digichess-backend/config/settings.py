@@ -147,6 +147,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.broadcast_clock_updates",
         "schedule": 1.0,
     },
+    "check-game-timeouts": {
+        "task": "games.tasks.check_game_timeouts",
+        "schedule": 5.0,  # Every 5 seconds - check for game timeouts (continues clock when user disconnects)
+    },
+    "flush-game-proxies": {
+        "task": "games.tasks.flush_dirty_games",
+        "schedule": 30.0,  # Every 30 seconds
+    },
     "arena_pairings": {
         "task": "games.tasks.arena_pairing_tick",
         "schedule": 15.0,

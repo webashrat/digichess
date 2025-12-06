@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '../api/client';
 import NotificationBell from './NotificationBell';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
+import { pingPresence } from '../api/account';
 
 const links = [
   { to: '/', label: 'Home', icon: '🏠' },
@@ -38,6 +39,14 @@ export default function NavBar() {
       .get('/api/accounts/me/')
       .then((r) => setMe({ username: r.data.username, profile_pic: r.data.profile_pic }))
       .catch(() => setMe(null));
+    
+    // Setup presence ping - ping every 60 seconds to keep user online
+    pingPresence().catch(() => {}); // Ping immediately
+    const pingInterval = setInterval(() => {
+      pingPresence().catch(() => {});
+    }, 60000); // Ping every 60 seconds
+    
+    return () => clearInterval(pingInterval);
   }, [authed]);
 
   const logout = () => {

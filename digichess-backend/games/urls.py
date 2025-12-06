@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AcceptGameView,
+    AbortGameView,
     FinishGameView,
     GameAnalysisView,
     GameDetailView,
@@ -59,6 +60,7 @@ urlpatterns = [
     path("<int:pk>/offer-draw/", GameDrawOfferView.as_view(), name="game-offer-draw"),
     path("<int:pk>/respond-draw/", GameDrawRespondView.as_view(), name="game-respond-draw"),
     path("<int:pk>/resign/", GameResignView.as_view(), name="game-resign"),
+    path("<int:pk>/abort/", AbortGameView.as_view(), name="game-abort"),
     path("<int:pk>/claim-draw/", GameClaimDrawView.as_view(), name="game-claim-draw"),
     path("<int:pk>/accept/", AcceptGameView.as_view(), name="game-accept"),
     path("<int:pk>/reject/", RejectGameView.as_view(), name="game-reject"),

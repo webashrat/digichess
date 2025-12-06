@@ -18,6 +18,33 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
+    def cleanup_test_data(self):
+        """Clean up existing test users and games from previous test runs"""
+        self.stdout.write('Cleaning up existing test data...')
+        
+        # Delete test games first (to avoid foreign key constraints)
+        test_usernames = [
+            'perf_test_1', 'perf_test_2',
+            'qtest_0', 'qtest_1', 'qtest_2', 'qtest_3', 'qtest_4',
+            'qtest_5', 'qtest_6', 'qtest_7', 'qtest_8', 'qtest_9',
+            'bwtest1', 'bwtest2',
+            'flow1', 'flow2',
+            'move_test_1', 'move_test_2'
+        ]
+        
+        # Also delete the test game with fixed ID
+        Game.objects.filter(id=999999).delete()
+        
+        # Delete games created by test users
+        test_users = User.objects.filter(username__in=test_usernames)
+        Game.objects.filter(creator__in=test_users).delete()
+        
+        # Delete test users
+        deleted_count = test_users.delete()[0]
+        if deleted_count > 0:
+            self.stdout.write(f'  Deleted {deleted_count} test users')
+        
+        self.stdout.write('  Cleanup complete\n')
     help = 'Test backend performance optimizations'
 
     def add_arguments(self, parser):
@@ -32,6 +59,9 @@ class Command(BaseCommand):
         iterations = options['iterations']
         
         self.stdout.write(self.style.SUCCESS('\n=== DigiChess Performance Test ===\n'))
+        
+        # Clean up existing test data
+        self.cleanup_test_data()
         
         # Clear cache
         cache.clear()
@@ -96,6 +126,22 @@ class Command(BaseCommand):
         """Test move processing speed"""
         self.stdout.write(f'\n[Test 2] Move Processing Speed ({iterations} iterations)...')
         
+        # Create a dummy game for testing
+        user1, _ = User.objects.get_or_create(username='move_test_1', defaults={'email': 'mt1@test.com', 'password': 'test'})
+        user2, _ = User.objects.get_or_create(username='move_test_2', defaults={'email': 'mt2@test.com', 'password': 'test'})
+        game, _ = Game.objects.get_or_create(
+            id=999999,  # Use a fixed ID to avoid duplicates
+            defaults={
+                'creator': user1,
+                'white': user1,
+                'black': user2,
+                'time_control': Game.TIME_BLITZ,
+                'white_time_left': 300,
+                'black_time_left': 300,
+                'current_fen': chess.STARTING_FEN
+            }
+        )
+        
         board = chess.Board()
         test_moves = ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6']
         
@@ -106,7 +152,7 @@ class Command(BaseCommand):
             board = chess.Board()  # Reset board
             for move_str in test_moves:
                 start = time.perf_counter()
-                success, error, move, data = process_move_optimized(None, move_str, board)
+                success, error, move, data = process_move_optimized(game, move_str, board)
                 elapsed = (time.perf_counter() - start) * 1000
                 total_time += elapsed
                 total_moves += 1
@@ -216,6 +262,7 @@ class Command(BaseCommand):
         # With batching (GameProxy)
         reset_queries()
         start = time.perf_counter()
+        game_proxy = GameProxy(game.id)
         for i in range(iterations):
             game.moves = f"test {i}"
             GameProxy.update_game(game, immediate_flush=False)
@@ -271,6 +318,7 @@ class Command(BaseCommand):
                 
                 # Use GameProxy (batched, except last move)
                 immediate = (i == len(moves) - 1)
+                game.save(update_fields=['moves', 'current_fen'])
                 GameProxy.update_game(game, immediate_flush=immediate)
         
         # Final flush

@@ -14,8 +14,6 @@ from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
 from .move_optimizer import process_move_optimized, latency_monitor
-from .game_proxy import GameProxy
-from .move_optimizer import process_move_optimized, latency_monitor
 
 User = get_user_model()
 
@@ -114,3 +112,81 @@ def swiss_pairings(tournament_id: int):
 def flush_dirty_games():
     """Flush all dirty games to database (Lichess-style batched writes)"""
     GameProxy.flush_all_dirty()
+
+
+@shared_task
+def check_game_timeouts():
+    """
+    Periodically check active games for timeouts.
+    This ensures games end when time runs out even if users disconnect.
+    Runs every 5 seconds via Celery Beat.
+    """
+    from django.utils import timezone
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    from .serializers import GameSerializer
+    import chess
+    
+    active_games = Game.objects.filter(status=Game.STATUS_ACTIVE)
+    now = timezone.now()
+    channel_layer = get_channel_layer()
+    
+    for game in active_games:
+        if not game.last_move_at:
+            continue
+        
+        elapsed = (now - game.last_move_at).total_seconds()
+        
+        try:
+            board = chess.Board(game.current_fen or chess.STARTING_FEN)
+            is_white_turn = board.turn == chess.WHITE
+        except Exception:
+            is_white_turn = True
+        
+        # Check timeout for current player
+        if is_white_turn:
+            time_left = game.white_time_left - int(elapsed)
+            if time_left <= 0:
+                # White timeout
+                game.finish(Game.RESULT_BLACK)
+                game.refresh_from_db()
+                if game.rated:
+                    FinishGameView().update_ratings(game, Game.RESULT_BLACK)
+                if channel_layer:
+                    game_data = GameSerializer(game).data
+                    async_to_sync(channel_layer.group_send)(
+                        f"game_{game.id}",
+                        {
+                            "type": "game.event",
+                            "payload": {
+                                "type": "game_finished",
+                                "game_id": game.id,
+                                "result": Game.RESULT_BLACK,
+                                "reason": "timeout",
+                                "game": game_data,
+                            },
+                        },
+                    )
+        else:
+            time_left = game.black_time_left - int(elapsed)
+            if time_left <= 0:
+                # Black timeout
+                game.finish(Game.RESULT_WHITE)
+                game.refresh_from_db()
+                if game.rated:
+                    FinishGameView().update_ratings(game, Game.RESULT_WHITE)
+                if channel_layer:
+                    game_data = GameSerializer(game).data
+                    async_to_sync(channel_layer.group_send)(
+                        f"game_{game.id}",
+                        {
+                            "type": "game.event",
+                            "payload": {
+                                "type": "game_finished",
+                                "game_id": game.id,
+                                "result": Game.RESULT_WHITE,
+                                "reason": "timeout",
+                                "game": game_data,
+                            },
+                        },
+                    )

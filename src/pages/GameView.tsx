@@ -11,6 +11,7 @@ import {
   offerDraw,
   respondDraw,
   resignGame,
+  abortGame,
   finishGame,
   rematch,
   rematchAccept,
@@ -25,7 +26,7 @@ import {
   requestFullAnalysis,
   checkAnalysisStatus
 } from '../api/games';
-import { fetchMe } from '../api/account';
+import { fetchMe, pingPresence } from '../api/account';
 import { makeWsUrl } from '../utils/ws';
 import { ChessBoard } from '../components/ChessBoard';
 import { MaterialDiff } from '../components/MaterialDiff';
@@ -394,6 +395,21 @@ export default function GameView() {
     return () => {
       document.body.classList.remove('game-view');
     };
+  }, []);
+  
+  // Setup presence ping when user is authenticated
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    
+    // Ping immediately
+    pingPresence().catch(() => {});
+    
+    // Ping every 60 seconds to keep user online
+    const pingInterval = setInterval(() => {
+      pingPresence().catch(() => {});
+    }, 60000);
+    
+    return () => clearInterval(pingInterval);
   }, []);
 
   useEffect(() => {
@@ -1989,15 +2005,37 @@ export default function GameView() {
                   </div>
                 </div>
               ) : (
-                // Normal state - show Draw and Resign buttons
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-warning" type="button" onClick={() => setDrawConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Offer draw">
-                    ½ Draw
-                  </button>
-                  <button className="btn btn-danger" type="button" onClick={() => setResignConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Resign">
-                    🏳 Resign
-                  </button>
-                </div>
+                // Normal state - show Draw and Resign/Abort buttons
+                (() => {
+                  // Count moves (each move is space-separated)
+                  const moveCount = game?.moves ? game.moves.trim().split(/\s+/).filter(m => m.length > 0).length : 0;
+                  const canAbort = moveCount <= 2;
+                  
+                  return (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {!canAbort && (
+                        <button className="btn btn-warning" type="button" onClick={() => setDrawConfirm(true)} style={{ padding: '10px 16px', fontSize: 13, flex: 1, fontWeight: 600 }} title="Offer draw">
+                          ½ Draw
+                        </button>
+                      )}
+                      <button 
+                        className="btn btn-danger" 
+                        type="button" 
+                        onClick={() => {
+                          if (canAbort) {
+                            doAction(() => abortGame(id!), 'Game aborted');
+                          } else {
+                            setResignConfirm(true);
+                          }
+                        }} 
+                        style={{ padding: '10px 16px', fontSize: 13, flex: canAbort ? 1 : 1, fontWeight: 600 }} 
+                        title={canAbort ? "Abort game" : "Resign"}
+                      >
+                        {canAbort ? '⛔ Abort' : '🏳 Resign'}
+                      </button>
+                    </div>
+                  );
+                })()
             )}
             </div>
           )}

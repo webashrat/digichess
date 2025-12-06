@@ -722,6 +722,55 @@ class AcceptGameView(APIView):
         return Response(GameSerializer(game).data)
 
 
+class AbortGameView(APIView):
+    """
+    Abort an active game (only allowed if <= 2 moves have been played).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk: int):
+        game = get_object_or_404(Game, id=pk)
+        
+        # Check if user is part of this game
+        if request.user != game.white and request.user != game.black:
+            raise PermissionDenied("You are not part of this game.")
+        
+        # Only allow abort for active games
+        if game.status != Game.STATUS_ACTIVE:
+            return Response({"detail": "Game must be active to abort."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Count moves (each player move counts as 1, so 2 moves = 1 move each)
+        move_count = len((game.moves or "").strip().split()) if game.moves else 0
+        
+        if move_count > 2:
+            return Response({"detail": "Cannot abort game after more than 2 moves."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Abort the game
+        game.status = Game.STATUS_ABORTED
+        game.finished_at = timezone.now()
+        game.result = Game.RESULT_NONE
+        game.save(update_fields=["status", "finished_at", "result"])
+        
+        # Broadcast game update via WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "gameState",
+                        "status": "aborted",
+                        "game": GameSerializer(game).data
+                    }
+                }
+            )
+        
+        return Response(GameSerializer(game).data)
+
+
 class RejectGameView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

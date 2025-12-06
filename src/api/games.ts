@@ -46,6 +46,11 @@ export const resignGame = async (id: string | number) => {
   return data;
 };
 
+export const abortGame = async (id: string | number) => {
+  const { data } = await api.post(`/api/games/${id}/abort/`);
+  return data;
+};
+
 export const acceptChallenge = async (id: string | number) => {
   const { data } = await api.post(`/api/games/${id}/accept/`);
   return data;
