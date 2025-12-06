@@ -555,7 +555,11 @@ export default function GameView() {
         // Connect to user-specific WebSocket for rematch notifications
         if (u?.id) {
           try {
-            const userWs = new WebSocket(makeWsUrl(`/ws/user/${u.id}/`));
+            const token = localStorage.getItem('token');
+            const wsUrl = token
+              ? makeWsUrl(`/ws/user/${u.id}/?token=${encodeURIComponent(token)}`)
+              : makeWsUrl(`/ws/user/${u.id}/`);
+            const userWs = new WebSocket(wsUrl);
             userWsRef.current = userWs;
             userWs.onmessage = (event) => {
               try {

@@ -808,11 +808,17 @@ class RejectGameView(APIView):
 
 
 class GameAnalysisView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]  # Allow spectators to view analysis
 
     def get(self, request, pk: int):
         game = get_object_or_404(Game, id=pk)
-        is_player = game.white == request.user or game.black == request.user
+        # Check if user is authenticated (for player check)
+        is_player = False
+        if request.user and not request.user.is_anonymous:
+            is_player = game.white == request.user or game.black == request.user
+        
+        # Only block players from viewing analysis during their own active games
+        # Allow spectators and allow players to view finished games
         if is_player and game.status in [Game.STATUS_ACTIVE, Game.STATUS_PENDING]:
             return Response(
                 {"detail": "Players cannot view live analysis during an active game."},
