@@ -25,11 +25,14 @@ function getMaterialDiff(fen: string): MaterialDiff {
     };
 
     board.forEach(row => {
+      if (!row || !Array.isArray(row)) return;
       row.forEach(square => {
-        if (square) {
+        if (square && typeof square === 'object' && square.color && square.type) {
           const color = square.color;
           const type = square.type;
-          counts[color][type]++;
+          if (counts[color] && typeof counts[color][type] === 'number') {
+            counts[color][type]++;
+          }
         }
       });
     });
