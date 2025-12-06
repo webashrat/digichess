@@ -12,11 +12,14 @@ function getMaterialDiff(fen: string): MaterialDiff {
     black: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
   };
 
-  if (!fen) return diff;
+  if (!fen || typeof fen !== 'string') return diff;
 
   try {
     const chess = new Chess(fen);
+    if (!chess || typeof chess.board !== 'function') return diff;
+    
     const board = chess.board();
+    if (!board || !Array.isArray(board)) return diff;
     
     // Count pieces on board
     const counts = {
@@ -24,17 +27,28 @@ function getMaterialDiff(fen: string): MaterialDiff {
       black: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
     };
 
-    board.forEach(row => {
+    board.forEach((row, rowIdx) => {
       if (!row || !Array.isArray(row)) return;
-      row.forEach(square => {
-        if (square && typeof square === 'object' && square.color && square.type) {
-          const color = square.color;
-          const type = square.type;
-          if (counts[color] && typeof counts[color][type] === 'number') {
-            counts[color][type]++;
+      try {
+        row.forEach((square, colIdx) => {
+          if (!square || typeof square !== 'object') return;
+          try {
+            const color = square?.color;
+            const type = square?.type;
+            if (color === 'white' || color === 'black') {
+              if (type && typeof type === 'string' && counts[color] && counts[color][type] !== undefined) {
+                counts[color][type]++;
+              }
+            }
+          } catch (e) {
+            // Silently skip invalid squares
+            console.debug('Invalid square data:', e);
           }
-        }
-      });
+        });
+      } catch (e) {
+        // Silently skip invalid rows
+        console.debug('Invalid row data:', e);
+      }
     });
 
     // Calculate differences from starting position
@@ -55,7 +69,9 @@ function getMaterialDiff(fen: string): MaterialDiff {
       }
     });
   } catch (e) {
-    console.error('Error calculating material diff:', e);
+    // Silently handle errors - return empty diff to prevent UI crashes
+    console.debug('Error calculating material diff:', e);
+    return diff;
   }
 
   return diff;
