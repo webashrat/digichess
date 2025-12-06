@@ -27,7 +27,7 @@ class GameProxy:
     """
     
     # Class-level cache for active games (thread-safe with proper locking in production)
-    _cache: Dict[int, Dict[str, Any]] = {}
+    _cache: Dict[int, Any] = {}  # Can store Game objects or dicts
     _dirty: Dict[int, bool] = {}
     _last_flush: Dict[int, float] = {}
     
@@ -102,10 +102,16 @@ class GameProxy:
             return
         
         try:
-            game = Game.objects.get(id=game_id)
+            # Use cached game object if available (has latest changes), otherwise load from DB
+            if game_id in cls._cache and isinstance(cls._cache[game_id], Game):
+                game = cls._cache[game_id]
+            else:
+                game = Game.objects.get(id=game_id)
+            
+            # Determine which fields actually changed (simple approach: save all common fields)
             game.save(update_fields=[
                 'current_fen', 'moves', 'white_time_left', 'black_time_left',
-                'status', 'result', 'last_move_at', 'updated_at'
+                'status', 'result', 'last_move_at'
             ])
             cls._dirty[game_id] = False
             cls._update_cache(game)
@@ -123,20 +129,26 @@ class GameProxy:
         """
         cls.mark_dirty(game.id)
         
+        # Store the game object in cache for flushing later
+        cls._cache[game.id] = game
+        
         # Immediate flush for critical events
         status_changed = getattr(game, '_status_changed', False)
         if immediate_flush or status_changed or game.status in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
             cls.flush_if_needed(game.id, force=True)
-        else:
-            # Schedule batched flush
-            cls.flush_if_needed(game.id)
+        # Don't flush immediately if not critical - let flush_all_dirty handle it
     
     @classmethod
     def flush_all_dirty(cls):
         """Flush all dirty games (called periodically)"""
-        for game_id in list(cls._dirty.keys()):
-            if cls.should_flush(game_id):
-                cls.flush_if_needed(game_id)
+        # Get all dirty games that should be flushed
+        game_ids_to_flush = [
+            game_id for game_id in cls._dirty.keys()
+            if cls.should_flush(game_id)
+        ]
+        
+        for game_id in game_ids_to_flush:
+            cls.flush_if_needed(game_id)
 
 
 # Periodic flush task (runs every 30 seconds)

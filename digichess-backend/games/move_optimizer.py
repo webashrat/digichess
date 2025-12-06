@@ -120,9 +120,11 @@ def process_move_optimized(
         if not is_valid or not move:
             return False, error_msg, None, {}
         
+        # Get SAN notation before applying move (board.san() needs the move to be in legal_moves)
+        move_san = board.san(move)
+        
         # Apply move
         board.push(move)
-        move_san = board.san(move)
         
         # Prepare response data (minimal processing)
         extra_data = {
