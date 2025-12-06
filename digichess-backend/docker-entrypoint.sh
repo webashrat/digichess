@@ -81,12 +81,25 @@ parsed = urlparse(redis_url)
 max_retries = 30
 retry = 0
 
+# Support TLS and password-protected Redis (e.g., Upstash)
+db = int(parsed.path.lstrip('/') or 0)
+use_ssl = parsed.scheme in ('rediss', 'rediss+ssl', 'tls')
+username = parsed.username
+password = parsed.password
+host = parsed.hostname or 'localhost'
+port = parsed.port or 6379
+
 while retry < max_retries:
     try:
-        r = redis.Redis(host=parsed.hostname or 'localhost', 
-                       port=parsed.port or 6379, 
-                       db=int(parsed.path[1:]) if parsed.path else 0,
-                       socket_connect_timeout=1)
+        r = redis.Redis(
+            host=host,
+            port=port,
+            db=db,
+            username=username,
+            password=password,
+            ssl=use_ssl,
+            socket_connect_timeout=1,
+        )
         r.ping()
         sys.exit(0)
     except Exception:
@@ -128,4 +141,3 @@ fi
 
 # Execute the command passed to the container
 exec "$@"
-
