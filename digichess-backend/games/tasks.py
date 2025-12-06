@@ -12,6 +12,10 @@ from .models import Game, Tournament, TournamentParticipant, TournamentGame
 from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
+from .game_proxy import GameProxy
+from .move_optimizer import process_move_optimized, latency_monitor
+from .game_proxy import GameProxy
+from .move_optimizer import process_move_optimized, latency_monitor
 
 User = get_user_model()
 
@@ -104,3 +108,9 @@ def swiss_pairings(tournament_id: int):
     """Swiss tournament pairings task"""
     # Placeholder - implement if needed
     pass
+
+
+@shared_task
+def flush_dirty_games():
+    """Flush all dirty games to database (Lichess-style batched writes)"""
+    GameProxy.flush_all_dirty()

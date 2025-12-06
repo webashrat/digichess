@@ -175,17 +175,25 @@ class GameMoveView(APIView):
                     )
         
         # Apply increment
+        from games.game_proxy import GameProxy
+        status_changed = False
         if game.status == Game.STATUS_ACTIVE:
             if is_white_move:
                 game.white_time_left += game.white_increment_seconds
             else:
                 game.black_time_left += game.black_increment_seconds
             game.last_move_at = now
-            game.save(update_fields=["moves", "current_fen", "white_time_left", "black_time_left", "last_move_at", "status"])
+            # Check if result will change
+            old_status = game.status
             self._update_result(game, board)
+            status_changed = game.status != old_status
+            
+            # Use GameProxy for batched writes (immediate flush if status changed)
+            GameProxy.update_game(game, immediate_flush=status_changed)
         else:
             game.last_move_at = now
-            game.save(update_fields=["moves", "current_fen", "white_time_left", "black_time_left", "last_move_at", "status"])
+            # Immediate flush for finished/aborted games
+            GameProxy.update_game(game, immediate_flush=True)
         
         # Broadcast move
         channel_layer = get_channel_layer()
@@ -205,14 +213,16 @@ class GameMoveView(APIView):
             pass
         
         # Include legal moves and game state for instant interactivity (like Lichess)
-        legal_moves = []
+        # Use data from optimized processing to avoid re-calculating
+        legal_moves = extra_data.get('legal_moves', [])
         game_state = {}
         try:
-            legal_moves = [board.san(mv) for mv in board.legal_moves]
-            
             # Get full game state for smooth reconnection (like Lichess gameState)
             from games.lichess_game_flow import get_game_state_export
             game_state = get_game_state_export(game.current_fen, game.moves) or {}
+            # Enhance with optimized data
+            if legal_moves:
+                game_state['legal_moves'] = {'san': legal_moves}
         except Exception:
             pass
         
@@ -293,7 +303,9 @@ class GameMoveView(APIView):
             reason = 'fifty_moves'
             game.finish(result)
         else:
-            game.save(update_fields=["current_fen", "moves"])
+            # Use GameProxy for normal moves (batched)
+            from games.game_proxy import GameProxy
+            GameProxy.update_game(game, immediate_flush=False)
             return
         
         # Refresh game from database to get updated rated status
@@ -341,29 +353,25 @@ class GameMoveView(APIView):
         if game.last_move_at:
             elapsed = (now - game.last_move_at).total_seconds()
 
-        # Fast move validation using Lichess game flow utilities
+        # Optimized move processing with latency tracking (Lichess-style)
         move_san = serializer.validated_data["move"]
-        from games.lichess_game_flow import validate_move_fast
+        from games.move_optimizer import process_move_optimized
         
-        is_valid, error_msg, move = validate_move_fast(board, move_san)
-        if not is_valid or not move:
+        success, error_msg, move, extra_data = process_move_optimized(game, move_san, board)
+        if not success or not move:
             return Response({"detail": error_msg or "Illegal move."}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Move is valid, proceed
-        # move_san is already in SAN format (from validate_move_fast or input)
-        # Use it directly, but also get from move object for consistency
-        try:
-            san = board.san(move)  # Ensure we have correct SAN
-        except Exception:
-            san = move_san  # Fallback to input
-        board.push(move)
+        # Move is valid, use optimized processing result
+        san = extra_data.get('san', move_san)
+        # Board is already updated by process_move_optimized
+        # board.push(move)  # Already done in process_move_optimized
 
         if game.status == Game.STATUS_PENDING:
             game.start()
         move_list = (game.moves or "").strip().split()
         move_list.append(san)
         game.moves = " ".join(move_list)
-        game.current_fen = board.fen()
+        game.current_fen = extra_data.get('fen', board.fen())  # Use from optimized processing
         # Deduct time
         is_white_move = (len(move_list) % 2) == 1  # after push, move count odd means white just moved
         if game.last_move_at:
@@ -428,7 +436,9 @@ class GameMoveView(APIView):
             else:
                 game.black_time_left += game.black_increment_seconds
             game.last_move_at = now
-            game.save(update_fields=["moves", "current_fen", "white_time_left", "black_time_left", "last_move_at"])
+            # Use GameProxy for batched writes
+            from games.game_proxy import GameProxy
+            GameProxy.update_game(game, immediate_flush=False)
             self._update_result(game, board)
         else:
             game.last_move_at = now

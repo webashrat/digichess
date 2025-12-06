@@ -102,17 +102,29 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _serialize_game(self, game_id):
+        """Get game with optimized query (select_related for foreign keys)"""
         try:
-            game = Game.objects.get(id=game_id)
+            # Use GameProxy for caching (Lichess-style)
+            from games.game_proxy import GameProxy
+            game = GameProxy.get_game(game_id, use_db=True)
+            if not game:
+                # Fallback to direct query with optimization
+                game = Game.objects.select_related('white', 'black').get(id=game_id)
             return GameSerializer(game).data
         except Game.DoesNotExist:
             return None
 
     @database_sync_to_async
     def _get_game(self, game_id):
-        """Get game object"""
+        """Get game object with optimized query"""
         try:
-            return Game.objects.get(id=game_id)
+            # Use GameProxy for caching
+            from games.game_proxy import GameProxy
+            game = GameProxy.get_game(game_id, use_db=True)
+            if not game:
+                # Fallback with query optimization
+                game = Game.objects.select_related('white', 'black').get(id=game_id)
+            return game
         except Game.DoesNotExist:
             return None
 

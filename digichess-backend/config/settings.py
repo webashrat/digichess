@@ -163,6 +163,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.store_daily_rating_snapshots",
         "schedule": 86400.0,  # Run daily (24 hours = 86400 seconds)
     },
+    "flush_dirty_games": {
+        "task": "games.tasks.flush_dirty_games",
+        "schedule": 30.0,  # Flush batched writes every 30 seconds (Lichess-style)
+    },
 }
 
 # CORS / CSRF
