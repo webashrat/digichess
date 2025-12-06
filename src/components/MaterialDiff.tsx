@@ -27,17 +27,23 @@ function getMaterialDiff(fen: string): MaterialDiff {
       black: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
     };
 
+    const validPieceTypes = ['king', 'queen', 'rook', 'bishop', 'knight', 'pawn'] as const;
+    type PieceType = typeof validPieceTypes[number];
+
     board.forEach((row, rowIdx) => {
       if (!row || !Array.isArray(row)) return;
       try {
         row.forEach((square, colIdx) => {
           if (!square || typeof square !== 'object') return;
           try {
-            const color = square?.color;
-            const type = square?.type;
+            const color = square?.color as 'white' | 'black' | undefined;
+            const type = square?.type as string | undefined;
             if (color === 'white' || color === 'black') {
-              if (type && typeof type === 'string' && counts[color] && counts[color][type] !== undefined) {
-                counts[color][type]++;
+              if (type && validPieceTypes.includes(type as PieceType)) {
+                const pieceType = type as PieceType;
+                if (counts[color] && counts[color][pieceType] !== undefined) {
+                  counts[color][pieceType]++;
+                }
               }
             }
           } catch (e) {
