@@ -120,14 +120,54 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
 class GameConsumer(BaseGameConsumer):
     async def connect(self):
         await super().connect()
+        # Send full game state immediately (like Lichess gameFull)
         data = await self._serialize_game(self.game_id)
         if data:
-            await self.send(text_data=json.dumps({"type": "sync", "game": data}))
+            # Get enhanced game state with legal moves and board state
+            from games.lichess_game_flow import get_game_state_export
+            game = await self._get_game(self.game_id)
+            if game:
+                game_state = await database_sync_to_async(get_game_state_export)(
+                    game.current_fen or "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    game.moves or "",
+                    "standard"
+                )
+                if game_state:
+                    data.update({
+                        "game_state": game_state,
+                        "legal_moves": game_state.get("legal_moves", {}).get("san", [])
+                    })
+            
+            await self.send(text_data=json.dumps({
+                "type": "gameFull",  # Lichess-compatible type
+                "game": data,
+                "sync": True
+            }))
 
 
 class SpectateConsumer(BaseGameConsumer):
     async def connect(self):
         await super().connect()
+        # Send full game state immediately (like Lichess gameFull)
         data = await self._serialize_game(self.game_id)
         if data:
-            await self.send(text_data=json.dumps({"type": "sync", "game": data}))
+            # Get enhanced game state with legal moves and board state
+            from games.lichess_game_flow import get_game_state_export
+            game = await self._get_game(self.game_id)
+            if game:
+                game_state = await database_sync_to_async(get_game_state_export)(
+                    game.current_fen or "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    game.moves or "",
+                    "standard"
+                )
+                if game_state:
+                    data.update({
+                        "game_state": game_state,
+                        "legal_moves": game_state.get("legal_moves", {}).get("san", [])
+                    })
+            
+            await self.send(text_data=json.dumps({
+                "type": "gameFull",  # Lichess-compatible type
+                "game": data,
+                "sync": True
+            }))

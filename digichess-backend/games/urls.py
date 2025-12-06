@@ -18,7 +18,12 @@ from .views import (
     GameResignView,
     GameClaimDrawView,
 )
-from .views_analysis import GameFullAnalysisView, GameAnalysisRequestView
+from .views_analysis import (
+    GameFullAnalysisView,
+    GameAnalysisRequestView,
+    OpeningExplorerView,
+    TablebaseView,
+)
 from .views_public import PublicGamesListView
 from .views_user_games import UserGamesView
 from .views_tournament import (
@@ -35,16 +40,21 @@ from .views_public_clock import LiveClockView
 from .views_prediction import PredictionCreateView
 from .views_leaderboard import RatingLeaderboardView, DigiQuizLeaderboardView
 from .views_bot import BotListView, CreateBotGameView
+from .views_puzzle import DailyPuzzleView, PuzzleView, NextPuzzleView, PuzzleBatchView
+from .views_optimistic import OptimisticMoveView
 
 urlpatterns = [
     path("", GameListCreateView.as_view(), name="games"),
     path("public/", PublicGamesListView.as_view(), name="games-public"),
     path("<int:pk>/", GameDetailView.as_view(), name="game-detail"),
     path("<int:pk>/move/", GameMoveView.as_view(), name="game-move"),
+    path("<int:pk>/move/optimistic/", OptimisticMoveView.as_view(), name="game-move-optimistic"),
     path("<int:pk>/finish/", FinishGameView.as_view(), name="game-finish"),
     path("<int:pk>/analysis/", GameAnalysisView.as_view(), name="game-analysis"),
     path("<int:pk>/analysis/full/", GameFullAnalysisView.as_view(), name="game-full-analysis"),
     path("<int:pk>/analysis/request/", GameAnalysisRequestView.as_view(), name="game-analysis-request"),
+    path("opening-explorer/", OpeningExplorerView.as_view(), name="opening-explorer"),
+    path("tablebase/", TablebaseView.as_view(), name="tablebase"),
     path("<int:pk>/spectate/", GameSpectateView.as_view(), name="game-spectate"),
     path("<int:pk>/offer-draw/", GameDrawOfferView.as_view(), name="game-offer-draw"),
     path("<int:pk>/respond-draw/", GameDrawRespondView.as_view(), name="game-respond-draw"),
@@ -73,4 +83,8 @@ urlpatterns = [
     path("user/<str:username>/", UserGamesView.as_view(), name="user-games"),
     path("bots/", BotListView.as_view(), name="bots-list"),
     path("bots/create-game/", CreateBotGameView.as_view(), name="bot-create-game"),
+    path("puzzles/daily/", DailyPuzzleView.as_view(), name="puzzle-daily"),
+    path("puzzles/<str:puzzle_id>/", PuzzleView.as_view(), name="puzzle-detail"),
+    path("puzzles/next/", NextPuzzleView.as_view(), name="puzzle-next"),
+    path("puzzles/batch/<str:angle>/", PuzzleBatchView.as_view(), name="puzzle-batch"),
 ]

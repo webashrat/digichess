@@ -63,9 +63,17 @@ def make_bot_move_async(game_id: int):
     rating_field = rating_field_map.get(game.time_control, 'rating_blitz')
     bot_rating = getattr(current_player, rating_field, 800)
     
-    # Get bot move
+    # Get bot move - use Lichess APIs for optimization
+    move_list = (game.moves or "").strip().split()
+    ply_count = len(move_list)
+    
     try:
-        bot_move = get_bot_move_with_error(board, bot_rating)
+        bot_move = get_bot_move_with_error(
+            board, 
+            bot_rating,
+            time_control=game.time_control,
+            ply_count=ply_count
+        )
         move_san = board.san(bot_move)
         
         # Make the move directly (simulate a POST request)

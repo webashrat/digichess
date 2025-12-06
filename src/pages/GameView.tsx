@@ -18,6 +18,7 @@ import {
   acceptChallenge,
   rejectChallenge,
   makeMove,
+  validateMoveOptimistic,
   claimDraw,
   fetchAnalysis,
   fetchPlayerStatus,
@@ -586,15 +587,51 @@ export default function GameView() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          // Handle sync message format
-          if (data.type === 'sync') {
-            // Initial sync message
+          
+          // Handle gameFull message (initial sync or reconnection) - like Lichess
+          if (data.type === 'gameFull' || (data.type === 'sync' && data.game)) {
+            console.log('[GameView] Received gameFull sync message');
+            const gameData = data.game || data;
+            if (gameData) {
+              // Full state sync - update everything to prevent disappearing pieces
+              setGame((prevGame) => {
+                if (!prevGame) return gameData;
+                // Merge with existing state to preserve UI state
+                return {
+                  ...prevGame,
+                  ...gameData,
+                  // Preserve any UI-specific state
+                  legal_moves: gameData.legal_moves || gameData.game_state?.legal_moves?.san || prevGame.legal_moves,
+                };
+              });
+              
+              // Sync clock if available
+              if (gameData.white_time_left !== undefined || gameData.black_time_left !== undefined) {
+                setClock({
+                  white_time_left: gameData.white_time_left,
+                  black_time_left: gameData.black_time_left,
+                  turn: gameData.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+                  lastUpdate: performance.now()
+                });
+                
+                // Update clock refs
+                clockTimesRef.current = {
+                  white: (gameData.white_time_left || 0) * 1000,
+                  black: (gameData.black_time_left || 0) * 1000,
+                  activeColor: gameData.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+                  lastUpdate: performance.now()
+                };
+              }
+            }
             return;
           }
+          
           // Handle event messages - can be direct payload or wrapped
           const payload = data?.payload || data;
           const t = payload.type;
-          if (t === 'move') {
+          
+          // Handle gameState message (like Lichess) - full state update
+          if (t === 'gameState' || t === 'move') {
             // Immediately update game state from WebSocket payload for faster UI update
             if (payload.fen && payload.moves) {
               const newTurn = payload.fen?.split(' ')[1] || 'w';
@@ -609,19 +646,24 @@ export default function GameView() {
               })();
               
               // Update game state immediately - include legal moves if provided in payload (like Lichess)
-              // Preserve all existing state to prevent flickering
+              // Preserve all existing state to prevent flickering/disappearing pieces
               setGame((prevGame) => {
                 if (!prevGame) return prevGame;
                 const updated = {
                   ...prevGame,
                   current_fen: payload.fen,
                   moves: payload.moves,
-                  // Preserve other game state
+                  status: payload.status || prevGame.status,
+                  result: payload.result || prevGame.result,
+                  // Preserve all other game state to prevent UI flicker
                 };
                 
                 // If legal moves are included in WebSocket payload (backend optimization), use them immediately
                 if (payload.legal_moves && Array.isArray(payload.legal_moves)) {
                   updated.legal_moves = payload.legal_moves;
+                } else if (payload.game_state?.legal_moves?.san && Array.isArray(payload.game_state.legal_moves.san)) {
+                  // Use legal moves from game_state if available
+                  updated.legal_moves = payload.game_state.legal_moves.san;
                 } else if (prevGame.legal_moves) {
                   // Preserve existing legal moves if not in payload
                   updated.legal_moves = prevGame.legal_moves;
@@ -1011,13 +1053,38 @@ export default function GameView() {
     
     setMoveInProgress(true);
     setMoveErr('');
-    makeMove(id, uci)
+    
+    // Step 1: Optimistic validation - show move instantly for better UX
+    validateMoveOptimistic(id, uci)
+      .then((optimisticData) => {
+        if (optimisticData.valid && optimisticData.fen_after) {
+          // Update UI immediately with optimistic move (instant feedback)
+          setGame((prevGame) => {
+            if (!prevGame) return prevGame;
+            return {
+              ...prevGame,
+              current_fen: optimisticData.fen_after,
+              moves: prevGame.moves ? `${prevGame.moves} ${optimisticData.san}` : optimisticData.san,
+              legal_moves: optimisticData.legal_moves_after || prevGame.legal_moves,
+            };
+          });
+          
+          // Step 2: Then confirm with server
+          return makeMove(id, optimisticData.san);
+        } else {
+          // Validation failed - show error immediately
+          setMoveInProgress(false);
+          setMoveErr(optimisticData.error || 'Invalid move');
+          throw new Error(optimisticData.error || 'Invalid move');
+        }
+      })
       .then((res) => {
+        // Server confirmed move - update with server response
         setGame(res);
         setMoveInProgress(false);
         // Only fetch clock if game is still active
         if (res.status === 'active') {
-        fetchClock(id).then(setClock).catch(() => {});
+          fetchClock(id).then(setClock).catch(() => {});
         }
       })
       .catch((err) => {

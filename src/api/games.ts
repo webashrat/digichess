@@ -81,6 +81,15 @@ export const makeMove = async (id: string | number, move: string) => {
   return data;
 };
 
+/**
+ * Optimistic move validation - validates move without saving
+ * Returns immediate feedback for instant UI updates
+ */
+export const validateMoveOptimistic = async (id: string | number, move: string) => {
+  const { data } = await api.post(`/api/games/${id}/move/optimistic/`, { move });
+  return data;
+};
+
 export const claimDraw = async (id: string | number) => {
   const { data } = await api.post(`/api/games/${id}/claim-draw/`);
   return data;

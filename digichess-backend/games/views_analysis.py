@@ -10,9 +10,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import requests
 import os
+import logging
 
 from .models import Game
 from .serializers import GameSerializer
+from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
+from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation, get_opening_explorer, get_tablebase
+
+logger = logging.getLogger(__name__)
 
 
 class GameFullAnalysisView(APIView):
@@ -30,61 +35,57 @@ class GameFullAnalysisView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Try Stockfish first
-        engine_path = getattr(settings, "STOCKFISH_PATH", os.getenv("STOCKFISH_PATH"))
         analysis_data = None
+        source = None
         
-        if not engine_path:
-            return Response(
-                {
-                    "detail": "STOCKFISH_PATH not configured. Set it in settings or environment variables.",
-                    "suggestion": "Set STOCKFISH_PATH=/usr/local/bin/stockfish"
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        
-        engine_path_obj = Path(engine_path)
-        if not engine_path_obj.exists():
-            return Response(
-                {
-                    "detail": f"Stockfish not found at path: {engine_path}",
-                    "engine_path": engine_path,
-                    "suggestion": "Verify STOCKFISH_PATH is correct or install Stockfish"
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        
-        if not os.access(engine_path, os.X_OK):
-            return Response(
-                {
-                    "detail": f"Stockfish found at {engine_path} but is not executable. Run: chmod +x {engine_path}",
-                    "engine_path": engine_path
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        
-        # Try to analyze with Stockfish
+        # Try Lichess API first (fastest, free, no local setup needed)
         try:
-            analysis_data = self._analyze_with_stockfish(game, engine_path)
+            analysis_data = self._analyze_with_lichess(game)
+            if analysis_data and analysis_data.get("summary", {}).get("analyzed_moves", 0) > 0:
+                source = "lichess"
+            else:
+                analysis_data = None  # Fall through to local Stockfish
         except Exception as exc:
-            # Return detailed error for debugging
-            return Response(
-                {
-                    "detail": f"Stockfish analysis failed: {str(exc)}",
-                    "engine_path": engine_path,
-                    "error_type": type(exc).__name__,
-                    "game_id": game.id,
-                    "game_moves": game.moves[:100] if game.moves else "No moves",
-                    "game_status": game.status
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            logger.warning(f"Lichess analysis failed, falling back to local Stockfish: {exc}")
+            analysis_data = None
+        
+        # Fallback to local Stockfish if Lichess fails
+        if not analysis_data:
+            engine_path = get_stockfish_path()
+            
+            # Ensure Stockfish works (uses repo Stockfish)
+            works, message = ensure_stockfish_works(engine_path)
+            if not works:
+                return Response(
+                    {
+                        "detail": f"Local Stockfish unavailable: {message}. Lichess API also failed.",
+                        "engine_path": engine_path,
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+            
+            # Try to analyze with local Stockfish
+            try:
+                analysis_data = self._analyze_with_stockfish(game, engine_path)
+                source = "local_stockfish"
+            except Exception as exc:
+                return Response(
+                    {
+                        "detail": f"Stockfish analysis failed: {str(exc)}",
+                        "engine_path": engine_path,
+                        "error_type": type(exc).__name__,
+                        "game_id": game.id,
+                        "game_moves": game.moves[:100] if game.moves else "No moves",
+                        "game_status": game.status
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         
         return Response({
             "game_id": game.id,
             "analysis": analysis_data,
-            "source": "stockfish",
-            "engine_path": engine_path
+            "source": source or "unknown",
+            "engine_path": get_stockfish_path() if source == "local_stockfish" else None
         })
 
     def _analyze_with_stockfish(self, game: Game, engine_path: str):
@@ -187,13 +188,10 @@ class GameFullAnalysisView(APIView):
         
         except OSError as e:
             if e.errno == 8:  # Exec format error
-                import platform
-                system_arch = platform.machine()
+                # This shouldn't happen if ensure_stockfish_works was called, but handle it anyway
                 raise Exception(
-                    f"Stockfish architecture mismatch. "
-                    f"Your system is {system_arch}, but Stockfish binary was compiled for a different architecture. "
-                    f"Path: {engine_path}. "
-                    f"Solution: Recompile Stockfish for your architecture or download a pre-built binary."
+                    f"Stockfish architecture mismatch detected. "
+                    f"This should have been auto-fixed. Please check server logs."
                 )
             raise Exception(f"Failed to start Stockfish engine: {str(e)}")
         except Exception as e:
@@ -220,45 +218,147 @@ class GameFullAnalysisView(APIView):
         return result
 
     def _analyze_with_lichess(self, game: Game):
-        """Analyze game using Lichess API"""
-        # Convert game to PGN format
-        pgn = StringIO()
-        exporter = chess.pgn.StringExporter(headers=False, variations=False, comments=False)
-        
-        # Create PGN from moves
-        pgn_game = chess.pgn.Game()
-        pgn_game.headers["White"] = game.white.username or game.white.email
-        pgn_game.headers["Black"] = game.black.username or game.black.email
-        pgn_game.headers["Result"] = game.result or "*"
-        
-        node = pgn_game
-        board = chess.Board()
+        """Analyze game using Lichess Cloud Evaluation API - fast and free!"""
         moves = game.moves.split() if game.moves else []
+        if not moves:
+            # Analyze starting position
+            fen = chess.STARTING_FEN
+        else:
+            # Replay game to get final position
+            board = chess.Board()
+            for move_san in moves:
+                try:
+                    move = board.parse_san(move_san)
+                    board.push(move)
+                except Exception:
+                    continue
+            fen = board.fen()
         
-        for move_san in moves:
+        analysis_moves = []
+        errors = []
+        
+        # Analyze each position after each move using Lichess API
+        board = chess.Board()
+        
+        for i, move_san in enumerate(moves):
             try:
                 move = board.parse_san(move_san)
-                node = node.add_variation(move)
                 board.push(move)
-            except Exception:
+                
+                # Get evaluation from Lichess cloud
+                eval_data = get_cloud_evaluation(board.fen(), depth=18, multi_pv=1)
+                
+                if eval_data and eval_data.get("pvs"):
+                    pv_data = eval_data["pvs"][0]
+                    cp = pv_data.get("cp")
+                    mate = pv_data.get("mate")
+                    best_moves = pv_data.get("moves", "").split()
+                    best_move_san = None
+                    
+                    if best_moves:
+                        try:
+                            # Convert UCI to SAN for best move
+                            temp_board = board.copy()
+                            best_move_uci = best_moves[0]
+                            best_move_obj = chess.Move.from_uci(best_move_uci)
+                            if best_move_obj in temp_board.legal_moves:
+                                best_move_san = temp_board.san(best_move_obj)
+                        except Exception:
+                            best_move_san = best_moves[0] if best_moves else None
+                    
+                    eval_score = cp / 100.0 if cp is not None else None  # Convert centipawns to pawns
+                    
+                    analysis_moves.append({
+                        "move": move_san,
+                        "move_number": i + 1,
+                        "eval": eval_score,
+                        "mate": mate,
+                        "best_move": best_move_san,
+                        "depth": eval_data.get("depth", 0),
+                        "knodes": eval_data.get("knodes", 0)
+                    })
+                else:
+                    errors.append(f"Move {i+1} ({move_san}): Lichess API returned no evaluation")
+                    
+            except chess.InvalidMoveError as e:
+                errors.append(f"Move {i+1} ({move_san}): Invalid move - {str(e)}")
+                continue
+            except Exception as e:
+                errors.append(f"Move {i+1} ({move_san}): Error - {str(e)}")
                 continue
         
-        pgn_str = str(pgn_game)
+        analyzed_count = len([m for m in analysis_moves if m.get("eval") is not None])
         
-        # Request analysis from Lichess API
-        # Note: Lichess doesn't have a direct public API for this, so we'll use a workaround
-        # For now, return basic analysis structure
-        # In production, you might want to use Lichess's cloud analysis or implement your own
-        
-        return {
-            "moves": [],
+        result = {
+            "moves": analysis_moves,
             "summary": {
                 "total_moves": len(moves),
-                "analyzed_moves": 0,
-                "note": "Full analysis requires Stockfish configuration. Basic analysis available."
-            },
-            "lichess_url": f"https://lichess.org/analysis/{game.current_fen or chess.STARTING_FEN}"
+                "analyzed_moves": analyzed_count,
+                "errors": errors[:10] if errors else [],  # Limit errors
+                "source": "lichess_cloud"
+            }
         }
+        
+        if analyzed_count == 0 and len(moves) > 0:
+            result["warning"] = f"Found {len(moves)} moves but none were successfully analyzed. Check errors."
+        
+        return result
+
+
+class OpeningExplorerView(APIView):
+    """Get opening explorer data from Lichess for a position"""
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """Get opening explorer data"""
+        fen = request.data.get("fen", chess.STARTING_FEN)
+        variant = request.data.get("variant", "standard")
+        speeds = request.data.get("speeds", None)
+        ratings = request.data.get("ratings", None)
+        
+        explorer_data = get_opening_explorer(fen, variant=variant, speeds=speeds, ratings=ratings)
+        
+        if explorer_data:
+            return Response({
+                "fen": fen,
+                "opening_explorer": explorer_data,
+                "source": "lichess"
+            })
+        else:
+            return Response(
+                {"detail": "Failed to get opening explorer data from Lichess API"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class TablebaseView(APIView):
+    """Get tablebase (endgame database) information from Lichess"""
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """Get tablebase data"""
+        fen = request.data.get("fen")
+        variant = request.data.get("variant", "standard")
+        
+        if not fen:
+            return Response(
+                {"detail": "fen is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        tablebase_data = get_tablebase(fen, variant=variant)
+        
+        if tablebase_data:
+            return Response({
+                "fen": fen,
+                "tablebase": tablebase_data,
+                "source": "lichess"
+            })
+        else:
+            return Response(
+                {"detail": "Failed to get tablebase data from Lichess API or position has too many pieces"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
 
 
 class GameAnalysisRequestView(APIView):

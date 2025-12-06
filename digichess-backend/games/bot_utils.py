@@ -1,7 +1,10 @@
 """
 Bot utilities for generating moves with different skill levels
 Uses Maia Chess (human-like neural network) for all ratings 800-2400.
-Stockfish has been removed - it was too fast for DB and played poorly.
+Optimized with Lichess API:
+- Opening Explorer for early game (faster, more realistic)
+- Tablebase for endgame (perfect play)
+- Maia for mid-game (human-like)
 """
 import chess
 import chess.engine
@@ -19,6 +22,23 @@ except ImportError:
     def get_maia_move(board, rating):
         return None
     def should_use_maia(rating):
+        return False
+
+# Try to import Lichess API utilities
+try:
+    from games.lichess_api import (
+        get_opening_move_from_explorer,
+        get_tablebase_move,
+        is_endgame_position
+    )
+    LICHESS_AVAILABLE = True
+except ImportError:
+    LICHESS_AVAILABLE = False
+    def get_opening_move_from_explorer(board, time_control="blitz", rating_range=None):
+        return None
+    def get_tablebase_move(board):
+        return None
+    def is_endgame_position(board):
         return False
 
 
@@ -100,11 +120,13 @@ def get_stockfish_config(bot_rating: int):
     }
 
 
-def get_bot_move(board: chess.Board, bot_rating: int) -> chess.Move:
+def get_bot_move(board: chess.Board, bot_rating: int, time_control: str = "blitz", ply_count: int = 0) -> chess.Move:
     """
     Get a move from a bot with a given rating.
-    Uses Maia Chess (human-like neural network) for all ratings 800-2400.
-    Stockfish has been removed - it was too fast for DB and played poorly.
+    Optimized with Lichess APIs for speed and accuracy:
+    - Early game (ply < 20): Lichess Opening Explorer (fast, realistic)
+    - Endgame (≤7 pieces): Lichess Tablebase (perfect play)
+    - Mid-game: Maia Chess (human-like neural network)
     
     Rating ranges map to Maia models:
     - 800-1100 → maia-1100
@@ -117,7 +139,29 @@ def get_bot_move(board: chess.Board, bot_rating: int) -> chess.Move:
     - 1801-1900 → maia-1800
     - 1901-2400 → maia-1900
     """
-    # Use Maia for all ratings 800-2400
+    # Strategy 1: Endgame - use tablebase for perfect play
+    if LICHESS_AVAILABLE and is_endgame_position(board):
+        tablebase_move_uci = get_tablebase_move(board)
+        if tablebase_move_uci:
+            try:
+                tablebase_move = chess.Move.from_uci(tablebase_move_uci)
+                if tablebase_move in board.legal_moves:
+                    return tablebase_move
+            except Exception:
+                pass  # Fall through to Maia
+    
+    # Strategy 2: Early game - use opening explorer (first 20 moves)
+    if LICHESS_AVAILABLE and ply_count < 20:
+        opening_move_uci = get_opening_move_from_explorer(board, time_control=time_control)
+        if opening_move_uci:
+            try:
+                opening_move = chess.Move.from_uci(opening_move_uci)
+                if opening_move in board.legal_moves:
+                    return opening_move
+            except Exception:
+                pass  # Fall through to Maia
+    
+    # Strategy 3: Mid-game - use Maia for human-like play
     if not MAIA_AVAILABLE:
         raise RuntimeError("Maia is not available. Please ensure lc0 and Maia models are configured.")
     
@@ -134,13 +178,13 @@ def get_bot_move(board: chess.Board, bot_rating: int) -> chess.Move:
     return maia_move
 
 
-def get_bot_move_with_error(board: chess.Board, bot_rating: int) -> chess.Move:
+def get_bot_move_with_error(board: chess.Board, bot_rating: int, time_control: str = "blitz", ply_count: int = 0) -> chess.Move:
     """
     Get a move from a bot that may make mistakes based on rating.
     Lower rated bots make more mistakes.
     """
     # Get the best move
-    best_move = get_bot_move(board, bot_rating)
+    best_move = get_bot_move(board, bot_rating, time_control=time_control, ply_count=ply_count)
     
     # Calculate error probability based on rating
     # 800 rating = 30% chance of error, 2500 rating = 2% chance of error

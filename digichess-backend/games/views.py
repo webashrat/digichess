@@ -15,7 +15,9 @@ from channels.layers import get_channel_layer
 from utils.redis_client import get_redis
 
 from .models import Game
-from .serializers import GameSerializer, MoveSerializer
+from .serializers import GameSerializer
+from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
+from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation, MoveSerializer
 
 
 class GameListCreateView(APIView):
@@ -85,9 +87,17 @@ class GameMoveView(APIView):
         rating_field = rating_field_map.get(game.time_control, 'rating_blitz')
         bot_rating = getattr(bot_player, rating_field, 800)
         
-        # Get bot move
+        # Get bot move - use Lichess APIs for optimization
+        move_list = (game.moves or "").strip().split()
+        ply_count = len(move_list)
+        
         try:
-            bot_move = get_bot_move_with_error(board, bot_rating)
+            bot_move = get_bot_move_with_error(
+                board, 
+                bot_rating, 
+                time_control=game.time_control,
+                ply_count=ply_count
+            )
             move_san = board.san(bot_move)
         except Exception as e:
             import sys
@@ -194,19 +204,25 @@ class GameMoveView(APIView):
         except Exception:
             pass
         
-        # Include legal moves in WebSocket payload for instant interactivity (like Lichess)
+        # Include legal moves and game state for instant interactivity (like Lichess)
         legal_moves = []
+        game_state = {}
         try:
             legal_moves = [board.san(mv) for mv in board.legal_moves]
+            
+            # Get full game state for smooth reconnection (like Lichess gameState)
+            from games.lichess_game_flow import get_game_state_export
+            game_state = get_game_state_export(game.current_fen, game.moves) or {}
         except Exception:
             pass
         
+        # Broadcast move with full state (like Lichess does)
         async_to_sync(channel_layer.group_send)(
             f"game_{game.id}",
             {
                 "type": "game.event",
                 "payload": {
-                    "type": "move",
+                    "type": "gameState",  # Lichess-compatible type
                     "game_id": game.id,
                     "san": move_san,
                     "fen": game.current_fen,
@@ -214,6 +230,10 @@ class GameMoveView(APIView):
                     "white_time_left": game.white_time_left,
                     "black_time_left": game.black_time_left,
                     "legal_moves": legal_moves,  # Include legal moves for instant board interactivity
+                    "game_state": game_state,  # Full game state for smooth updates
+                    "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
+                    "status": game.status,
+                    "result": game.result,
                 },
             },
         )
@@ -321,12 +341,21 @@ class GameMoveView(APIView):
         if game.last_move_at:
             elapsed = (now - game.last_move_at).total_seconds()
 
-        move = self._parse_move(board, serializer.validated_data["move"])
-        if move not in board.legal_moves:
-            return Response({"detail": "Illegal move."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Get SAN notation BEFORE pushing the move
-        san = board.san(move)
+        # Fast move validation using Lichess game flow utilities
+        move_san = serializer.validated_data["move"]
+        from games.lichess_game_flow import validate_move_fast
+        
+        is_valid, error_msg, move = validate_move_fast(board, move_san)
+        if not is_valid or not move:
+            return Response({"detail": error_msg or "Illegal move."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Move is valid, proceed
+        # move_san is already in SAN format (from validate_move_fast or input)
+        # Use it directly, but also get from move object for consistency
+        try:
+            san = board.san(move)  # Ensure we have correct SAN
+        except Exception:
+            san = move_san  # Fallback to input
         board.push(move)
 
         if game.status == Game.STATUS_PENDING:
@@ -748,52 +777,71 @@ class GameAnalysisView(APIView):
         }
 
         engine_info = None
-        engine_path = getattr(settings, "STOCKFISH_PATH", os.getenv("STOCKFISH_PATH"))
-        if not engine_path:
-            engine_info = {"error": "STOCKFISH_PATH not configured. Set it in settings or environment variables."}
-        elif not Path(engine_path).exists():
-            engine_info = {"error": f"Stockfish not found at path: {engine_path}"}
-        elif not os.access(engine_path, os.X_OK):
-            engine_info = {"error": f"Stockfish found at {engine_path} but is not executable. Run: chmod +x {engine_path}"}
-        else:
-            try:
-                with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-                    limit = chess.engine.Limit(time=0.5)
-                    result = engine.analyse(board, limit)
-                    if result:
-                        score = result.get("score")
-                        pv = result.get("pv", [])
-                        engine_info = {
-                            "best_move": board.san(pv[0]) if pv else None,
-                            "score": score.pov(board.turn).score(mate_score=100000) if score else None,
-                            "mate": score.pov(board.turn).mate() if score else None,
-                            "depth": result.get("depth", 0),
-                        }
-                    else:
-                        engine_info = {"error": "Stockfish returned no analysis result"}
-            except OSError as exc:
-                if exc.errno == 8:  # Exec format error
-                    import platform
-                    system_arch = platform.machine()
-                    engine_info = {
-                        "error": f"Stockfish architecture mismatch. Your system is {system_arch}, but Stockfish binary was compiled for a different architecture.",
-                        "error_type": "ArchitectureMismatch",
-                        "engine_path": engine_path,
-                        "system_architecture": system_arch,
-                        "suggestion": "Recompile Stockfish for your architecture or download a pre-built binary for your platform."
-                    }
-                else:
-                    engine_info = {
-                        "error": str(exc),
-                        "error_type": type(exc).__name__,
-                        "engine_path": engine_path
-                    }
-            except Exception as exc:
+        engine_source = None
+        
+        # Try Lichess API first (faster, free, no local setup)
+        try:
+            lichess_result = analyze_position_with_lichess(board, depth=18)
+            if lichess_result:
+                best_move_san = lichess_result.get("best_move")
+                if best_move_san:
+                    # Convert UCI to SAN if needed
+                    try:
+                        move_obj = chess.Move.from_uci(best_move_san)
+                        if move_obj in board.legal_moves:
+                            best_move_san = board.san(move_obj)
+                    except Exception:
+                        pass  # Already SAN or can't convert
+                
                 engine_info = {
-                    "error": str(exc),
-                    "error_type": type(exc).__name__,
-                    "engine_path": engine_path
+                    "best_move": best_move_san,
+                    "score": lichess_result.get("evaluation"),  # Centipawns
+                    "mate": lichess_result.get("mate"),
+                    "depth": lichess_result.get("depth", 0),
+                    "pv": lichess_result.get("pv", []),
+                    "knodes": lichess_result.get("knodes", 0)
                 }
+                engine_source = "lichess_cloud"
+        except Exception:
+            pass  # Fall through to local Stockfish
+        
+        # Fallback to local Stockfish if Lichess fails
+        if not engine_info:
+            engine_path = get_stockfish_path()
+            
+            if not engine_path:
+                engine_info = {"error": "STOCKFISH_PATH not configured and repo Stockfish not available."}
+            else:
+                works, message = ensure_stockfish_works(engine_path)
+                
+                if not works:
+                    engine_info = {"error": message, "engine_path": engine_path}
+                else:
+                    try:
+                        with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
+                            limit = chess.engine.Limit(time=0.5)
+                            result = engine.analyse(board, limit)
+                            if result:
+                                score = result.get("score")
+                                pv = result.get("pv", [])
+                                engine_info = {
+                                    "best_move": board.san(pv[0]) if pv else None,
+                                    "score": score.pov(board.turn).score(mate_score=100000) if score else None,
+                                    "mate": score.pov(board.turn).mate() if score else None,
+                                    "depth": result.get("depth", 0),
+                                }
+                                engine_source = "local_stockfish"
+                            else:
+                                engine_info = {"error": "Stockfish returned no analysis result"}
+                    except Exception as exc:
+                        engine_info = {
+                            "error": str(exc),
+                            "error_type": type(exc).__name__,
+                            "engine_path": engine_path
+                        }
+        
+        if engine_source:
+            engine_info["source"] = engine_source
 
         return Response(
             {
