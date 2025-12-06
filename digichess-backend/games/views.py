@@ -771,6 +771,23 @@ class GameAnalysisView(APIView):
                         }
                     else:
                         engine_info = {"error": "Stockfish returned no analysis result"}
+            except OSError as exc:
+                if exc.errno == 8:  # Exec format error
+                    import platform
+                    system_arch = platform.machine()
+                    engine_info = {
+                        "error": f"Stockfish architecture mismatch. Your system is {system_arch}, but Stockfish binary was compiled for a different architecture.",
+                        "error_type": "ArchitectureMismatch",
+                        "engine_path": engine_path,
+                        "system_architecture": system_arch,
+                        "suggestion": "Recompile Stockfish for your architecture or download a pre-built binary for your platform."
+                    }
+                else:
+                    engine_info = {
+                        "error": str(exc),
+                        "error_type": type(exc).__name__,
+                        "engine_path": engine_path
+                    }
             except Exception as exc:
                 engine_info = {
                     "error": str(exc),

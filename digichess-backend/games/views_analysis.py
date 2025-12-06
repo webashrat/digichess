@@ -185,6 +185,17 @@ class GameFullAnalysisView(APIView):
                         errors.append(f"Move {i+1} ({move_san}): Error - {str(e)}")
                         continue
         
+        except OSError as e:
+            if e.errno == 8:  # Exec format error
+                import platform
+                system_arch = platform.machine()
+                raise Exception(
+                    f"Stockfish architecture mismatch. "
+                    f"Your system is {system_arch}, but Stockfish binary was compiled for a different architecture. "
+                    f"Path: {engine_path}. "
+                    f"Solution: Recompile Stockfish for your architecture or download a pre-built binary."
+                )
+            raise Exception(f"Failed to start Stockfish engine: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to start Stockfish engine: {str(e)}")
         
