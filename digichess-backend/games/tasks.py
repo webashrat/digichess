@@ -96,9 +96,49 @@ def make_bot_move_async(game_id: int):
 
 @shared_task
 def broadcast_clock_updates():
-    r = get_redis()
-    # Implementation for clock updates if needed
-    pass
+    """Broadcast clock updates for all active games via WebSocket"""
+    from django.utils import timezone
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    import chess
+    
+    active_games = Game.objects.filter(status=Game.STATUS_ACTIVE).select_related('white', 'black')
+    now = timezone.now()
+    channel_layer = get_channel_layer()
+    
+    if not channel_layer:
+        return
+    
+    for game in active_games:
+        if not game.last_move_at:
+            continue
+        
+        elapsed = (now - game.last_move_at).total_seconds()
+        
+        try:
+            board = chess.Board(game.current_fen or chess.STARTING_FEN)
+            is_white_turn = board.turn == chess.WHITE
+        except Exception:
+            is_white_turn = True
+        
+        # Calculate current time left
+        white_time_left = max(0, game.white_time_left - int(elapsed) if is_white_turn else game.white_time_left)
+        black_time_left = max(0, game.black_time_left - int(elapsed) if not is_white_turn else game.black_time_left)
+        
+        # Broadcast clock update
+        async_to_sync(channel_layer.group_send)(
+            f"game_{game.id}",
+            {
+                "type": "game.event",
+                "payload": {
+                    "type": "clock",
+                    "game_id": game.id,
+                    "white_time_left": white_time_left,
+                    "black_time_left": black_time_left,
+                    "turn": "white" if is_white_turn else "black",
+                },
+            },
+        )
 
 
 @shared_task

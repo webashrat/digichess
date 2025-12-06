@@ -135,19 +135,22 @@ class GameMoveView(APIView):
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": result,
-                                "reason": "timeout",
-                                "game": game_data,
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "game_finished",
+                                    "game_id": game.id,
+                                    "result": result,
+                                    "reason": "timeout",
+                                    "game": game_data,
+                                },
                             },
-                        },
-                    )
+                        )
+                    except Exception:
+                        pass  # Don't fail if channel layer unavailable
             else:
                 game.black_time_left -= int(elapsed)
                 if game.black_time_left <= 0:
@@ -160,19 +163,22 @@ class GameMoveView(APIView):
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": result,
-                                "reason": "timeout",
-                                "game": game_data,
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "game_finished",
+                                    "game_id": game.id,
+                                    "result": result,
+                                    "reason": "timeout",
+                                    "game": game_data,
+                                },
                             },
-                        },
-                    )
+                        )
+                    except Exception:
+                        pass  # Don't fail if channel layer unavailable
         
         # Apply increment
         from games.game_proxy import GameProxy
@@ -213,40 +219,51 @@ class GameMoveView(APIView):
             pass
         
         # Include legal moves and game state for instant interactivity (like Lichess)
-        # Use data from optimized processing to avoid re-calculating
-        legal_moves = extra_data.get('legal_moves', [])
+        # Calculate legal moves from current board position
+        try:
+            legal_moves = [board.san(m) for m in list(board.legal_moves)[:50]]  # Limit to 50 for performance
+        except Exception:
+            legal_moves = []
+        
         game_state = {}
         try:
             # Get full game state for smooth reconnection (like Lichess gameState)
             from games.lichess_game_flow import get_game_state_export
             game_state = get_game_state_export(game.current_fen, game.moves) or {}
-            # Enhance with optimized data
+            # Enhance with calculated legal moves
             if legal_moves:
                 game_state['legal_moves'] = {'san': legal_moves}
         except Exception:
             pass
         
         # Broadcast move with full state (like Lichess does)
-        async_to_sync(channel_layer.group_send)(
-            f"game_{game.id}",
-            {
-                "type": "game.event",
-                "payload": {
-                    "type": "gameState",  # Lichess-compatible type
-                    "game_id": game.id,
-                    "san": move_san,
-                    "fen": game.current_fen,
-                    "moves": game.moves,
-                    "white_time_left": game.white_time_left,
-                    "black_time_left": game.black_time_left,
-                    "legal_moves": legal_moves,  # Include legal moves for instant board interactivity
-                    "game_state": game_state,  # Full game state for smooth updates
-                    "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
-                    "status": game.status,
-                    "result": game.result,
+        # Wrap in try-except to handle Redis/channel layer unavailability gracefully
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "gameState",  # Lichess-compatible type
+                        "game_id": game.id,
+                        "san": move_san,
+                        "fen": game.current_fen,
+                        "moves": game.moves,
+                        "white_time_left": game.white_time_left,
+                        "black_time_left": game.black_time_left,
+                        "legal_moves": legal_moves,  # Include legal moves for instant board interactivity
+                        "game_state": game_state,  # Full game state for smooth updates
+                        "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
+                        "status": game.status,
+                        "result": game.result,
+                    },
                 },
-            },
-        )
+            )
+        except Exception as e:
+            # Don't fail if channel layer unavailable (e.g., Redis down or test mode)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to broadcast bot move via WebSocket: {e}")
         
         # If next player is also a bot, make another move (with small delay)
         if game.status == Game.STATUS_ACTIVE:
@@ -321,19 +338,22 @@ class GameMoveView(APIView):
         if result:
             channel_layer = get_channel_layer()
             game_data = GameSerializer(game).data
-            async_to_sync(channel_layer.group_send)(
-                f"game_{game.id}",
-                {
-                    "type": "game.event",
-                    "payload": {
-                        "type": "game_finished",
-                        "game_id": game.id,
-                        "result": result,
-                        "reason": reason,
-                        "game": game_data,
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"game_{game.id}",
+                    {
+                        "type": "game.event",
+                        "payload": {
+                            "type": "game_finished",
+                            "game_id": game.id,
+                            "result": result,
+                            "reason": reason,
+                            "game": game_data,
+                        },
                     },
-                },
-            )
+                )
+            except Exception:
+                pass  # Don't fail if channel layer unavailable
 
     def post(self, request, pk: int):
         game = get_object_or_404(Game, id=pk)
@@ -389,19 +409,22 @@ class GameMoveView(APIView):
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": result,
-                                "reason": "timeout",
-                                "game": game_data,
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "game_finished",
+                                    "game_id": game.id,
+                                    "result": result,
+                                    "reason": "timeout",
+                                    "game": game_data,
+                                },
                             },
-                        },
-                    )
+                        )
+                    except Exception:
+                        pass  # Don't fail if channel layer unavailable
             else:
                 game.black_time_left -= int(elapsed)
                 if game.black_time_left <= 0:
@@ -416,19 +439,22 @@ class GameMoveView(APIView):
                     # Broadcast game_finished event for timeout
                     channel_layer = get_channel_layer()
                     game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": result,
-                                "reason": "timeout",
-                                "game": game_data,
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "game_finished",
+                                    "game_id": game.id,
+                                    "result": result,
+                                    "reason": "timeout",
+                                    "game": game_data,
+                                },
                             },
-                        },
-                    )
+                        )
+                    except Exception:
+                        pass  # Don't fail if channel layer unavailable
         # Apply increment to mover if still active
         if game.status == Game.STATUS_ACTIVE:
             if is_white_move:
@@ -461,21 +487,45 @@ class GameMoveView(APIView):
             )
         except Exception:
             pass
-        async_to_sync(channel_layer.group_send)(
-            f"game_{game.id}",
-            {
-                "type": "game.event",
-                "payload": {
-                    "type": "move",
-                    "game_id": game.id,
-                    "san": san,
-                    "fen": game.current_fen,
-                    "moves": game.moves,
-                    "white_time_left": game.white_time_left,
-                    "black_time_left": game.black_time_left,
+        
+        # Get legal moves and enhanced game state for WebSocket payload (like Lichess)
+        from games.lichess_game_flow import get_game_state_export
+        try:
+            game_state = get_game_state_export(
+                game.current_fen or chess.STARTING_FEN,
+                game.moves or "",
+                "standard"
+            )
+            legal_moves = game_state.get("legal_moves", {}).get("san", []) if game_state else []
+        except Exception:
+            legal_moves = []
+        
+        # Broadcast move with full game state (like Lichess gameState message)
+        # Wrap in try-except to handle Redis/channel layer unavailability gracefully
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "gameState",
+                        "game_id": game.id,
+                        "san": san,
+                        "fen": game.current_fen,
+                        "moves": game.moves,
+                        "white_time_left": game.white_time_left,
+                        "black_time_left": game.black_time_left,
+                        "legal_moves": legal_moves,
+                        "status": game.status,
+                        "result": game.result,
+                    },
                 },
-            },
-        )
+            )
+        except Exception as e:
+            # Don't fail if channel layer unavailable (e.g., Redis down or test mode)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to broadcast game state via WebSocket: {e}")
         
         # Check if opponent is a bot and make bot move automatically
         if game.status == Game.STATUS_ACTIVE:

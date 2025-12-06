@@ -872,23 +872,25 @@ export default function GameView() {
             // Handle clock update directly from WebSocket (like Lichess)
             if (payload.white_time_left !== undefined && payload.black_time_left !== undefined) {
               const now = performance.now();
+              const turn = payload.turn || clock.turn || 'white';
               if (!clockTimesRef.current) {
                 clockTimesRef.current = {
                   white: payload.white_time_left * 1000,
                   black: payload.black_time_left * 1000,
                   lastUpdate: now,
-                  activeColor: clock.turn as 'white' | 'black'
+                  activeColor: turn as 'white' | 'black'
                 };
               } else {
-                // Sync with server clock data
+                // Sync with server clock data - server is source of truth
                 clockTimesRef.current.white = payload.white_time_left * 1000;
                 clockTimesRef.current.black = payload.black_time_left * 1000;
+                clockTimesRef.current.activeColor = turn as 'white' | 'black';
                 clockTimesRef.current.lastUpdate = now;
               }
               setClock({
                 white_time_left: payload.white_time_left,
                 black_time_left: payload.black_time_left,
-                turn: clock.turn
+                turn: turn
               });
             }
           } else if (t === 'chat') {

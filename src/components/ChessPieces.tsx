@@ -1,6 +1,6 @@
 // SVG Chess Pieces - Solid Black and White with Lichess CDN support
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const pieceMap: { [key: string]: string } = {
   'p': 'P',
@@ -32,7 +32,13 @@ export const ChessPiece = ({
   const strokeWidth = pieceColor === 'white' ? 1.2 : 1.0;
 
   // Use custom SVG pieces when 'custom' is selected, otherwise try Lichess CDN with fallback
+  // Reset imageError when pieceSet changes
   const [imageError, setImageError] = useState(false);
+  
+  // Reset error state when pieceSet changes
+  useEffect(() => {
+    setImageError(false);
+  }, [pieceSet]);
   
   // If using custom SVG pieces, use SVG components directly
   if (pieceSet === 'custom') {
@@ -75,10 +81,12 @@ export const ChessPiece = ({
   }
   
   // Try to load from public Lichess CDN (lichess.org, not lichess1.org)
+  // Add timestamp or pieceSet to URL to force reload when pieceSet changes
   const lichessUrl = `https://lichess.org/assets/piece/${pieceSet}/${pieceCode}.webp`;
   
   return (
     <img
+      key={`${pieceSet}-${pieceCode}`} // Force re-render when pieceSet changes
       src={lichessUrl}
       alt=""
       width={size}
