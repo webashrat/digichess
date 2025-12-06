@@ -127,11 +127,13 @@ def process_move_optimized(
         board.push(move)
         
         # Prepare response data (minimal processing)
+        # Convert legal_moves generator to list and limit to 10 for performance
+        legal_moves_list = list(board.legal_moves)[:10]
         extra_data = {
             'san': move_san,
             'uci': move.uci(),
             'fen': board.fen(),
-            'legal_moves': [board.san(m) for m in board.legal_moves[:10]],  # Limit to 10 for performance
+            'legal_moves': [board.san(m) for m in legal_moves_list],
             'is_check': board.is_check(),
             'is_checkmate': board.is_checkmate(),
             'is_stalemate': board.is_stalemate(),
