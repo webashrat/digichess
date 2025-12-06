@@ -15,9 +15,9 @@ from channels.layers import get_channel_layer
 from utils.redis_client import get_redis
 
 from .models import Game
-from .serializers import GameSerializer
+from .serializers import GameSerializer, MoveSerializer
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
-from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation, MoveSerializer
+from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation
 
 
 class GameListCreateView(APIView):
