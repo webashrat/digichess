@@ -6,10 +6,20 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import requests
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 LICHESS_API_BASE = "https://lichess.org/api"
+
+
+def get_lichess_headers():
+    """Get headers for authenticated Lichess API requests"""
+    headers = {}
+    token = getattr(settings, "LICHESS_API_TOKEN", "")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 class DailyPuzzleView(APIView):
@@ -19,7 +29,8 @@ class DailyPuzzleView(APIView):
     def get(self, request):
         try:
             url = f"{LICHESS_API_BASE}/puzzle/daily"
-            response = requests.get(url, timeout=5)
+            headers = get_lichess_headers()
+            response = requests.get(url, headers=headers, timeout=5)
             
             if response.status_code == 200:
                 return Response(response.json())
@@ -43,7 +54,8 @@ class PuzzleView(APIView):
     def get(self, request, puzzle_id: str):
         try:
             url = f"{LICHESS_API_BASE}/puzzle/{puzzle_id}"
-            response = requests.get(url, timeout=5)
+            headers = get_lichess_headers()
+            response = requests.get(url, headers=headers, timeout=5)
             
             if response.status_code == 200:
                 return Response(response.json())
@@ -75,7 +87,8 @@ class NextPuzzleView(APIView):
             # Remove None values
             params = {k: v for k, v in params.items() if v is not None}
             
-            response = requests.get(url, params=params, timeout=5)
+            headers = get_lichess_headers()
+            response = requests.get(url, params=params, headers=headers, timeout=5)
             
             if response.status_code == 200:
                 return Response(response.json())
@@ -107,7 +120,8 @@ class PuzzleBatchView(APIView):
                 "nb": int(request.query_params.get("nb", 10)),  # Number of puzzles
             }
             
-            response = requests.get(url, params=params, timeout=10)
+            headers = get_lichess_headers()
+            response = requests.get(url, params=params, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 return Response(response.json())

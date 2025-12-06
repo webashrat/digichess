@@ -1,10 +1,10 @@
 """
 Lichess API integration for fast cloud-based chess features
-Uses Lichess free API for:
-- Cloud evaluation (fast Stockfish analysis)
-- Opening explorer
-- Tablebase (endgame database)
-- Puzzle solving
+Uses Lichess API with authentication for:
+- Cloud evaluation (fast Stockfish analysis) - higher rate limits with auth
+- Opening explorer - faster with authenticated requests
+- Tablebase (endgame database) - faster with authenticated requests
+- Puzzle solving - authenticated access
 """
 import requests
 import chess
@@ -17,16 +17,30 @@ logger = logging.getLogger(__name__)
 LICHESS_API_BASE = "https://lichess.org/api"
 
 
+def get_lichess_headers() -> Dict[str, str]:
+    """
+    Get headers for authenticated Lichess API requests.
+    Returns headers with Bearer token if available.
+    """
+    headers = {}
+    token = getattr(settings, "LICHESS_API_TOKEN", "")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        logger.debug("Using authenticated Lichess API request")
+    return headers
+
+
 def get_cloud_evaluation(fen: str, variant: str = "standard", multi_pv: int = 1, depth: int = 18) -> Optional[Dict[str, Any]]:
     """
     Get cloud evaluation from Lichess API.
     Fast and free - no local Stockfish needed!
+    Uses authenticated requests for higher rate limits and faster responses.
     
     Args:
         fen: Position FEN string
         variant: Chess variant (standard, chess960, etc.)
         multi_pv: Number of principal variations (1-5)
-        depth: Analysis depth (1-22, default 18)
+        depth: Analysis depth (1-22, default 18) - higher with auth token
     
     Returns:
         Dict with evaluation data or None if failed
@@ -36,11 +50,14 @@ def get_cloud_evaluation(fen: str, variant: str = "standard", multi_pv: int = 1,
         params = {
             "fen": fen,
             "multiPv": min(multi_pv, 5),  # Lichess limits to 5
-            "depth": min(max(depth, 1), 22),  # Lichess limits depth
+            "depth": min(max(depth, 1), 22),  # Lichess limits depth, but auth gets priority
             "variant": variant
         }
         
-        response = requests.get(url, params=params, timeout=5)
+        headers = get_lichess_headers()
+        # Use longer timeout for authenticated requests (they can be deeper)
+        timeout = 10 if headers.get("Authorization") else 5
+        response = requests.get(url, params=params, headers=headers, timeout=timeout)
         
         if response.status_code == 200:
             data = response.json()
@@ -93,7 +110,8 @@ def get_opening_explorer(fen: str, variant: str = "standard", speeds: List[str] 
         if ratings:
             params["ratings"] = ",".join(map(str, ratings))
         
-        response = requests.get(url, params=params, timeout=3)
+        headers = get_lichess_headers()
+        response = requests.get(url, params=params, headers=headers, timeout=3)
         
         if response.status_code == 200:
             data = response.json()
@@ -127,7 +145,8 @@ def get_tablebase(fen: str, variant: str = "standard") -> Optional[Dict[str, Any
         url = f"{LICHESS_API_BASE}/tablebase/{variant}"
         params = {"fen": fen}
         
-        response = requests.get(url, params=params, timeout=3)
+        headers = get_lichess_headers()
+        response = requests.get(url, params=params, headers=headers, timeout=3)
         
         if response.status_code == 200:
             data = response.json()

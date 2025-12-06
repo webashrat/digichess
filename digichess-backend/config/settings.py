@@ -127,6 +127,9 @@ OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://digichess.local")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
+# Lichess API Configuration
+LICHESS_API_TOKEN = os.getenv("LICHESS_API_TOKEN", "")
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CHANNEL_LAYERS = {
     "default": {
