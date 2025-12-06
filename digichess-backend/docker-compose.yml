@@ -85,7 +85,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: digichess-celery
-    command: celery -A config worker -l info --concurrency=2
+    command: celery -A config worker -l info -Q scm_default,scm_emails --concurrency=4
     depends_on:
       - postgres
       - redis

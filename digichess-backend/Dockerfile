@@ -73,6 +73,10 @@ COPY . .
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Copy startup script for running all services
+COPY docker-start-all.sh /start-all.sh
+RUN chmod +x /start-all.sh
+
 # Create directories for media, static files, and Maia models
 RUN mkdir -p /app/media /app/staticfiles /app/games/maia_models /app/media/bots
 
