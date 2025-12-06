@@ -95,6 +95,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -164,15 +165,25 @@ CELERY_BEAT_SCHEDULE = {
 # CORS / CSRF
 cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
 if cors_origins_env:
-    CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+    # Strip whitespace and trailing slashes from origins
+    CORS_ALLOWED_ORIGINS = [
+        o.strip().rstrip("/") for o in cors_origins_env.split(",") if o.strip()
+    ]
 else:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+csrf_origins_env = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+if csrf_origins_env:
+    # Strip whitespace and trailing slashes from origins
+    CSRF_TRUSTED_ORIGINS = [
+        o.strip().rstrip("/") for o in csrf_origins_env.split(",") if o.strip()
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 CORS_ALLOW_CREDENTIALS = True

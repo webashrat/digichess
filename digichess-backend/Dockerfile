@@ -74,7 +74,7 @@ COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Create directories for media, static files, and Maia models
-RUN mkdir -p /app/media /app/static /app/games/maia_models /app/media/bots
+RUN mkdir -p /app/media /app/staticfiles /app/games/maia_models /app/media/bots
 
 # Copy bot profile pictures
 COPY DIGIBOT.jpg /app/media/bots/digibot.jpg
