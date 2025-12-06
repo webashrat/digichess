@@ -240,9 +240,12 @@ export function ChessBoard({
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (draggedPiece && boardRef.current) {
         const rect = boardRef.current.getBoundingClientRect();
+        // Constrain to board bounds to prevent shadow appearing outside
+        const boardX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const boardY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
         setDragOffset({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
+          x: boardX,
+          y: boardY
         });
       }
     };
@@ -979,12 +982,12 @@ export function ChessBoard({
         </div>
       </div>
       {/* Ghost piece during drag - Lichess style - Only show when actually dragging */}
-      {draggedPiece && dragOffset && wasDragged && (
+      {draggedPiece && dragOffset && wasDragged && boardRef.current && (
         <div
           style={{
             position: 'fixed',
-            left: `${dragOffset.x - 30}px`,
-            top: `${dragOffset.y - 30}px`,
+            left: `${Math.max(0, Math.min(window.innerWidth - 60, dragOffset.x + (boardRef.current.getBoundingClientRect().left) - 30))}px`,
+            top: `${Math.max(0, Math.min(window.innerHeight - 60, dragOffset.y + (boardRef.current.getBoundingClientRect().top) - 30))}px`,
             pointerEvents: 'none',
             zIndex: 10000,
             filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',

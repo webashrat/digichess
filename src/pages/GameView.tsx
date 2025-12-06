@@ -584,7 +584,7 @@ export default function GameView() {
       ws.onerror = (error) => {
         console.error('[GameView] Game WebSocket error:', error);
       };
-      ws.onmessage = (event) => {
+        ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
@@ -896,11 +896,21 @@ export default function GameView() {
           console.error('WebSocket message parse error:', e);
         }
       };
-      ws.onclose = () => {
-        console.log('Game WebSocket closed');
-        wsRef.current = null;
+        
+      // Initial connection
+      connectWebSocket();
+      
+      // Cleanup function
+      return () => {
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
+        }
+        if (wsRef.current) {
+          wsRef.current.close(1000, 'Component unmounting'); // Clean close
+        }
       };
-    } catch {
+    } catch (err) {
+      console.error('Failed to setup game WebSocket:', err);
       wsRef.current = null;
     }
 

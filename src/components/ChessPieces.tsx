@@ -31,7 +31,10 @@ export const ChessPiece = ({
   const strokeColor = pieceColor === 'white' ? '#000000' : '#ffffff';
   const strokeWidth = pieceColor === 'white' ? 1.2 : 1.0;
 
-  // If using custom SVG pieces (when pieceSet is 'custom'), use SVG components
+  // Use custom SVG pieces when 'custom' is selected, otherwise try Lichess CDN with fallback
+  const [imageError, setImageError] = useState(false);
+  
+  // If using custom SVG pieces, use SVG components directly
   if (pieceSet === 'custom') {
     switch (pieceType) {
       case 'p':
@@ -51,25 +54,47 @@ export const ChessPiece = ({
     }
   }
   
-  // Always use custom SVG pieces for reliability and performance
-  // Lichess CDN (lichess1.org) is internal-only and not publicly accessible
-  // Custom SVG pieces are fast, reliable, and work offline
-  switch (pieceType) {
-    case 'p':
-      return <Pawn size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
-    case 'r':
-      return <Rook size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
-    case 'n':
-      return <Knight size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
-    case 'b':
-      return <Bishop size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
-    case 'q':
-      return <Queen size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
-    case 'k':
-      return <King size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} isBlack={pieceColor === 'black'} />;
-    default:
-      return null;
+  // If image failed or we should use SVG fallback, use custom SVG pieces
+  if (imageError) {
+    switch (pieceType) {
+      case 'p':
+        return <Pawn size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
+      case 'r':
+        return <Rook size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
+      case 'n':
+        return <Knight size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
+      case 'b':
+        return <Bishop size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
+      case 'q':
+        return <Queen size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} />;
+      case 'k':
+        return <King size={size} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} isBlack={pieceColor === 'black'} />;
+      default:
+        return null;
+    }
   }
+  
+  // Try to load from public Lichess CDN (lichess.org, not lichess1.org)
+  const lichessUrl = `https://lichess.org/assets/piece/${pieceSet}/${pieceCode}.webp`;
+  
+  return (
+    <img
+      src={lichessUrl}
+      alt=""
+      width={size}
+      height={size}
+      style={{
+        display: 'block',
+        margin: 'auto',
+        filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))',
+        objectFit: 'contain'
+      }}
+      onError={() => {
+        // Fallback to custom SVG on error
+        setImageError(true);
+      }}
+    />
+  );
 };
 
 const Pawn = ({ size, fill, stroke, strokeWidth }: { size: number; fill: string; stroke: string; strokeWidth: number }) => (
