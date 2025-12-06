@@ -62,6 +62,7 @@ class Command(BaseCommand):
         user1 = User.objects.create_user(username='perf_test_1', email='pt1@test.com', password='test')
         user2 = User.objects.create_user(username='perf_test_2', email='pt2@test.com', password='test')
         game = Game.objects.create(
+            creator=user1,
             white=user1,
             black=user2,
             time_control=Game.TIME_BLITZ,
@@ -144,6 +145,7 @@ class Command(BaseCommand):
         games = []
         for i in range(10):
             game = Game.objects.create(
+                creator=users[i % len(users)],
                 white=users[i % len(users)],
                 black=users[(i + 1) % len(users)],
                 time_control=Game.TIME_BLITZ,
@@ -194,6 +196,7 @@ class Command(BaseCommand):
         user1 = User.objects.create_user(username='bwtest1', email='bw1@test.com', password='test')
         user2 = User.objects.create_user(username='bwtest2', email='bw2@test.com', password='test')
         game = Game.objects.create(
+            creator=user1,
             white=user1,
             black=user2,
             time_control=Game.TIME_BLITZ,
@@ -242,6 +245,7 @@ class Command(BaseCommand):
         user1 = User.objects.create_user(username='flow1', email='flow1@test.com', password='test')
         user2 = User.objects.create_user(username='flow2', email='flow2@test.com', password='test')
         game = Game.objects.create(
+            creator=user1,
             white=user1,
             black=user2,
             time_control=Game.TIME_BLITZ,

@@ -78,6 +78,7 @@ def test_query_optimization():
     games = []
     for i in range(10):
         game = Game.objects.create(
+            creator=user1,
             white=user1 if i % 2 == 0 else user2,
             black=user2 if i % 2 == 0 else user1,
             time_control=Game.TIME_BLITZ,
@@ -132,6 +133,7 @@ def test_batched_writes():
     user1 = User.objects.create_user(username='batch1', email='batch1@test.com', password='test')
     user2 = User.objects.create_user(username='batch2', email='batch2@test.com', password='test')
     game = Game.objects.create(
+        creator=user1,
         white=user1,
         black=user2,
         time_control=Game.TIME_BLITZ,

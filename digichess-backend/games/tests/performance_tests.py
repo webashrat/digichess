@@ -24,6 +24,7 @@ class GameProxyPerformanceTest(TestCase):
         self.user1 = User.objects.create_user(username='test1', email='test1@test.com', password='test')
         self.user2 = User.objects.create_user(username='test2', email='test2@test.com', password='test')
         self.game = Game.objects.create(
+            creator=self.user1,
             white=self.user1,
             black=self.user2,
             time_control=Game.TIME_BLITZ,
@@ -137,6 +138,7 @@ class QueryOptimizationTest(TransactionTestCase):
         self.games = []
         for i in range(5):
             game = Game.objects.create(
+                creator=self.user1,
                 white=self.user1 if i % 2 == 0 else self.user2,
                 black=self.user2 if i % 2 == 0 else self.user1,
                 time_control=Game.TIME_BLITZ,
@@ -180,6 +182,7 @@ class IntegrationPerformanceTest(TransactionTestCase):
         self.user1 = User.objects.create_user(username='player1', email='p1@test.com', password='test')
         self.user2 = User.objects.create_user(username='player2', email='p2@test.com', password='test')
         self.game = Game.objects.create(
+            creator=self.user1,
             white=self.user1,
             black=self.user2,
             time_control=Game.TIME_BLITZ,

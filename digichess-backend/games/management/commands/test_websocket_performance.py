@@ -37,6 +37,7 @@ class Command(BaseCommand):
         user1 = User.objects.create_user(username='wstest1', email='ws1@test.com', password='test')
         user2 = User.objects.create_user(username='wstest2', email='ws2@test.com', password='test')
         game = Game.objects.create(
+            creator=user1,
             white=user1,
             black=user2,
             time_control=Game.TIME_BLITZ,
