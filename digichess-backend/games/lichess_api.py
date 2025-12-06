@@ -121,8 +121,13 @@ def get_opening_explorer(fen: str, variant: str = "standard", speeds: List[str] 
                 "draws": data.get("draws", 0),
                 "moves": data.get("moves", [])
             }
+        elif response.status_code == 404:
+            # 404 is common for positions not in database - use debug level
+            logger.debug(f"Lichess explorer API returned 404 for position (not in database)")
+            return None
         else:
-            logger.warning(f"Lichess explorer API returned {response.status_code}")
+            # Only warn for unexpected errors (not 404)
+            logger.debug(f"Lichess explorer API returned {response.status_code}")
             return None
     except Exception as e:
         logger.warning(f"Error getting Lichess opening explorer: {e}")

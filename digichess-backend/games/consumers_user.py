@@ -3,6 +3,11 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 
 class UserConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group_name = None
+        self.user_id = None
+    
     async def connect(self):
         user = self.scope.get("user")
         if not user or user.is_anonymous:
@@ -21,7 +26,9 @@ class UserConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, code):
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        # Only discard from groups if we successfully connected
+        if self.group_name:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
         await self.channel_layer.group_discard("mm_global", self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
