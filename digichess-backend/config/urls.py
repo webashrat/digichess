@@ -6,8 +6,8 @@ from .views import healthz, readyz
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("healthz", healthz, name="healthz"),
-    path("readyz", readyz, name="readyz"),
+    path("healthz/", healthz, name="healthz"),
+    path("readyz/", readyz, name="readyz"),
     path("api/accounts/", include("accounts.urls")),
     path("api/public/accounts/", include("accounts.urls_public")),
     path("api/social/", include("social.urls")),
