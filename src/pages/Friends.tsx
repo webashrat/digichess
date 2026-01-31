@@ -157,7 +157,7 @@ export default function Friends() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {friends.map((f) => (
               <div key={f.id} className="card" style={{ padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <a href={`/profile/${f.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit' }}>
+                <a href={`#/profile/${f.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit' }}>
                   <div
                     style={{
                       width: 32,

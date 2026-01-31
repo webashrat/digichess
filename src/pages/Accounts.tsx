@@ -144,7 +144,7 @@ export default function Accounts() {
                 </td>
                 <td>{`${u.first_name || ''} ${u.last_name || ''}`.trim() || '—'}</td>
                 <td>
-                  <a style={{ color: 'var(--text)' }} href={`/profile/${u.username}`}>{u.username}</a>
+                  <a style={{ color: 'var(--text)' }} href={`#/profile/${u.username}`}>{u.username}</a>
                 </td>
                 <td><FlagIcon code={u.country} size={18} /></td>
                 <td>

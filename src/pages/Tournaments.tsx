@@ -70,7 +70,7 @@ export default function Tournaments() {
             Compete in structured chess tournaments
           </p>
         </div>
-        <a href="/tournaments/create" className="btn btn-gold" style={{ fontSize: 15, padding: '12px 24px', fontWeight: 600 }}>
+        <a href="#/tournaments/create" className="btn btn-gold" style={{ fontSize: 15, padding: '12px 24px', fontWeight: 600 }}>
           ➕ Create Tournament
         </a>
       </div>
@@ -114,7 +114,7 @@ export default function Tournaments() {
               {t.type === 'swiss' && <span>Swiss rounds: {t.swiss_rounds}</span>}
             </div>
             <a 
-              href={`/tournaments/${t.id}`} 
+              href={`#/tournaments/${t.id}`} 
               className="btn btn-primary" 
               style={{ marginTop: 'auto', width: 'fit-content' }}
               onClick={(e) => e.stopPropagation()}

@@ -201,7 +201,7 @@ export default function Register() {
             <button className="btn btn-warning" type="button" onClick={handleResend} style={{ fontSize: 14, padding: '10px 20px' }}>🔄 Resend OTP</button>
           </div>
         )}
-        <a href="/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Already have an account? Log in</a>
+        <a href="#/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Already have an account? Log in</a>
       </form>
     </div>
   );

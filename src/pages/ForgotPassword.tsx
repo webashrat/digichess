@@ -59,7 +59,7 @@ export default function ForgotPassword() {
         <button className="btn btn-primary" type="submit">
           {stage === 'request' ? 'Send OTP' : 'Reset password'}
         </button>
-        <a href="/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Back to login</a>
+        <a href="#/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Back to login</a>
       </form>
     </div>
   );

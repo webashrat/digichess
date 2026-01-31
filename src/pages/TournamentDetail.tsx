@@ -143,7 +143,7 @@ export default function TournamentDetail() {
         <div className="card" style={{ color: 'var(--danger)' }}>
           {error || 'Tournament not found'}
         </div>
-        <a href="/tournaments" className="btn btn-info" style={{ fontSize: 14, padding: '10px 20px' }}>← Back to Tournaments</a>
+        <a href="#/tournaments" className="btn btn-info" style={{ fontSize: 14, padding: '10px 20px' }}>← Back to Tournaments</a>
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function TournamentDetail() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexShrink: 0 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
-            <a href="/tournaments" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← Tournaments</a>
+            <a href="#/tournaments" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← Tournaments</a>
           </div>
           <h1 style={{ margin: 0 }}>{tournament.name}</h1>
           <div style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>

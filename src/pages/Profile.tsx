@@ -372,7 +372,7 @@ export default function Profile() {
             {(me && me.id === user.id) || user.is_online || user.is_bot ? '🟢 Online' : '🔴 Offline'}
           </span>
           {user.is_playing && user.spectate_game_id && (
-            <a className="btn btn-info" href={`/games/${user.spectate_game_id}`}>👁️ Spectate</a>
+            <a className="btn btn-info" href={`#/games/${user.spectate_game_id}`}>👁️ Spectate</a>
           )}
           {renderFriendButton()}
         </div>

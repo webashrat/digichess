@@ -805,7 +805,7 @@ export default function Home() {
               <span>Live Games</span>
             </h3>
               <a 
-                href="/games" 
+                href="#/games" 
                 className="btn btn-info"
                 style={{ 
                   fontSize: 13, 
@@ -889,7 +889,7 @@ export default function Home() {
                           ? '1px solid #66bb6a'
                           : '1px solid #64b5f6'
                     }}
-                    href={`/games/${g.id}`}
+                    href={`#/games/${g.id}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {me && (g.white.id === me.id || g.black.id === me.id) ? '▶️ Play' : '👀 Watch'}
@@ -907,7 +907,7 @@ export default function Home() {
               <span>Leaderboards</span>
             </h3>
               <a 
-                href="/leaderboards" 
+                href="#/leaderboards" 
                 className="btn btn-info"
                 style={{ 
                   fontSize: 13, 
@@ -959,7 +959,7 @@ export default function Home() {
                   }}>
                     <FlagIcon code={row.country} size={18} />
                     <a 
-                      href={`/profile/${row.username}`} 
+                      href={`#/profile/${row.username}`} 
                       style={{ 
                         color: 'var(--text)', 
                         fontWeight: 600,

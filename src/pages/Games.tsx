@@ -79,7 +79,7 @@ export default function Games() {
               <IdentityStrip user={g.black} mode={g.mode} />
               <a 
                 className="btn"
-                href={`/games/${g.id}`}
+                href={`#/games/${g.id}`}
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   fontSize: 14,

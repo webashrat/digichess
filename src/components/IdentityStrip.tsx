@@ -21,7 +21,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       {/* Profile picture */}
       <a
-        href={`/profile/${user.username}`}
+        href={`#/profile/${user.username}`}
         style={{
           width: 40,
           height: 40,
@@ -69,7 +69,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <a
-            href={`/profile/${user.username}`}
+            href={`#/profile/${user.username}`}
             style={{ 
               fontWeight: 600, 
               color: 'var(--text)', 

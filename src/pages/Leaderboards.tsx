@@ -161,7 +161,7 @@ export default function Leaderboards() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <FlagIcon code={r.country} size={18} />
                     <a 
-                      href={`/profile/${r.username}`} 
+                      href={`#/profile/${r.username}`} 
                       style={{ 
                         color: 'var(--text)', 
                         fontWeight: 600,

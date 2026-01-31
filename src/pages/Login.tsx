@@ -243,7 +243,7 @@ export default function Login() {
         </button>
         {mode === 'login' && (
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
-            Not the first time? <a href="/register" style={{ color: 'var(--accent)' }}>Register</a>
+            Not the first time? <a href="#/register" style={{ color: 'var(--accent)' }}>Register</a>
           </div>
         )}
       </form>
