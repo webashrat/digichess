@@ -151,6 +151,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.check_game_timeouts",
         "schedule": 5.0,  # Every 5 seconds - check for game timeouts (continues clock when user disconnects)
     },
+    "check-first-move-timeouts": {
+        "task": "games.tasks.check_first_move_timeouts",
+        "schedule": 2.0,  # Every 2 seconds - abort games if first move not made in time
+    },
     "flush-game-proxies": {
         "task": "games.tasks.flush_dirty_games",
         "schedule": 30.0,  # Every 30 seconds

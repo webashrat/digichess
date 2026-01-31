@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import timedelta
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 LOCK_TTL_SECONDS = 5
 EVENT_STREAM_MAXLEN = 10000
+FIRST_MOVE_GRACE_SECONDS = 20
 
 _RELEASE_LOCK_LUA = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -81,7 +83,9 @@ def compute_clock_snapshot(game: Game, now=None, board: Optional[chess.Board] = 
     white_left = game.white_time_left
     black_left = game.black_time_left
     elapsed = 0
-    if game.status == Game.STATUS_ACTIVE and game.last_move_at:
+    move_count = len((game.moves or "").strip().split()) if game.moves else 0
+    # Do not run the main clock until both players have made their first move.
+    if game.status == Game.STATUS_ACTIVE and game.last_move_at and move_count >= 2:
         elapsed = int((now - game.last_move_at).total_seconds())
         if elapsed < 0:
             elapsed = 0
@@ -96,6 +100,7 @@ def compute_clock_snapshot(game: Game, now=None, board: Optional[chess.Board] = 
         "turn": "white" if board.turn is chess.WHITE else "black",
         "server_time": int(now.timestamp()),
         "elapsed": elapsed,
+        "move_count": move_count,
     }
 
 
@@ -143,6 +148,16 @@ def _build_state(
     uci: Optional[str],
     seq: Optional[int],
 ) -> Dict[str, Any]:
+    move_count = len((game.moves or "").strip().split()) if game.moves else 0
+    first_move_deadline = None
+    first_move_color = None
+    if move_count == 0:
+        first_move_deadline = int((game.created_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+        first_move_color = "white"
+    elif move_count == 1 and game.started_at:
+        first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+        first_move_color = "black"
+
     return {
         "seq": seq,
         "ts": int(now.timestamp()),
@@ -158,6 +173,11 @@ def _build_state(
         "status": game.status,
         "result": game.result,
         "server_time": int(now.timestamp()),
+        "created_at": game.created_at.isoformat() if game.created_at else None,
+        "started_at": game.started_at.isoformat() if game.started_at else None,
+        "move_count": move_count,
+        "first_move_deadline": first_move_deadline,
+        "first_move_color": first_move_color,
     }
 
 
@@ -202,16 +222,22 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             if now is None:
                 now = timezone.now()
 
+            move_list = (game.moves or "").strip().split() if game.moves else []
+            move_count = len(move_list)
+
             # Start game if pending
             if game.status == Game.STATUS_PENDING:
                 game.status = Game.STATUS_ACTIVE
                 game.started_at = now
-                if not game.last_move_at:
+                # Do not start the main clock until both players have moved once
+                if move_count < 1:
+                    game.last_move_at = None
+                elif not game.last_move_at:
                     game.last_move_at = now
 
             # Apply elapsed time to side to move before move validation
             timeout_result = None
-            if game.status == Game.STATUS_ACTIVE and game.last_move_at:
+            if game.status == Game.STATUS_ACTIVE and game.last_move_at and move_count >= 2:
                 elapsed = int((now - game.last_move_at).total_seconds())
                 if elapsed < 0:
                     elapsed = 0
@@ -270,7 +296,6 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
 
             san = extra.get("san", move_str)
             uci = extra.get("uci", move.uci())
-            move_list = (game.moves or "").strip().split()
             move_list.append(san)
             game.moves = " ".join(move_list)
             game.current_fen = extra.get("fen", board.fen())
@@ -280,7 +305,11 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             else:
                 game.black_time_left += game.black_increment_seconds
 
-            game.last_move_at = now
+            # Start the main clock only after Black's first move (i.e., move_count >= 1 before this move)
+            if move_count >= 1:
+                game.last_move_at = now
+            else:
+                game.last_move_at = None
             result, reason = _evaluate_result(board)
             finished = False
             if result:

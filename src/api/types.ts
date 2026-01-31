@@ -49,6 +49,9 @@ export interface GameSummary {
   legal_moves?: string[];
   draw_offer_by?: number | null;
   rematch_requested_by?: number | null;
+  first_move_deadline?: number | null;
+  first_move_color?: 'white' | 'black' | null;
+  move_count?: number;
 }
 
 export interface GameAnalysis {

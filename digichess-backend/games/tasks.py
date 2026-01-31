@@ -13,7 +13,7 @@ from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
-from .game_core import compute_clock_snapshot
+from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS
 from .move_optimizer import process_move_optimized, latency_monitor
 
 User = get_user_model()
@@ -166,6 +166,10 @@ def check_game_timeouts():
             board = chess.Board(game.current_fen or chess.STARTING_FEN)
         except Exception:
             board = chess.Board()
+        move_count = len((game.moves or "").strip().split()) if game.moves else 0
+        # Do not enforce main clock timeouts until both players have moved once
+        if move_count < 2:
+            continue
         snapshot = compute_clock_snapshot(game, now=now, board=board)
         result = None
         if snapshot["turn"] == "white" and snapshot["white_time_left"] <= 0:
@@ -203,6 +207,57 @@ def check_game_timeouts():
                         "game_id": game.id,
                         "result": result,
                         "reason": "timeout",
+                        "game": game_data,
+                    },
+                },
+            )
+
+
+@shared_task
+def check_first_move_timeouts():
+    """
+    Abort games if a player fails to make their first move within the grace period.
+    - White must move within FIRST_MOVE_GRACE_SECONDS of game creation.
+    - Black must move within FIRST_MOVE_GRACE_SECONDS after White's first move (started_at).
+    """
+    from datetime import timedelta
+
+    now = timezone.now()
+    channel_layer = get_channel_layer()
+    games = Game.objects.filter(status__in=[Game.STATUS_PENDING, Game.STATUS_ACTIVE])
+
+    for game in games:
+        move_count = len((game.moves or "").strip().split()) if game.moves else 0
+
+        if move_count == 0:
+            deadline = game.created_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
+            if now <= deadline:
+                continue
+        elif move_count == 1:
+            if not game.started_at:
+                continue
+            deadline = game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
+            if now <= deadline:
+                continue
+        else:
+            continue
+
+        game.status = Game.STATUS_ABORTED
+        game.result = Game.RESULT_NONE
+        game.finished_at = now
+        game.save(update_fields=["status", "result", "finished_at"])
+
+        if channel_layer:
+            game_data = GameSerializer(game).data
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "game_finished",
+                        "game_id": game.id,
+                        "result": game.result,
+                        "reason": "first_move_timeout",
                         "game": game_data,
                     },
                 },

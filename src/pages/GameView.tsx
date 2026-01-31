@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GameSummary, GameResult } from '../api/types';
 import { Chess } from 'chess.js';
@@ -79,6 +79,8 @@ export default function GameView() {
   const clockTickTimeoutRef = useRef<number | null>(null);
   const tickAudioRef = useRef<AudioContext | null>(null);
   const lastTickSecondRef = useRef<number | null>(null);
+  const serverTimeOffsetRef = useRef(0);
+  const lastFenRef = useRef<string | null>(null);
   const [loadErr, setLoadErr] = useState('');
   const [boardTheme, setBoardTheme] = useState(() => {
     if (typeof localStorage === 'undefined') return 0;
@@ -137,6 +139,7 @@ export default function GameView() {
     black_in_active_game?: boolean;
     rematch_requested_by?: number | null;
   } | null>(null);
+  const [firstMoveCountdown, setFirstMoveCountdown] = useState<{ remaining: number; color: 'white' | 'black' } | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ user: string; message: string; timestamp: number }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [gameResultPopup, setGameResultPopup] = useState<{ type: 'win' | 'loss' | 'draw'; reason: string } | null>(null);
@@ -422,6 +425,43 @@ export default function GameView() {
     }
   }, [id]);
 
+  const getServerNow = useCallback(() => Date.now() + serverTimeOffsetRef.current, []);
+
+  // First-move countdown (white then black)
+  useEffect(() => {
+    if (!game || !isPlayer || !myColor) {
+      setFirstMoveCountdown(null);
+      return;
+    }
+
+    let deadlineMs: number | null = null;
+    let color: 'white' | 'black' | null = null;
+
+    if (moveCount === 0 && myColor === 'white' && (game.status === 'pending' || game.status === 'active')) {
+      if (game.created_at) {
+        deadlineMs = new Date(game.created_at).getTime() + 20000;
+        color = 'white';
+      }
+    } else if (moveCount === 1 && myColor === 'black' && game.status === 'active' && game.started_at) {
+      deadlineMs = new Date(game.started_at).getTime() + 20000;
+      color = 'black';
+    }
+
+    if (!deadlineMs || !color) {
+      setFirstMoveCountdown(null);
+      return;
+    }
+
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((deadlineMs! - getServerNow()) / 1000));
+      setFirstMoveCountdown({ remaining, color: color! });
+    };
+
+    update();
+    const interval = window.setInterval(update, 250);
+    return () => clearInterval(interval);
+  }, [game?.status, game?.created_at, game?.started_at, moveCount, myColor, isPlayer, getServerNow]);
+
   // Clock update - Lichess-style smart scheduling with setTimeout
   useEffect(() => {
     if (game?.status !== 'active' || !clock.turn) {
@@ -434,8 +474,8 @@ export default function GameView() {
       return;
     }
 
-    // Don't start the clock until White has played the first move
-    if (moveCount === 0 && clock.turn === 'white') {
+    // Don't start the clock until both players have made their first move
+    if (moveCount < 2) {
       if (clockTickTimeoutRef.current) {
         clearTimeout(clockTickTimeoutRef.current);
         clockTickTimeoutRef.current = null;
@@ -818,6 +858,9 @@ export default function GameView() {
           
           // Handle gameState message (like Lichess) - full state update
           if (t === 'gameState' || t === 'move') {
+            if (payload.server_time) {
+              serverTimeOffsetRef.current = payload.server_time * 1000 - Date.now();
+            }
             // Immediately update game state from WebSocket payload for faster UI update
             if (payload.fen && payload.moves) {
               const newTurn = payload.fen?.split(' ')[1] || 'w';
@@ -835,12 +878,25 @@ export default function GameView() {
               // Preserve all existing state to prevent flickering/disappearing pieces
               setGame((prevGame) => {
                 if (!prevGame) return prevGame;
+                if (
+                  prevGame.current_fen === payload.fen &&
+                  prevGame.moves === payload.moves &&
+                  (payload.status ? prevGame.status === payload.status : true) &&
+                  (payload.result ? prevGame.result === payload.result : true)
+                ) {
+                  return prevGame;
+                }
                 const updated = {
                   ...prevGame,
                   current_fen: payload.fen,
                   moves: payload.moves,
                   status: payload.status || prevGame.status,
                   result: payload.result || prevGame.result,
+                  started_at: payload.started_at || prevGame.started_at,
+                  created_at: payload.created_at || prevGame.created_at,
+                  first_move_deadline: payload.first_move_deadline ?? prevGame.first_move_deadline,
+                  first_move_color: payload.first_move_color ?? prevGame.first_move_color,
+                  move_count: payload.move_count ?? prevGame.move_count,
                   // Preserve all other game state to prevent UI flicker
                 };
                 
@@ -1257,7 +1313,7 @@ export default function GameView() {
       });
   };
 
-  const submitMoveUci = (uci: string) => {
+  const submitMoveUci = useCallback((uci: string) => {
     if (!id || !uci || moveInProgress) return;
     
     // Triple-check it's the player's turn before submitting
@@ -1337,7 +1393,9 @@ export default function GameView() {
           fetchGameDetail(id).then(setGame).catch(() => {});
         }
       });
-  };
+  }, [id, moveInProgress, isPlayer, game?.status, isMyTurn, game?.current_fen, myColor, isBotOpponent]);
+
+  const handleBoardMove = useCallback((uci: string) => submitMoveUci(uci), [submitMoveUci]);
 
   if (loadErr && !game) {
   return (
@@ -1713,8 +1771,8 @@ export default function GameView() {
             fen={movePreview.fen}
             lastMove={movePreview.lastUci}
             onMove={
-                    isViewingLive && isPlayer && game?.status === 'active' && isMyTurn && !moveInProgress && game?.legal_moves && game.legal_moves.length > 0
-                      ? submitMoveUci
+              isViewingLive && isPlayer && game?.status === 'active' && isMyTurn && !moveInProgress && game?.legal_moves && game.legal_moves.length > 0
+                ? handleBoardMove
                 : undefined
             }
                   legalMoves={isViewingLive ? game?.legal_moves : []}
@@ -1758,16 +1816,36 @@ export default function GameView() {
                 >
                   ↻
                 </button>
-                {isPlayer && game?.status === 'active' && !isMyTurn && moveCount < 2 && (
-                  <div style={{ color: 'var(--muted)', fontSize: 11, position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center' }}>
-                    Waiting for opponent...
-          </div>
-        )}
-                {isPlayer && game?.status === 'active' && isMyTurn && (
-                  <div style={{ color: 'var(--accent)', fontSize: 11, position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', fontWeight: 600 }}>
-                    Your turn
-              </div>
-            )}
+                {firstMoveCountdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      minWidth: 240,
+                      maxWidth: 360,
+                      padding: '10px 14px',
+                      borderRadius: 12,
+                      textAlign: 'center',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'rgba(10, 18, 12, 0.9)',
+                      letterSpacing: '0.1px',
+                      background: firstMoveCountdown.remaining <= 10
+                        ? 'linear-gradient(90deg, rgba(255, 210, 210, 0.45), rgba(255, 120, 120, 0.65))'
+                        : 'linear-gradient(90deg, rgba(175, 245, 205, 0.45), rgba(110, 205, 150, 0.65))',
+                      border: firstMoveCountdown.remaining <= 10
+                        ? '1px solid rgba(255, 140, 140, 0.35)'
+                        : '1px solid rgba(140, 255, 200, 0.35)',
+                      boxShadow: '0 10px 20px rgba(0,0,0,0.25)',
+                      zIndex: 15
+                    }}
+                  >
+                    {firstMoveCountdown.remaining}s to play the first move
+                  </div>
+                )}
+                
               </div>
 
               {/* Bottom player info bar - shows the color that's on bottom of the board */}

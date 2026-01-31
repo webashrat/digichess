@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { ChessPiece } from './ChessPieces';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
@@ -47,7 +47,7 @@ function parseFen(fen?: string): Square[] {
   return board;
 }
 
-export function ChessBoard({
+export const ChessBoard = memo(function ChessBoard({
   fen,
   lastMove,
   onMove,
@@ -924,4 +924,4 @@ export function ChessBoard({
       )}
     </div>
   );
-}
+});
