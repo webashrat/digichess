@@ -5,13 +5,15 @@ Move processing optimizations inspired by Lichess
 - Optimistic updates
 """
 import time
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, TYPE_CHECKING
 from django.core.cache import cache
 import chess
 import logging
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from .models import Game
 
 class MoveLatencyMonitor:
     """
