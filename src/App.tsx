@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -18,9 +18,11 @@ import Friends from './pages/Friends';
 import NavBar from './components/NavBar';
 
 function App() {
+  const location = useLocation();
+  const hideNav = /^\/games\/\d+$/.test(location.pathname);
   return (
     <div className="app-shell">
-      <NavBar />
+      {!hideNav && <NavBar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -28,7 +30,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/games" element={<Games />} />
         <Route path="/games/create" element={<GameCreate />} />
-        <Route path="/games/:id" element={<GameView />} />
+        <Route path="/games/:id" element={<GameView key={location.pathname} />} />
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/leaderboards" element={<Leaderboards />} />
         <Route path="/tournaments" element={<Tournaments />} />

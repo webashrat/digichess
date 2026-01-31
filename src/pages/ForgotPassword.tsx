@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { forgotPassword, resetPassword } from '../api/auth';
 
 export default function ForgotPassword() {
@@ -8,6 +8,12 @@ export default function ForgotPassword() {
   const [stage, setStage] = useState<'request' | 'reset'>('request');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (!err) return;
+    const timer = window.setTimeout(() => setErr(''), 3000);
+    return () => window.clearTimeout(timer);
+  }, [err]);
 
   const request = (e: FormEvent) => {
     e.preventDefault();

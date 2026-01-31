@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchAccounts } from '../api/users';
 import { AccountListItem } from '../api/types';
 import { createThread } from '../api/social';
-import { flagFromCode } from '../utils/flags';
+import FlagIcon from '../components/FlagIcon';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 
 export default function Accounts() {
@@ -146,7 +146,7 @@ export default function Accounts() {
                 <td>
                   <a style={{ color: 'var(--text)' }} href={`/profile/${u.username}`}>{u.username}</a>
                 </td>
-                <td>{flagFromCode(u.country)}</td>
+                <td><FlagIcon code={u.country} size={18} /></td>
                 <td>
                   {!u.is_bot && (
                     <button

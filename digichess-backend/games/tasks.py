@@ -13,6 +13,7 @@ from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
+from .game_core import compute_clock_snapshot
 from .move_optimizer import process_move_optimized, latency_monitor
 
 User = get_user_model()
@@ -110,22 +111,11 @@ def broadcast_clock_updates():
         return
     
     for game in active_games:
-        if not game.last_move_at:
-            continue
-        
-        elapsed = (now - game.last_move_at).total_seconds()
-        
         try:
             board = chess.Board(game.current_fen or chess.STARTING_FEN)
-            is_white_turn = board.turn == chess.WHITE
         except Exception:
-            is_white_turn = True
-        
-        # Calculate current time left
-        white_time_left = max(0, game.white_time_left - int(elapsed) if is_white_turn else game.white_time_left)
-        black_time_left = max(0, game.black_time_left - int(elapsed) if not is_white_turn else game.black_time_left)
-        
-        # Broadcast clock update
+            board = chess.Board()
+        snapshot = compute_clock_snapshot(game, now=now, board=board)
         async_to_sync(channel_layer.group_send)(
             f"game_{game.id}",
             {
@@ -133,9 +123,9 @@ def broadcast_clock_updates():
                 "payload": {
                     "type": "clock",
                     "game_id": game.id,
-                    "white_time_left": white_time_left,
-                    "black_time_left": black_time_left,
-                    "turn": "white" if is_white_turn else "black",
+                    "white_time_left": snapshot["white_time_left"],
+                    "black_time_left": snapshot["black_time_left"],
+                    "turn": snapshot["turn"],
                 },
             },
         )
@@ -172,61 +162,48 @@ def check_game_timeouts():
     channel_layer = get_channel_layer()
     
     for game in active_games:
-        if not game.last_move_at:
-            continue
-        
-        elapsed = (now - game.last_move_at).total_seconds()
-        
         try:
             board = chess.Board(game.current_fen or chess.STARTING_FEN)
-            is_white_turn = board.turn == chess.WHITE
         except Exception:
-            is_white_turn = True
-        
-        # Check timeout for current player
-        if is_white_turn:
-            time_left = game.white_time_left - int(elapsed)
-            if time_left <= 0:
-                # White timeout
-                game.finish(Game.RESULT_BLACK)
-                game.refresh_from_db()
-                if game.rated:
-                    FinishGameView().update_ratings(game, Game.RESULT_BLACK)
-                if channel_layer:
-                    game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": Game.RESULT_BLACK,
-                                "reason": "timeout",
-                                "game": game_data,
-                            },
-                        },
-                    )
-        else:
-            time_left = game.black_time_left - int(elapsed)
-            if time_left <= 0:
-                # Black timeout
-                game.finish(Game.RESULT_WHITE)
-                game.refresh_from_db()
-                if game.rated:
-                    FinishGameView().update_ratings(game, Game.RESULT_WHITE)
-                if channel_layer:
-                    game_data = GameSerializer(game).data
-                    async_to_sync(channel_layer.group_send)(
-                        f"game_{game.id}",
-                        {
-                            "type": "game.event",
-                            "payload": {
-                                "type": "game_finished",
-                                "game_id": game.id,
-                                "result": Game.RESULT_WHITE,
-                                "reason": "timeout",
-                                "game": game_data,
-                            },
-                        },
-                    )
+            board = chess.Board()
+        snapshot = compute_clock_snapshot(game, now=now, board=board)
+        result = None
+        if snapshot["turn"] == "white" and snapshot["white_time_left"] <= 0:
+            result = Game.RESULT_BLACK
+        if snapshot["turn"] == "black" and snapshot["black_time_left"] <= 0:
+            result = Game.RESULT_WHITE
+        if not result:
+            continue
+
+        game.white_time_left = snapshot["white_time_left"]
+        game.black_time_left = snapshot["black_time_left"]
+        game.status = Game.STATUS_FINISHED
+        game.result = result
+        game.finished_at = now
+        game.save(
+            update_fields=[
+                "status",
+                "result",
+                "finished_at",
+                "white_time_left",
+                "black_time_left",
+            ]
+        )
+        game.refresh_from_db()
+        if game.rated:
+            FinishGameView().update_ratings(game, result)
+        if channel_layer:
+            game_data = GameSerializer(game).data
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "game_finished",
+                        "game_id": game.id,
+                        "result": result,
+                        "reason": "timeout",
+                        "game": game_data,
+                    },
+                },
+            )

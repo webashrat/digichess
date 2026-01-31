@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFriends, getFriendRequests, respondFriendRequest, createThread } from '../api/social';
-import { flagFromCode } from '../utils/flags';
+import FlagIcon from '../components/FlagIcon';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 
 export default function Friends() {
@@ -194,7 +194,7 @@ export default function Friends() {
                         fontSize: 13
                       }}
                     >
-                      <span>{flagFromCode(f.country)}</span>
+                      <FlagIcon code={f.country} size={18} />
                       <span style={{ letterSpacing: 0.3 }}>{(f.country || 'INTL').toString().toUpperCase()}</span>
                     </div>
                   </div>

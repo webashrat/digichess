@@ -98,6 +98,7 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_URL: redis://redis:6379/0
+      SKIP_DB_SETUP: "true"
     volumes:
       - media_data:/app/media
     networks:
@@ -123,6 +124,7 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_URL: redis://redis:6379/0
+      SKIP_DB_SETUP: "true"
     volumes:
       - celery_beat_data:/app
     networks:

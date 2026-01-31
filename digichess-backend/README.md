@@ -12,6 +12,10 @@ Backend scaffold that supports email+OTP registration, token login, friends, cha
   - **Recommended for WebSocket support**: `daphne -b 0.0.0.0 -p 8000 config.asgi:application`
   - Or use: `python manage.py runserver` (Channels modifies runserver to use ASGI, but daphne is more reliable)
 
+### Celery + migrations (Docker)
+To avoid migration race conditions, only the **backend** container should run migrations.
+Celery and Celery-beat containers set `SKIP_DB_SETUP=true` so they do not attempt migrations.
+
 ## API overview
 All endpoints live under `/api/…` and use token authentication once logged in.
 

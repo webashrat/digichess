@@ -1,5 +1,6 @@
 import { Mode, UserLookup } from '../api/types';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
+import FlagIcon from './FlagIcon';
 
 interface Props {
   user: UserLookup;
@@ -10,21 +11,6 @@ interface Props {
   isActive?: boolean;
   isMyTurn?: boolean;
 }
-
-const countryFlag = (code?: string) => {
-  if (!code) return '🌍';
-  if (code.toUpperCase() === 'INTERNATIONAL') return '🌍';
-  try {
-    const cc = code.trim().toUpperCase();
-    if (cc.length === 2) {
-      const codePoints = cc.split('').map((c) => 0x1f1a5 + c.charCodeAt(0));
-      return String.fromCodePoint(...codePoints);
-    }
-  } catch {
-    return '🌍';
-  }
-  return '🌍';
-};
 
 export default function IdentityStrip({ user, rating, ratingChange, mode, rightText, isActive, isMyTurn }: Props) {
   // Check if this is DIGI bot and use DIGIBOT.jpg
@@ -98,7 +84,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
           >
             {user.username}
           </a>
-          <span style={{ fontSize: 14, flexShrink: 0 }}>{countryFlag(user.country)}</span>
+          <FlagIcon code={user.country} size={18} />
           {rating !== undefined && rating !== null && (
             <span style={{ 
               fontSize: 14, 

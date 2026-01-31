@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.db.models import Q
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from rest_framework.authtoken.models import Token
 
 from .models import OTPVerification, User
@@ -93,10 +95,28 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLookupSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "profile_pic", "username", "country", "is_bot")
+        fields = ("id", "first_name", "last_name", "profile_pic", "username", "country", "is_bot", "is_online")
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.filter(is_active=True),
+                lookup="iexact",
+                message="Email already exists",
+            )
+        ]
+    )
+    username = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.filter(is_active=True),
+                lookup="iexact",
+                message="Username already exists",
+            )
+        ]
+    )
     password = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
@@ -117,7 +137,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         email = value.lower()
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email=email, is_active=True).exists():
             raise serializers.ValidationError("An account with this email already exists.")
         return email
 
@@ -125,12 +145,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         username = value.strip()
         if not username:
             raise serializers.ValidationError("Username is required.")
-        if User.objects.filter(username__iexact=username).exists():
+        if User.objects.filter(username__iexact=username, is_active=True).exists():
             raise serializers.ValidationError("An account with this username already exists.")
         return username
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        email = (validated_data.get("email") or "").lower()
+        username = (validated_data.get("username") or "").strip()
+
+        # Allow reuse of unverified credentials by clearing inactive conflicts
+        User.objects.filter(is_active=False, is_bot=False).filter(
+            Q(email__iexact=email) | Q(username__iexact=username)
+        ).delete()
+
         user = User.objects.create_user(**validated_data, password=password, is_active=False)
 
         OTPVerification.objects.filter(

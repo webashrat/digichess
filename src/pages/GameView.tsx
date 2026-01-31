@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GameSummary, GameResult } from '../api/types';
+import { Chess } from 'chess.js';
 import IdentityStrip from '../components/IdentityStrip';
 import { fetchAccountDetail } from '../api/users';
 import {
@@ -76,10 +77,41 @@ export default function GameView() {
   const wsRef = useRef<WebSocket | null>(null);
   const clockIntervalRef = useRef<number | null>(null);
   const clockTickTimeoutRef = useRef<number | null>(null);
+  const tickAudioRef = useRef<AudioContext | null>(null);
+  const lastTickSecondRef = useRef<number | null>(null);
   const [loadErr, setLoadErr] = useState('');
-  const [boardTheme, setBoardTheme] = useState(0);
-  const [pieceSet, setPieceSet] = useState('cburnett');
+  const [boardTheme, setBoardTheme] = useState(() => {
+    if (typeof localStorage === 'undefined') return 0;
+    const stored = Number(localStorage.getItem('boardTheme'));
+    return Number.isFinite(stored) ? stored : 0;
+  });
+  const [pieceSet, setPieceSet] = useState(() => {
+    if (typeof localStorage === 'undefined') return 'cburnett';
+    return localStorage.getItem('pieceSet') || 'cburnett';
+  });
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
+  const [orientationMode, setOrientationMode] = useState<'auto' | 'manual'>('auto');
+
+  // Keep board settings in sync with global settings (applies to past/existing games too)
+  useEffect(() => {
+    const applySettings = () => {
+      if (typeof localStorage === 'undefined') return;
+      const storedTheme = Number(localStorage.getItem('boardTheme'));
+      const nextTheme = Number.isFinite(storedTheme) ? storedTheme : 0;
+      const nextSet = localStorage.getItem('pieceSet') || 'cburnett';
+      setBoardTheme(nextTheme);
+      setPieceSet(nextSet);
+    };
+
+    applySettings();
+    const handleSettingsChange = () => applySettings();
+    window.addEventListener('board-settings-change', handleSettingsChange as EventListener);
+    window.addEventListener('storage', handleSettingsChange as EventListener);
+    return () => {
+      window.removeEventListener('board-settings-change', handleSettingsChange as EventListener);
+      window.removeEventListener('storage', handleSettingsChange as EventListener);
+    };
+  }, []);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
   
   // Listen for toast events from notifications
@@ -109,7 +141,42 @@ export default function GameView() {
   const [chatInput, setChatInput] = useState('');
   const [gameResultPopup, setGameResultPopup] = useState<{ type: 'win' | 'loss' | 'draw'; reason: string } | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null); // For move navigation
+  const [rematchNow, setRematchNow] = useState<number>(() => Date.now());
   const previousMoveCountRef = useRef<number>(0);
+
+  const playTickSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!tickAudioRef.current) {
+        tickAudioRef.current = new AudioContextClass();
+      }
+      const ctx = tickAudioRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 900;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.09);
+    } catch {
+      // Ignore audio errors (autoplay restrictions, unsupported browsers)
+    }
+  };
+
+  // Reset orientation mode when switching games or users
+  useEffect(() => {
+    if (!game?.id) return;
+    setOrientationMode('auto');
+    setBoardOrientation('white');
+  }, [game?.id, me?.id]);
 
   // Reset move navigation to last move when new moves are added
   useEffect(() => {
@@ -123,6 +190,30 @@ export default function GameView() {
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const moveCount = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length : 0), [game]);
+  const movesList = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean) : []), [game?.moves]);
+  const isViewingLive = currentMoveIndex === null;
+  const movePreview = useMemo(() => {
+    const fallbackFen = game?.current_fen || 'start';
+    if (!movesList.length) {
+      return { fen: fallbackFen, lastUci: undefined, index: null };
+    }
+
+    const targetIndex =
+      currentMoveIndex === null
+        ? movesList.length - 1
+        : Math.max(0, Math.min(currentMoveIndex, movesList.length - 1));
+
+    const chess = new Chess();
+    let lastUci: string | undefined;
+    for (let i = 0; i <= targetIndex; i += 1) {
+      const move = chess.move(movesList[i], { sloppy: true });
+      if (!move) break;
+      lastUci = `${move.from}${move.to}${move.promotion || ''}`;
+    }
+
+    const fen = currentMoveIndex === null ? fallbackFen : chess.fen();
+    return { fen, lastUci, index: targetIndex };
+  }, [currentMoveIndex, game?.current_fen, movesList]);
   const isPlayer = useMemo(() => {
     if (!me || !game) return false;
     return game.white?.id === me.id || game.black?.id === me.id;
@@ -134,6 +225,15 @@ export default function GameView() {
     if (game.black?.id === me.id) return 'black';
     return null;
   }, [me, game]);
+
+  const isBotOpponent = useMemo(() => {
+    if (!game || !me) return false;
+    const whiteIsBot = !!game.white?.is_bot;
+    const blackIsBot = !!game.black?.is_bot;
+    if (game.white?.id === me.id) return blackIsBot;
+    if (game.black?.id === me.id) return whiteIsBot;
+    return whiteIsBot || blackIsBot;
+  }, [game?.white?.id, game?.black?.id, game?.white?.is_bot, game?.black?.is_bot, me?.id]);
 
   // Calculate rating changes (only show when game is finished and rated)
   const whiteRatingChange = useMemo(() => {
@@ -161,12 +261,47 @@ export default function GameView() {
     return result;
   }, [game?.current_fen, game?.status, myColor, clock.turn]);
 
+  // Play low-latency tick sound when my remaining time is <= 10 seconds
+  useEffect(() => {
+    if (!game || game.status !== 'active') {
+      lastTickSecondRef.current = null;
+      return;
+    }
+    if (!isPlayer || !myColor || !isMyTurn) {
+      lastTickSecondRef.current = null;
+      return;
+    }
+    if (!clockTimesRef.current || clockTimesRef.current.activeColor !== myColor) {
+      return;
+    }
+    const myTimeLeft = myColor === 'white' ? clock.white_time_left : clock.black_time_left;
+    if (myTimeLeft === undefined || myTimeLeft === null) return;
+    const secondsLeft = Math.ceil(myTimeLeft);
+    if (secondsLeft <= 10 && secondsLeft > 0) {
+      if (lastTickSecondRef.current !== secondsLeft) {
+        lastTickSecondRef.current = secondsLeft;
+        playTickSound();
+      }
+    } else {
+      lastTickSecondRef.current = null;
+    }
+  }, [
+    game?.status,
+    isPlayer,
+    isMyTurn,
+    myColor,
+    clock.white_time_left,
+    clock.black_time_left,
+    clock.turn
+  ]);
+
   // Update board orientation based on player color
   // Players: auto-orient to their color during active/pending games
   // Spectators: default to white, can flip anytime
   // Finished games: everyone can flip
   useEffect(() => {
     if (!game || !me) return;
+    if (orientationMode === 'manual') return;
     
     // Check if user is a player (either white or black)
     const userIsWhite = game.white?.id === me.id;
@@ -180,7 +315,7 @@ export default function GameView() {
       setBoardOrientation(playerColor);
     }
     // For finished games or spectators, don't auto-set (allow manual control)
-  }, [game?.white?.id, game?.black?.id, game?.status, game?.id, me?.id]);
+  }, [game?.white?.id, game?.black?.id, game?.status, game?.id, me?.id, orientationMode]);
 
   // Fetch user ratings based on game mode
   useEffect(() => {
@@ -271,6 +406,13 @@ export default function GameView() {
     const interval = setInterval(loadStatus, 2000); // Poll every 2 seconds
     return () => clearInterval(interval);
   }, [id, game?.status, isPlayer]);
+
+  // Rematch expiry timer (updates every 5s while finished)
+  useEffect(() => {
+    if (!game || game.status !== 'finished') return;
+    const interval = setInterval(() => setRematchNow(Date.now()), 5000);
+    return () => clearInterval(interval);
+  }, [game?.status, game?.finished_at]);
   
   // Reset initial ratings when game ID changes (new game)
   useEffect(() => {
@@ -289,6 +431,16 @@ export default function GameView() {
       }
       // Don't clear clockTimesRef - keep it for when game becomes active again
       // clockTimesRef.current = null;
+      return;
+    }
+
+    // Don't start the clock until White has played the first move
+    if (moveCount === 0 && clock.turn === 'white') {
+      if (clockTickTimeoutRef.current) {
+        clearTimeout(clockTickTimeoutRef.current);
+        clockTickTimeoutRef.current = null;
+      }
+      clockTimesRef.current = null;
       return;
     }
 
@@ -387,7 +539,7 @@ export default function GameView() {
         clockTickTimeoutRef.current = null;
       }
     };
-  }, [game?.status, clock.turn, clock.white_time_left, clock.black_time_left]);
+  }, [game?.status, clock.turn, clock.white_time_left, clock.black_time_left, moveCount]);
 
   // Prevent body scroll when game view is active
   useEffect(() => {
@@ -1161,6 +1313,19 @@ export default function GameView() {
         if (res.status === 'active') {
           fetchClock(id).then(setClock).catch(() => {});
         }
+        // If playing a bot, poll once for bot response in case WS drops
+        if (res.status === 'active' && isBotOpponent) {
+          setTimeout(() => {
+            fetchGameDetail(id)
+              .then((updated) => {
+                setGame(updated);
+                if (updated.status === 'active') {
+                  fetchClock(id).then(setClock).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }, 1200);
+        }
       })
       .catch((err) => {
         setMoveInProgress(false);
@@ -1192,70 +1357,31 @@ export default function GameView() {
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      background: 'var(--bg)',
+      background: 'radial-gradient(120% 140% at 20% 10%, #101b34 0%, #0a0f1c 45%, #05070f 100%)',
       position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
       bottom: 0
-    }}>
+    }}
+    className="game-shell">
       <div style={{ 
-        maxWidth: 1800, // Increased max width for larger boards
+        maxWidth: 1900,
         width: '100%',
         margin: '0 auto',
-        padding: '8px', // Reduced padding
+        padding: '12px',
         height: '100%',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box'
       }}>
-        {/* Header with home button - Compact */}
-        <div style={{
-          flex: '0 0 auto',
-          display: 'flex',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          marginBottom: 8,
-          height: 'auto'
-        }}>
-          <button
-            className="btn btn-ghost"
-            onClick={() => navigate('/')}
-            style={{
-              padding: '10px 16px',
-              fontSize: 14,
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              color: 'var(--text)',
-              textDecoration: 'none',
-              borderRadius: 8,
-              transition: 'all 0.2s ease',
-              border: '1px solid var(--border)',
-              background: 'rgba(44, 230, 194, 0.05)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(44, 230, 194, 0.1)';
-              e.currentTarget.style.borderColor = 'var(--accent)';
-              e.currentTarget.style.transform = 'translateX(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(44, 230, 194, 0.05)';
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
-          >
-            <span style={{ fontSize: 16 }}>🏠</span>
-            <span>Home</span>
-          </button>
-        </div>
+        {/* Header removed to maximize board height */}
         {/* Main game area - Lichess style layout: Left sidebar | Board | Right sidebar */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '240px minmax(0, 1fr) 280px', // Left sidebar | Board | Right sidebar
-          gap: 8,
+          gridTemplateColumns: 'minmax(240px, 18vw) minmax(0, 1fr) minmax(280px, 20vw)',
+          gap: 16,
           flex: '1 1 0',
           overflow: 'hidden',
           minHeight: 0
@@ -1265,21 +1391,57 @@ export default function GameView() {
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 8,
+          gap: 14,
           minHeight: 0,
           overflow: 'hidden',
           height: '100%'
         }}>
           {/* Game Info */}
-          <div className="card" style={{ flex: '0 0 auto', padding: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <div style={{ flex: 1, fontSize: 11, lineHeight: 1.4 }}>
+          <div className="card" style={{ flex: '0 0 auto', padding: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => navigate('/')}
+                style={{
+                  padding: '6px 10px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  borderRadius: 999,
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  background: 'rgba(15, 23, 42, 0.6)'
+                }}
+              >
+                ← Back
+              </button>
+              {game && (
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: game.status === 'active'
+                    ? 'rgba(76, 175, 80, 0.15)'
+                    : 'rgba(148, 163, 184, 0.12)',
+                  border: game.status === 'active'
+                    ? '1px solid rgba(76, 175, 80, 0.4)'
+                    : '1px solid rgba(148, 163, 184, 0.25)',
+                  color: game.status === 'active' ? '#4caf50' : 'var(--muted)',
+                  textTransform: 'capitalize'
+                }}>
+                  {game.status}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>⚡</span>
+              <div style={{ flex: 1, fontSize: 13, lineHeight: 1.4 }}>
                 {game ? (
                   <>
-                    <div style={{ fontWeight: 600 }}>{game.time_control}</div>
-                    <div style={{ color: 'var(--muted)', fontSize: 10 }}>{game.rated ? 'Rated' : 'Casual'}</div>
-                    {game.status === 'active' && <div style={{ color: 'var(--muted)', fontSize: 9 }}>right now</div>}
+                    <div style={{ fontWeight: 700 }}>{game.time_control}</div>
+                    <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+                      {game.rated ? 'Rated' : 'Casual'} • {game.time_control.toUpperCase()}
+                    </div>
+                    {game.status === 'active' && <div style={{ color: 'var(--muted)', fontSize: 11 }}>live now</div>}
                     {game.status === 'finished' && game.result && (() => {
                       let resultText = '';
                       let resultColor = 'var(--muted)';
@@ -1296,14 +1458,14 @@ export default function GameView() {
                       }
                       
                       return resultText ? (
-                        <div style={{ color: resultColor, fontSize: 12, fontWeight: 700, marginTop: 3 }}>
+                        <div style={{ color: resultColor, fontSize: 13, fontWeight: 700, marginTop: 6 }}>
                           {resultText}
                         </div>
                       ) : null;
                     })()}
                   </>
                 ) : (
-                  <div style={{ color: 'var(--muted)', fontSize: 10 }}>Loading…</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12 }}>Loading…</div>
                 )}
               </div>
             </div>
@@ -1311,32 +1473,32 @@ export default function GameView() {
           </div>
 
           {/* Chat Section */}
-          <div className="card" style={{ flex: '1 1 auto', padding: '10px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <h4 style={{ marginTop: 0, marginBottom: 0, fontSize: 11, fontWeight: 600 }}>Chat room</h4>
-              {me && <span style={{ fontSize: 10, color: 'var(--accent)' }}>✓</span>}
+          <div className="card" style={{ flex: '1 1 auto', padding: '12px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <h4 style={{ marginTop: 0, marginBottom: 0, fontSize: 13, fontWeight: 700 }}>Chat room</h4>
+              {me && <span style={{ fontSize: 11, color: 'var(--accent)' }}>●</span>}
             </div>
             <div 
               style={{ 
                 flex: '1 1 auto', 
                 overflowY: 'auto', 
                 minHeight: 0, 
-                marginBottom: 8, 
-                fontSize: 9, 
+                marginBottom: 10, 
+                fontSize: 12, 
                 color: 'var(--text)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4
+                gap: 6
               }}
             >
               {!me ? (
                 <div style={{ padding: '4px 0', color: 'var(--muted)' }}>Sign in to chat</div>
               ) : chatMessages.length === 0 ? (
-                <div style={{ padding: '4px 0', color: 'var(--muted)', fontSize: 8 }}>No messages yet</div>
+                <div style={{ padding: '4px 0', color: 'var(--muted)', fontSize: 11 }}>No messages yet</div>
               ) : (
                 <>
                   {chatMessages.map((msg, idx) => (
-                    <div key={idx} style={{ padding: '2px 0', lineHeight: 1.3 }}>
+                    <div key={idx} style={{ padding: '2px 0', lineHeight: 1.4 }}>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{msg.user}:</span>{' '}
                       <span>{msg.message}</span>
                     </div>
@@ -1347,7 +1509,7 @@ export default function GameView() {
             </div>
             {me && (
               <>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                   <input
                     type="text"
                     value={chatInput}
@@ -1361,11 +1523,11 @@ export default function GameView() {
                     placeholder="Type a message..."
                     style={{
                       flex: 1,
-                      padding: '4px 6px',
-                      fontSize: 9,
-                      background: 'var(--bg-secondary)',
+                      padding: '8px 10px',
+                      fontSize: 12,
+                      background: '#0b1220',
                       border: '1px solid var(--border)',
-                      borderRadius: 4,
+                      borderRadius: 8,
                       color: 'var(--text)'
                     }}
                     maxLength={140}
@@ -1378,18 +1540,18 @@ export default function GameView() {
                         setChatInput('');
                       }
                     }}
-                    style={{ padding: '4px 8px', fontSize: 9 }}
+                    style={{ padding: '8px 12px', fontSize: 12 }}
                     disabled={!chatInput.trim()}
                   >
                     Send
                   </button>
                 </div>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {['HI', 'GL', 'HF', 'U2'].map((preset) => (
                     <button
                       key={preset}
                       className="btn btn-ghost"
-                      style={{ padding: '4px 8px', fontSize: 9 }}
+                      style={{ padding: '6px 10px', fontSize: 11 }}
                       onClick={() => handleSendChat(preset)}
                     >
                       {preset}
@@ -1405,7 +1567,7 @@ export default function GameView() {
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 6,
+          gap: 8,
           minHeight: 0,
           overflow: 'hidden',
           height: '100%',
@@ -1420,7 +1582,7 @@ export default function GameView() {
                 <div
                   className="card"
                   style={{
-                    padding: '8px 10px',
+                    padding: '6px 8px',
                     background: clock.turn === 'black' && game.status === 'active' 
                       ? 'rgba(44, 230, 194, 0.1)' 
                       : undefined,
@@ -1428,7 +1590,7 @@ export default function GameView() {
                       ? '2px solid var(--accent)' 
                       : undefined,
                     flex: '0 0 auto',
-                    height: '52px',
+                    height: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     position: 'relative'
@@ -1469,7 +1631,7 @@ export default function GameView() {
                 <div
                   className="card"
                   style={{
-                    padding: '8px 10px',
+                    padding: '6px 8px',
                     background: clock.turn === 'white' && game.status === 'active' 
                       ? 'rgba(44, 230, 194, 0.1)' 
                       : undefined,
@@ -1477,7 +1639,7 @@ export default function GameView() {
                       ? '2px solid var(--accent)' 
                       : undefined,
                     flex: '0 0 auto',
-                    height: '52px',
+                    height: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     position: 'relative'
@@ -1517,7 +1679,7 @@ export default function GameView() {
 
               {/* Board - Takes maximum remaining space */}
               <div style={{ 
-                padding: 4, // Minimal padding for board
+                padding: 0,
                 display: 'flex', 
                 flexDirection: 'column',
                 justifyContent: 'center',
@@ -1525,12 +1687,12 @@ export default function GameView() {
                 flex: '1 1 auto',
                 minHeight: 0,
                 minWidth: 0,
-                overflow: 'hidden',
+                overflow: 'visible',
                 position: 'relative',
-                background: 'linear-gradient(135deg, #1a1f2e 0%, #2d3548 50%, #1a1f2e 100%)',
-                borderRadius: 12,
-                border: '1px solid rgba(44, 230, 194, 0.1)',
-                boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.3)'
+                background: 'linear-gradient(135deg, rgba(20, 28, 46, 0.9) 0%, rgba(26, 34, 54, 0.95) 50%, rgba(20, 28, 46, 0.9) 100%)',
+                borderRadius: 16,
+                border: '1px solid rgba(148, 163, 184, 0.18)',
+                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.4), inset 0 1px 12px rgba(0, 0, 0, 0.35)'
               }}>
                 {game.status === 'pending' && (
                   <div style={{ position: 'absolute', zIndex: 10, background: 'rgba(0,0,0,0.8)', padding: 20, borderRadius: 12 }}>
@@ -1548,45 +1710,54 @@ export default function GameView() {
           )}
           <ChessBoard
             key={`board-${game?.id}`}
-            fen={game?.current_fen || 'start'}
-            lastMove={undefined}
+            fen={movePreview.fen}
+            lastMove={movePreview.lastUci}
             onMove={
-                    isPlayer && game?.status === 'active' && isMyTurn && !moveInProgress && game?.legal_moves && game.legal_moves.length > 0
+                    isViewingLive && isPlayer && game?.status === 'active' && isMyTurn && !moveInProgress && game?.legal_moves && game.legal_moves.length > 0
                       ? submitMoveUci
                 : undefined
             }
-                  legalMoves={game?.legal_moves}
+                  legalMoves={isViewingLive ? game?.legal_moves : []}
                   orientation={boardOrientation}
                   theme={boardTheme}
                   onThemeChange={setBoardTheme}
                   pieceSet={pieceSet}
                   onPieceSetChange={setPieceSet}
+                  showControls={false}
                 />
                 {moveErr && (
                   <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6, textAlign: 'center', position: 'absolute', bottom: 8, left: 0, right: 0 }}>
                     {moveErr}
         </div>
                 )}
-                {/* Flip board button - positioned at bottom right of board area */}
-                {((!isPlayer && (game?.status === 'active' || game?.status === 'pending')) || game?.status === 'finished') && (
-                  <button
-                    className="btn btn-ghost"
-                    type="button"
-                    onClick={() => setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')}
-                    style={{ 
-                      position: 'absolute', 
-                      bottom: 12, 
-                      right: 12,
-                      fontSize: 12, 
-                      padding: '8px 16px',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      border: '1px solid var(--border)',
-                      zIndex: 10
-                    }}
-                  >
-                    🔄 Flip Board
-                  </button>
-                )}
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => {
+                    setOrientationMode('manual');
+                    setBoardOrientation(prev => (prev === 'white' ? 'black' : 'white'));
+                  }}
+                  title="Flip board"
+                  aria-label="Flip board"
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 0,
+                    fontSize: 15,
+                    background: 'rgba(8, 12, 24, 0.75)',
+                    border: '1px solid rgba(148, 163, 184, 0.35)',
+                    color: 'var(--text)',
+                    zIndex: 12
+                  }}
+                >
+                  ↻
+                </button>
                 {isPlayer && game?.status === 'active' && !isMyTurn && moveCount < 2 && (
                   <div style={{ color: 'var(--muted)', fontSize: 11, position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center' }}>
                     Waiting for opponent...
@@ -1707,21 +1878,21 @@ export default function GameView() {
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 6,
+          gap: 14,
           overflow: 'hidden',
           minHeight: 0,
           height: '100%'
         }}>
           {/* Move History with Controls - Lichess Style */}
-          <div className="card" style={{ flex: '0 0 30%', padding: '10px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexShrink: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>Moves</div>
-              <div style={{ display: 'flex', gap: 4 }}>
+          <div className="card" style={{ flex: '1 1 50%', padding: '12px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Moves</div>
+              <div style={{ display: 'flex', gap: 6 }}>
                 <button 
                   className="btn btn-ghost" 
                   style={{ 
-                    padding: '6px 8px', 
-                    fontSize: 13,
+                    padding: '6px 10px', 
+                    fontSize: 12,
                     background: currentMoveIndex === 0 ? 'rgba(255, 152, 0, 0.3)' : undefined,
                     color: currentMoveIndex === 0 ? '#ff9800' : undefined
                   }} 
@@ -1733,8 +1904,8 @@ export default function GameView() {
                 <button 
                   className="btn btn-ghost" 
                   style={{ 
-                    padding: '6px 8px', 
-                    fontSize: 13,
+                    padding: '6px 10px', 
+                    fontSize: 12,
                     background: currentMoveIndex !== null && currentMoveIndex > 0 ? 'rgba(255, 152, 0, 0.3)' : undefined,
                     color: currentMoveIndex !== null && currentMoveIndex > 0 ? '#ff9800' : undefined
                   }} 
@@ -1750,16 +1921,20 @@ export default function GameView() {
                 <button 
                   className="btn btn-ghost" 
                   style={{ 
-                    padding: '6px 8px', 
-                    fontSize: 13,
+                    padding: '6px 10px', 
+                    fontSize: 12,
                     background: currentMoveIndex !== null && currentMoveIndex < (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length - 1 : 0) ? 'rgba(255, 152, 0, 0.3)' : undefined,
                     color: currentMoveIndex !== null && currentMoveIndex < (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length - 1 : 0) ? '#ff9800' : undefined
                   }} 
                   title="Next move"
                   onClick={() => {
                     const moves = game?.moves ? game.moves.split(/\s+/).filter(Boolean) : [];
-                    if (currentMoveIndex === null) setCurrentMoveIndex(0);
-                    else if (currentMoveIndex < moves.length - 1) setCurrentMoveIndex(currentMoveIndex + 1);
+                    if (currentMoveIndex === null) return;
+                    if (currentMoveIndex < moves.length - 1) {
+                      setCurrentMoveIndex(currentMoveIndex + 1);
+                    } else {
+                      setCurrentMoveIndex(null);
+                    }
                   }}
                 >
                   ⏩
@@ -1767,34 +1942,33 @@ export default function GameView() {
                 <button 
                   className="btn btn-ghost" 
                   style={{ 
-                    padding: '6px 8px', 
-                    fontSize: 13,
+                    padding: '6px 10px', 
+                    fontSize: 12,
                     background: currentMoveIndex === (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length - 1 : -1) ? 'rgba(255, 152, 0, 0.3)' : undefined,
                     color: currentMoveIndex === (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length - 1 : -1) ? '#ff9800' : undefined
                   }} 
                   title="Last move"
                   onClick={() => {
-                    const moves = game?.moves ? game.moves.split(/\s+/).filter(Boolean) : [];
-                    setCurrentMoveIndex(moves.length - 1);
+                    setCurrentMoveIndex(null);
                   }}
                 >
                   ⏭
                 </button>
-                <button className="btn btn-ghost" style={{ padding: '4px 6px', fontSize: 12 }} title="Move list">☰</button>
+                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} title="Move list">☰</button>
               </div>
             </div>
             <div 
               className="moves-scrollable"
               style={{ 
-                fontSize: 12, 
-                lineHeight: 1.6, 
+                fontSize: 13, 
+                lineHeight: 1.7, 
                 height: '100%',
                 flex: '1 1 auto',
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 color: 'var(--text)',
-                padding: '3px 6px',
+                padding: '4px 6px',
                 margin: '0 -6px',
                 scrollbarWidth: 'thin',
                 scrollbarColor: 'rgba(44, 230, 194, 0.3) transparent'
@@ -1849,27 +2023,27 @@ export default function GameView() {
                         }}
                       >
                         <span style={{ 
-                          minWidth: '24px',
+                          minWidth: '26px',
                           color: isCurrentWhite ? '#4caf50' : 'var(--muted)',
                           fontWeight: isCurrentWhite ? 600 : 400,
-                          fontSize: 11
+                          fontSize: 12
                         }}>
                           {movePair.moveNum}.
                         </span>
                         <span style={{ 
-                          minWidth: '45px',
+                          minWidth: '52px',
                           color: isCurrentWhite ? '#4caf50' : 'var(--text)',
                           fontWeight: isCurrentWhite ? 600 : 400,
-                          fontSize: 11
+                          fontSize: 12
                         }}>
                           {movePair.white}
                         </span>
                         {movePair.black && (
                           <span style={{ 
-                            minWidth: '45px',
+                            minWidth: '52px',
                             color: isCurrentBlack ? '#4caf50' : 'var(--text)',
                             fontWeight: isCurrentBlack ? 600 : 400,
-                            fontSize: 11
+                            fontSize: 12
                           }}>
                             {movePair.black}
                           </span>
@@ -1879,7 +2053,7 @@ export default function GameView() {
                   })}
                 </div>
               ) : (
-                <div style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 0' }}>
                   No moves yet
           </div>
         )}
@@ -2097,6 +2271,13 @@ export default function GameView() {
                       const iAmActive = (isWhite && whiteActive) || (!isWhite && blackActive);
                       const opponentActive = (isWhite && blackActive) || (!isWhite && whiteActive);
                       const canRematch = !iAmActive && !opponentActive;
+                      const finishedAtMs = game?.finished_at ? new Date(game.finished_at).getTime() : 0;
+                      const ttlMs = (iAmActive || opponentActive) ? 60_000 : 300_000;
+                      const expired = finishedAtMs ? (rematchNow - finishedAtMs) > ttlMs : false;
+
+                      if (expired) {
+                        return null;
+                      }
                       
                       if (iRequested) {
                         return (

@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import FlagIcon from './FlagIcon';
+
 const countries: { code: string; name: string }[] = [
   { code: 'INTERNATIONAL', name: 'International' },
   { code: 'AF', name: 'Afghanistan' },
@@ -247,28 +250,144 @@ const countries: { code: string; name: string }[] = [
   { code: 'ZW', name: 'Zimbabwe' }
 ];
 
-const flagFromCode = (code?: string) => {
-  if (!code || code === 'INTERNATIONAL') return '🌍';
-  const cc = code.toUpperCase();
-  try {
-    const points = cc.split('').map((c) => 127397 + c.charCodeAt(0));
-    return String.fromCodePoint(...points);
-  } catch {
-    return '🌍';
-  }
-};
-
 export function CountrySelect({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const selectedCode = value || 'INTERNATIONAL';
+  const selectedCountry = countries.find((c) => c.code === selectedCode) || countries[0];
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return countries;
+    return countries.filter((c) => {
+      return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+    });
+  }, [query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: MouseEvent) => {
+      if (!wrapperRef.current) return;
+      const target = event.target as Node;
+      if (!wrapperRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span>{flagFromCode(value)}</span>
-      <select value={value || 'INTERNATIONAL'} onChange={(e) => onChange(e.target.value)}>
-        {countries.map((c) => (
-          <option key={c.code} value={c.code}>
-            {flagFromCode(c.code)} {c.name}
-          </option>
-        ))}
-      </select>
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((prev) => !prev);
+          setQuery('');
+        }}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          background: '#0b1220',
+          border: '1px solid var(--border)',
+          color: 'var(--text)',
+          borderRadius: 10,
+          padding: '12px 16px',
+          fontSize: 15,
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <FlagIcon code={selectedCountry.code} size={18} />
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {selectedCountry.name}
+          </span>
+        </span>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: 6,
+            background: 'linear-gradient(160deg, rgba(22, 32, 54, 0.98), rgba(12, 18, 32, 0.98))',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            zIndex: 50,
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{ padding: 10, borderBottom: '1px solid var(--border)' }}>
+            <input
+              autoFocus
+              placeholder="Search country..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{
+                width: '100%',
+                background: '#0b1220',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                borderRadius: 8,
+                padding: '10px 12px',
+                outline: 'none',
+                fontSize: 14
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: 12, color: 'var(--muted)', fontSize: 13 }}>
+                No results
+              </div>
+            )}
+            {filtered.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => {
+                  onChange(c.code);
+                  setOpen(false);
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  fontSize: 14
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <FlagIcon code={c.code} size={18} />
+                <span style={{ flex: 1 }}>{c.name}</span>
+                <span style={{ color: 'var(--muted)', fontSize: 12 }}>{c.code}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

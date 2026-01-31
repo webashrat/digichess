@@ -8,6 +8,7 @@ export interface UserLookup {
   last_name: string;
   country: string;
   profile_pic: string | null;
+  is_bot?: boolean;
 }
 
 export interface UserDetail extends UserLookup {
@@ -39,6 +40,9 @@ export interface GameSummary {
   time_control: string;
   status: string;
   spectators: number;
+  created_at?: string;
+  started_at?: string;
+  finished_at?: string;
   result?: GameResult;
   moves?: string;
   current_fen?: string;

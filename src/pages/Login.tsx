@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { login, forgotPassword, forgotUsername, verifyForgotOTP } from '../api/auth';
 
 export default function Login() {
@@ -10,6 +10,12 @@ export default function Login() {
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

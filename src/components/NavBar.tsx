@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../api/client';
 import NotificationBell from './NotificationBell';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 import { pingPresence } from '../api/account';
+import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 
 const links = [
   { to: '/', label: 'Home', icon: '🏠' },
@@ -18,11 +19,23 @@ const links = [
 
 export default function NavBar() {
   const { pathname } = useLocation();
+  const navRef = useRef<HTMLElement | null>(null);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
   const [authed, setAuthed] = useState<boolean>(() => {
     if (typeof localStorage === 'undefined') return false;
     return !!localStorage.getItem('token');
   });
   const [me, setMe] = useState<{ username: string; profile_pic?: string | null } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [boardTheme, setBoardTheme] = useState(() => {
+    if (typeof localStorage === 'undefined') return 0;
+    const stored = Number(localStorage.getItem('boardTheme'));
+    return Number.isFinite(stored) ? stored : 0;
+  });
+  const [pieceSet, setPieceSet] = useState(() => {
+    if (typeof localStorage === 'undefined') return 'cburnett';
+    return localStorage.getItem('pieceSet') || 'cburnett';
+  });
 
   useEffect(() => {
     const handler = () => setAuthed(!!localStorage.getItem('token'));
@@ -49,10 +62,63 @@ export default function NavBar() {
     return () => clearInterval(pingInterval);
   }, [authed]);
 
+  useEffect(() => {
+    const navEl = navRef.current;
+    if (!navEl) return;
+    const activeLink = navEl.querySelector<HTMLAnchorElement>('a[data-active="true"]');
+    if (!activeLink) {
+      navEl.scrollLeft = 0;
+      return;
+    }
+    const navRect = navEl.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    const padding = 12;
+    if (linkRect.left < navRect.left + padding) {
+      navEl.scrollLeft -= navRect.left + padding - linkRect.left;
+      return;
+    }
+    if (linkRect.right > navRect.right - padding) {
+      navEl.scrollLeft += linkRect.right - (navRect.right - padding);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem('boardTheme', String(boardTheme));
+    window.dispatchEvent(new Event('board-settings-change'));
+  }, [boardTheme]);
+
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem('pieceSet', pieceSet);
+    window.dispatchEvent(new Event('board-settings-change'));
+  }, [pieceSet]);
+
   const logout = () => {
     localStorage.removeItem('token');
     window.location.href = '/';
   };
+  const showSettings = pathname === '/';
 
   return (
     <header style={{ 
@@ -126,61 +192,73 @@ export default function NavBar() {
         </Link>
         
         {/* Navigation Menu - Centered */}
-        <nav style={{ 
+        <nav
+          ref={navRef}
+          style={{ 
           display: 'flex', 
-          gap: 6, 
+          gap: 8, 
           alignItems: 'center', 
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           flex: 1,
           overflowX: 'auto',
           overflowY: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          padding: '0 16px',
-          maxWidth: '100%'
+          padding: '0 14px',
+          maxWidth: '100%',
+          scrollPaddingLeft: 16,
+          scrollPaddingRight: 16
         }}>
           <style>{`
             nav::-webkit-scrollbar {
               display: none;
             }
           `}</style>
-          {links.map((l) => (
+          {links.map((l) => {
+            const isActive = pathname === l.to;
+            return (
             <Link
               key={l.to}
               to={l.to}
+              data-active={isActive ? 'true' : 'false'}
+              aria-current={isActive ? 'page' : undefined}
               style={{
-                padding: '8px 14px',
-                borderRadius: 8,
+                height: 34,
+                padding: '0 12px',
+                borderRadius: 999,
                 fontSize: 13,
                 fontWeight: 600,
-                background: pathname === l.to ? 'rgba(44, 230, 194, 0.15)' : 'transparent',
-                color: pathname === l.to ? 'var(--accent)' : 'var(--text)',
-                border: pathname === l.to ? '1px solid rgba(44, 230, 194, 0.3)' : '1px solid transparent',
+                lineHeight: 1,
+                background: isActive ? 'rgba(44, 230, 194, 0.18)' : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--text)',
+                border: isActive ? '1px solid rgba(44, 230, 194, 0.35)' : '1px solid transparent',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
                 transition: 'all 0.2s ease',
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',
-                flexShrink: 0
+                flexShrink: 0,
+                scrollMarginLeft: 16,
+                scrollMarginRight: 16
               }}
               onMouseEnter={(e) => {
-                if (pathname !== l.to) {
-                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.1)';
+                if (!isActive) {
+                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.07)';
+                  e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.18)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (pathname !== l.to) {
+                if (!isActive) {
                   e.currentTarget.style.background = 'transparent';
                   e.currentTarget.style.borderColor = 'transparent';
                 }
               }}
             >
-              <span style={{ fontSize: 14 }}>{l.icon}</span>
+              <span style={{ fontSize: 14, lineHeight: 1 }}>{l.icon}</span>
               <span>{l.label}</span>
             </Link>
-          ))}
+          )})}
         </nav>
         
         {/* User Actions Section */}
@@ -191,6 +269,119 @@ export default function NavBar() {
           flexShrink: 0,
           minWidth: 'fit-content'
         }}>
+          {showSettings && (
+            <div ref={settingsRef} style={{ position: 'relative' }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setSettingsOpen((prev) => !prev)}
+                style={{ 
+                  fontSize: 12, 
+                  padding: '6px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+                aria-haspopup="dialog"
+                aria-expanded={settingsOpen}
+              >
+                <span style={{ fontSize: 14 }}>⚙️</span>
+                <span>Settings</span>
+              </button>
+              {settingsOpen && (
+                <div
+                  role="dialog"
+                  aria-label="Board settings"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    right: 0,
+                    width: 260,
+                    background: 'linear-gradient(180deg, rgba(12, 18, 32, 0.98), rgba(10, 14, 24, 0.98))',
+                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    borderRadius: 12,
+                    padding: 12,
+                    boxShadow: '0 18px 40px rgba(0, 0, 0, 0.45)',
+                    backdropFilter: 'blur(10px)',
+                    zIndex: 1001
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+                    Board Settings
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      <label style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Theme</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <select
+                          value={boardTheme}
+                          onChange={(e) => setBoardTheme(Number(e.target.value))}
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            padding: '7px 10px',
+                            fontSize: 12,
+                            borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            background: '#0b1220',
+                            color: 'var(--text)',
+                            appearance: 'auto'
+                          }}
+                        >
+                          {BOARD_THEMES.map((theme, idx) => (
+                            <option key={theme.name} value={idx}>
+                              {theme.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 12px)',
+                            width: 24,
+                            height: 12,
+                            borderRadius: 4,
+                            overflow: 'hidden',
+                            border: '1px solid var(--border)',
+                            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'
+                          }}
+                        >
+                          <span style={{ background: BOARD_THEMES[boardTheme]?.light || '#f0d9b5' }} />
+                          <span style={{ background: BOARD_THEMES[boardTheme]?.dark || '#b58863' }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      <label style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Pieces</label>
+                      <select
+                        value={pieceSet}
+                        onChange={(e) => setPieceSet(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: '1px solid var(--border)',
+                          background: '#0b1220',
+                          color: 'var(--text)',
+                          appearance: 'auto'
+                        }}
+                      >
+                        {PIECE_SETS.map((set) => (
+                          <option key={set.value} value={set.value}>
+                            {set.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>
+                      Saved for new games.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {!authed && (
             <>
               <Link className="btn btn-ghost" to="/login" style={{ fontSize: 12, padding: '6px 12px' }}>Log in</Link>

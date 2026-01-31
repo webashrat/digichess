@@ -1,127 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { ChessPiece } from './ChessPieces';
+import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 
 type Square = { piece: string | null; color: 'light' | 'dark'; coord: string; pieceType?: string };
-
-type BoardTheme = {
-  name: string;
-  light: string;
-  dark: string;
-  lightPiece: string;
-  darkPiece: string;
-};
-
-type PieceSet = {
-  name: string;
-  value: string;
-};
-
-const pieceSets: PieceSet[] = [
-  { name: 'Custom (SVG)', value: 'custom' },
-  { name: 'Cburnett', value: 'cburnett' },
-  { name: 'Merida', value: 'merida' },
-  { name: 'Alpha', value: 'alpha' },
-  { name: 'Mono', value: 'mono' },
-  { name: 'Firi', value: 'firi' },
-  { name: 'Pirouetti', value: 'pirouetti' },
-  { name: 'Chessnut', value: 'chessnut' },
-  { name: 'Chess7', value: 'chess7' },
-  { name: 'Reilly', value: 'reillycraig' },
-  { name: 'Companion', value: 'companion' },
-  { name: 'Spatial', value: 'spatial' },
-  { name: 'California', value: 'california' },
-  { name: 'Pixel', value: 'pixel' },
-  { name: 'Letter', value: 'letter' },
-  { name: 'Cases', value: 'cases' },
-  { name: 'Clay', value: 'clay' },
-  { name: 'Horsey', value: 'horsey' },
-  { name: 'Shapes', value: 'shapes' },
-  { name: 'Cardinal', value: 'cardinal' },
-  { name: 'Gioco', value: 'gioco' },
-  { name: 'Staunty', value: 'staunty' },
-  { name: 'Governor', value: 'governor' },
-  { name: 'Dubrovny', value: 'dubrovny' },
-  { name: 'Icpieces', value: 'icpieces' },
-  { name: 'Riohacha', value: 'riohacha' },
-  { name: 'Kosal', value: 'kosal' },
-  { name: 'Libra', value: 'libra' },
-  { name: 'Maestro', value: 'maestro' },
-  { name: 'Caliente', value: 'caliente' }
-];
-
-const themes: BoardTheme[] = [
-  {
-    name: 'Classic',
-    light: '#f0d9b5',
-    dark: '#b58863',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Blue',
-    light: '#dee3e6',
-    dark: '#8ca2ad',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Green',
-    light: '#f0f0f0',
-    dark: '#86a666',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Marble',
-    light: '#eeeed2',
-    dark: '#769656',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Wood',
-    light: '#d18b47',
-    dark: '#aa6c39',
-    lightPiece: '#f4f6ff',
-    darkPiece: '#0b1020'
-  },
-  {
-    name: 'Dark',
-    light: '#3a3a3a',
-    dark: '#1a1a1a',
-    lightPiece: '#f4f6ff',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Lichess',
-    light: '#edeed1',
-    dark: '#779952',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Brown',
-    light: '#f0d9b5',
-    dark: '#b58863',
-    lightPiece: '#0b1020',
-    darkPiece: '#f4f6ff'
-  },
-  {
-    name: 'Leather',
-    light: '#d18b47',
-    dark: '#8b4513',
-    lightPiece: '#f4f6ff',
-    darkPiece: '#0b1020'
-  },
-  {
-    name: 'Metal',
-    light: '#c9c9c9',
-    dark: '#808080',
-    lightPiece: '#0b1020',
-    darkPiece: '#0b1020'
-  }
-];
 
 function parseFen(fen?: string): Square[] {
   const normalized =
@@ -174,7 +56,8 @@ export function ChessBoard({
   theme = 0,
   onThemeChange,
   pieceSet = 'cburnett',
-  onPieceSetChange
+  onPieceSetChange,
+  showControls = true
 }: {
   fen?: string;
   lastMove?: string;
@@ -185,6 +68,7 @@ export function ChessBoard({
   onThemeChange?: (theme: number) => void;
   pieceSet?: string;
   onPieceSetChange?: (pieceSet: string) => void;
+  showControls?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [draggedPiece, setDraggedPiece] = useState<{ coord: string; piece: string; pieceType: string } | null>(null);
@@ -193,6 +77,9 @@ export function ChessBoard({
   const [wasDragged, setWasDragged] = useState(false);
   const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
   const [boardSize, setBoardSize] = useState<number>(500);
+  const squareSize = useMemo(() => Math.max(32, Math.floor(boardSize / 8)), [boardSize]);
+  const pieceSize = useMemo(() => Math.max(28, Math.floor(squareSize * 0.9)), [squareSize]);
+  const ghostPieceSize = useMemo(() => Math.max(36, Math.floor(squareSize * 0.98)), [squareSize]);
   const boardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chessRef = useRef<Chess | null>(null);
@@ -203,14 +90,14 @@ export function ChessBoard({
       if (containerRef.current) {
         const container = containerRef.current;
         // Use full container space, accounting for minimal padding
-        const containerWidth = container.clientWidth - 8; // Minimal padding (reduced from 16)
-        const containerHeight = container.clientHeight - ((onThemeChange || onPieceSetChange) ? 32 : 0); // Reduced from 40
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight - ((showControls && (onThemeChange || onPieceSetChange)) ? 22 : 0);
         // Use the smaller dimension to maintain square aspect ratio, but allow much larger sizes
         const size = Math.min(containerWidth, containerHeight);
         // Min 300px, but allow up to 1000px or more based on viewport
         // On large screens, board can be 800-1000px easily
-        const maxSize = Math.min(1200, Math.max(containerWidth, containerHeight) * 0.9);
-        setBoardSize(Math.max(300, Math.min(size, maxSize)));
+        const maxSize = Math.min(1600, Math.max(containerWidth, containerHeight));
+        setBoardSize(Math.max(420, Math.min(size, maxSize)));
       }
     };
     
@@ -225,7 +112,7 @@ export function ChessBoard({
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateSize);
     };
-  }, [onThemeChange]);
+  }, [onThemeChange, onPieceSetChange, showControls]);
 
   // Initialize chess.js for move validation - reset selection when FEN changes
   // Use a ref to track the previous FEN to detect when a move completes
@@ -359,7 +246,7 @@ export function ChessBoard({
     return parseFen(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   }, [fen]);
   const last = lastMove ? lastMove.toLowerCase() : '';
-  const currentTheme = themes[theme] || themes[0];
+  const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES[0];
   
   // Detect check
   const isInCheck = useMemo(() => {
@@ -712,8 +599,20 @@ export function ChessBoard({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', width: '100%', height: '100%', minHeight: 0, justifyContent: 'center' }}>
-      {(onThemeChange || onPieceSetChange) && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 4, flexShrink: 0, alignItems: 'center' }}>
+      {showControls && (onThemeChange || onPieceSetChange) && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            marginBottom: 4,
+            flexShrink: 0,
+            alignItems: 'center',
+            position: 'relative',
+            zIndex: 5
+          }}
+        >
           {onThemeChange && (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 500 }}>Board:</label>
@@ -728,10 +627,13 @@ export function ChessBoard({
                   background: 'var(--bg)',
                   color: 'var(--text)',
                   cursor: 'pointer',
-                  minWidth: 100
+                  minWidth: 100,
+                  width: 'auto',
+                  maxWidth: 180,
+                  appearance: 'auto'
                 }}
               >
-                {themes.map((t, idx) => (
+                {BOARD_THEMES.map((t, idx) => (
                   <option key={idx} value={idx}>
                     {t.name}
                   </option>
@@ -753,10 +655,13 @@ export function ChessBoard({
                   background: 'var(--bg)',
                   color: 'var(--text)',
                   cursor: 'pointer',
-                  minWidth: 120
+                  minWidth: 120,
+                  width: 'auto',
+                  maxWidth: 200,
+                  appearance: 'auto'
                 }}
               >
-                {pieceSets.map((ps) => (
+                {PIECE_SETS.map((ps) => (
                   <option key={ps.value} value={ps.value}>
                     {ps.name}
                   </option>
@@ -766,7 +671,7 @@ export function ChessBoard({
           )}
         </div>
       )}
-      <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '4px', position: 'relative' }}>
+      <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: 0, position: 'relative' }}>
         <div
           ref={boardRef}
           style={{
@@ -888,7 +793,7 @@ export function ChessBoard({
                 >
                   <ChessPiece 
                     piece={sq.pieceType} 
-                    size={Math.min(60, window.innerWidth / 10)} 
+                    size={pieceSize}
                     color={sq.pieceType === sq.pieceType.toUpperCase() ? 'white' : 'black'}
                     pieceSet={pieceSet}
                   />
@@ -986,8 +891,20 @@ export function ChessBoard({
         <div
           style={{
             position: 'fixed',
-            left: `${Math.max(0, Math.min(window.innerWidth - 60, dragOffset.x + (boardRef.current.getBoundingClientRect().left) - 30))}px`,
-            top: `${Math.max(0, Math.min(window.innerHeight - 60, dragOffset.y + (boardRef.current.getBoundingClientRect().top) - 30))}px`,
+            left: `${Math.max(
+              0,
+              Math.min(
+                window.innerWidth - ghostPieceSize,
+                dragOffset.x + boardRef.current.getBoundingClientRect().left - ghostPieceSize / 2
+              )
+            )}px`,
+            top: `${Math.max(
+              0,
+              Math.min(
+                window.innerHeight - ghostPieceSize,
+                dragOffset.y + boardRef.current.getBoundingClientRect().top - ghostPieceSize / 2
+              )
+            )}px`,
             pointerEvents: 'none',
             zIndex: 10000,
             filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
@@ -999,7 +916,7 @@ export function ChessBoard({
         >
           <ChessPiece 
             piece={draggedPiece.pieceType} 
-            size={60}
+            size={ghostPieceSize}
             color={draggedPiece.pieceType === draggedPiece.pieceType.toUpperCase() ? 'white' : 'black'}
             pieceSet={pieceSet}
           />

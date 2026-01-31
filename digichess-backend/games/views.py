@@ -1,4 +1,5 @@
 from django.conf import settings
+from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db import models
@@ -16,6 +17,7 @@ from utils.redis_client import get_redis
 
 from .models import Game
 from .serializers import GameSerializer, MoveSerializer
+from .game_core import apply_move, MoveResult
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
 from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation
 
@@ -57,303 +59,138 @@ class GameDetailView(APIView):
 class GameMoveView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def _make_bot_move(self, game: Game, bot_player):
-        """Make a move for a bot player synchronously"""
-        from games.bot_utils import get_bot_move_with_error
-        from django.utils import timezone
-        
-        # Reload game from DB to get latest state
-        game.refresh_from_db()
-        
-        # Check if game is still active
-        if game.status != Game.STATUS_ACTIVE:
-            return
-        
-        # Load board
-        board = self._load_board(game)
-        
-        # Verify it's the bot's turn
-        current_player = game.white if board.turn == chess.WHITE else game.black
-        if current_player != bot_player or not bot_player.is_bot:
-            return
-        
-        # Get bot rating for the current time control
-        rating_field_map = {
-            Game.TIME_BULLET: 'rating_bullet',
-            Game.TIME_BLITZ: 'rating_blitz',
-            Game.TIME_RAPID: 'rating_rapid',
-            Game.TIME_CLASSICAL: 'rating_classical',
-        }
-        rating_field = rating_field_map.get(game.time_control, 'rating_blitz')
-        bot_rating = getattr(bot_player, rating_field, 800)
-        
-        # Get bot move - use Lichess APIs for optimization
-        move_list = (game.moves or "").strip().split()
-        ply_count = len(move_list)
-        
-        try:
-            bot_move = get_bot_move_with_error(
-                board, 
-                bot_rating, 
-                time_control=game.time_control,
-                ply_count=ply_count
-            )
-            move_san = board.san(bot_move)
-        except Exception as e:
-            import sys
-            print(f"[bot_move] Error getting bot move: {e}", file=sys.stderr)
-            return
-        
-        # Make the move using the same logic as post()
-        now = timezone.now()
-        board.push(bot_move)
-        
-        if game.status == Game.STATUS_PENDING:
-            game.start()
-        
-        move_list = (game.moves or "").strip().split()
-        move_list.append(move_san)
-        game.moves = " ".join(move_list)
-        game.current_fen = board.fen()
-        
-        # Clock handling
-        elapsed = 0
-        if game.last_move_at:
-            elapsed = (now - game.last_move_at).total_seconds()
-        
-        is_white_move = (len(move_list) % 2) == 1
-        if game.last_move_at:
-            if is_white_move:
-                game.white_time_left -= int(elapsed)
-                if game.white_time_left <= 0:
-                    result = Game.RESULT_BLACK
-                    game.finish(result)
-                    game.refresh_from_db()
-                    if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        # Always update ratings synchronously to ensure they're updated immediately
-                        FinishGameView().update_ratings(game, result)
-                    # Broadcast game_finished event for timeout
-                    channel_layer = get_channel_layer()
-                    game_data = GameSerializer(game).data
-                    try:
-                        async_to_sync(channel_layer.group_send)(
-                            f"game_{game.id}",
-                            {
-                                "type": "game.event",
-                                "payload": {
-                                    "type": "game_finished",
-                                    "game_id": game.id,
-                                    "result": result,
-                                    "reason": "timeout",
-                                    "game": game_data,
-                                },
-                            },
-                        )
-                    except Exception:
-                        pass  # Don't fail if channel layer unavailable
-            else:
-                game.black_time_left -= int(elapsed)
-                if game.black_time_left <= 0:
-                    result = Game.RESULT_WHITE
-                    game.finish(result)
-                    game.refresh_from_db()
-                    if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        # Always update ratings synchronously to ensure they're updated immediately
-                        FinishGameView().update_ratings(game, result)
-                    # Broadcast game_finished event for timeout
-                    channel_layer = get_channel_layer()
-                    game_data = GameSerializer(game).data
-                    try:
-                        async_to_sync(channel_layer.group_send)(
-                            f"game_{game.id}",
-                            {
-                                "type": "game.event",
-                                "payload": {
-                                    "type": "game_finished",
-                                    "game_id": game.id,
-                                    "result": result,
-                                    "reason": "timeout",
-                                    "game": game_data,
-                                },
-                            },
-                        )
-                    except Exception:
-                        pass  # Don't fail if channel layer unavailable
-        
-        # Apply increment
-        from games.game_proxy import GameProxy
-        status_changed = False
-        if game.status == Game.STATUS_ACTIVE:
-            if is_white_move:
-                game.white_time_left += game.white_increment_seconds
-            else:
-                game.black_time_left += game.black_increment_seconds
-            game.last_move_at = now
-            # Check if result will change
-            old_status = game.status
-            self._update_result(game, board)
-            status_changed = game.status != old_status
-            
-            # Use GameProxy for batched writes (immediate flush if status changed)
-            GameProxy.update_game(game, immediate_flush=status_changed)
-        else:
-            game.last_move_at = now
-            # Immediate flush for finished/aborted games
-            GameProxy.update_game(game, immediate_flush=True)
-        
-        # Broadcast move
+    def _broadcast_game_state(self, game: Game, state: dict, legal_moves: List[str]):
         channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+        payload = {
+            "type": "gameState",
+            "game_id": game.id,
+            **state,
+            "legal_moves": legal_moves,
+        }
         try:
-            r = get_redis()
-            turn = "white" if board.turn is chess.WHITE else "black"
-            r.hset(
-                f"game:clock:{game.id}",
-                mapping={
-                    "white_time_left": game.white_time_left,
-                    "black_time_left": game.black_time_left,
-                    "last_move_at": int(now.timestamp()),
-                    "turn": turn,
+            from games.lichess_game_flow import get_game_state_export
+            game_state = get_game_state_export(
+                state.get("fen") or chess.STARTING_FEN,
+                state.get("moves") or "",
+                "standard",
+            )
+            if game_state:
+                payload["game_state"] = game_state
+        except Exception:
+            pass
+
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": payload,
                 },
             )
-        except Exception:
-            pass
-        
-        # Include legal moves and game state for instant interactivity (like Lichess)
-        # Calculate legal moves from current board position
-        try:
-            legal_moves = [board.san(m) for m in list(board.legal_moves)[:50]]  # Limit to 50 for performance
-        except Exception:
-            legal_moves = []
-        
-        game_state = {}
-        try:
-            # Get full game state for smooth reconnection (like Lichess gameState)
-            from games.lichess_game_flow import get_game_state_export
-            game_state = get_game_state_export(game.current_fen, game.moves) or {}
-            # Enhance with calculated legal moves
-            if legal_moves:
-                game_state['legal_moves'] = {'san': legal_moves}
-        except Exception:
-            pass
-        
-        # Broadcast move with full state (like Lichess does)
-        # Wrap in try-except to handle Redis/channel layer unavailability gracefully
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to broadcast game state via WebSocket: {e}")
+
+    def _broadcast_game_finished(self, game: Game, reason: Optional[str]):
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+        game_data = GameSerializer(game).data
         try:
             async_to_sync(channel_layer.group_send)(
                 f"game_{game.id}",
                 {
                     "type": "game.event",
                     "payload": {
-                        "type": "gameState",  # Lichess-compatible type
+                        "type": "game_finished",
                         "game_id": game.id,
-                        "san": move_san,
-                        "fen": game.current_fen,
-                        "moves": game.moves,
-                        "white_time_left": game.white_time_left,
-                        "black_time_left": game.black_time_left,
-                        "legal_moves": legal_moves,  # Include legal moves for instant board interactivity
-                        "game_state": game_state,  # Full game state for smooth updates
-                        "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
-                        "status": game.status,
                         "result": game.result,
+                        "reason": reason,
+                        "game": game_data,
                     },
                 },
             )
+        except Exception:
+            pass
+
+    def _apply_and_broadcast(self, game_id: int, player, move_san: str) -> MoveResult:
+        result = apply_move(game_id, player, move_san)
+        if result.state and result.game:
+            self._broadcast_game_state(result.game, result.state, result.legal_moves or [])
+        if result.game and result.finished:
+            result.game.refresh_from_db()
+            if result.game.rated and result.game.result in {
+                Game.RESULT_WHITE,
+                Game.RESULT_BLACK,
+                Game.RESULT_DRAW,
+            }:
+                FinishGameView().update_ratings(result.game, result.game.result)
+            self._broadcast_game_finished(result.game, result.finish_reason)
+        return result
+
+    def _make_bot_move(self, game: Game, bot_player):
+        """Make a move for a bot player synchronously using the core."""
+        from games.bot_utils import get_bot_move_with_error
+
+        game.refresh_from_db()
+        if game.status != Game.STATUS_ACTIVE:
+            return
+
+        board = self._load_board(game)
+        current_player = game.white if board.turn == chess.WHITE else game.black
+        if current_player != bot_player or not bot_player.is_bot:
+            return
+
+        rating_field_map = {
+            Game.TIME_BULLET: "rating_bullet",
+            Game.TIME_BLITZ: "rating_blitz",
+            Game.TIME_RAPID: "rating_rapid",
+            Game.TIME_CLASSICAL: "rating_classical",
+        }
+        rating_field = rating_field_map.get(game.time_control, "rating_blitz")
+        bot_rating = getattr(bot_player, rating_field, 800)
+
+        move_list = (game.moves or "").strip().split()
+        ply_count = len(move_list)
+
+        try:
+            bot_move = get_bot_move_with_error(
+                board,
+                bot_rating,
+                time_control=game.time_control,
+                ply_count=ply_count,
+            )
+            move_san = board.san(bot_move)
         except Exception as e:
-            # Don't fail if channel layer unavailable (e.g., Redis down or test mode)
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to broadcast bot move via WebSocket: {e}")
-        
-        # If next player is also a bot, make another move (with small delay)
-        if game.status == Game.STATUS_ACTIVE:
-            game.refresh_from_db()
-            board = self._load_board(game)
-            next_player = game.white if board.turn == chess.WHITE else game.black
+            import sys
+            print(f"[bot_move] Error getting bot move: {e}", file=sys.stderr)
+            return
+
+        result = self._apply_and_broadcast(game.id, bot_player, move_san)
+        if not result.ok or not result.game:
+            return
+
+        if result.game.status == Game.STATUS_ACTIVE:
+            try:
+                next_board = chess.Board(result.game.current_fen or chess.STARTING_FEN)
+            except Exception:
+                next_board = chess.Board()
+            next_player = (
+                result.game.white if next_board.turn == chess.WHITE else result.game.black
+            )
             if next_player and next_player.is_bot:
-                # Small delay to allow UI to update and WebSocket to propagate
                 import time
-                time.sleep(0.5)  # Increased delay to ensure WebSocket message is sent
-                self._make_bot_move(game, next_player)
+                time.sleep(0.5)
+                self._make_bot_move(result.game, next_player)
 
     def _load_board(self, game: Game) -> chess.Board:
         try:
             return chess.Board(game.current_fen or chess.STARTING_FEN)
         except Exception:
             return chess.Board()
-
-    def _parse_move(self, board: chess.Board, move_str: str) -> chess.Move:
-        # Try SAN then UCI
-        try:
-            return board.parse_san(move_str)
-        except Exception:
-            try:
-                return board.parse_uci(move_str)
-            except Exception:
-                raise permissions.ValidationError("Invalid move notation.")
-
-    def _update_result(self, game: Game, board: chess.Board):
-        result = None
-        reason = None
-        
-        if board.is_checkmate():
-            # The side that just moved delivered mate; side to move is losing
-            winner_is_white = board.turn is chess.BLACK
-            result = Game.RESULT_WHITE if winner_is_white else Game.RESULT_BLACK
-            reason = 'checkmate'
-            game.finish(result)
-        elif board.is_stalemate():
-            result = Game.RESULT_DRAW
-            reason = 'stalemate'
-            game.finish(result)
-        elif board.can_claim_threefold_repetition():
-            result = Game.RESULT_DRAW
-            reason = 'threefold_repetition'
-            game.finish(result)
-        elif board.is_insufficient_material():
-            result = Game.RESULT_DRAW
-            reason = 'insufficient_material'
-            game.finish(result)
-        elif board.can_claim_fifty_moves():
-            # Treat as draw claimable
-            result = Game.RESULT_DRAW
-            reason = 'fifty_moves'
-            game.finish(result)
-        else:
-            # Use GameProxy for normal moves (batched)
-            from games.game_proxy import GameProxy
-            GameProxy.update_game(game, immediate_flush=False)
-            return
-        
-        # Refresh game from database to get updated rated status
-        game.refresh_from_db()
-        
-        # Update ratings for rated games when game finishes
-        if result and game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-            # Always update ratings synchronously to ensure they're updated immediately
-            # Celery tasks can be unreliable if not configured properly
-            FinishGameView().update_ratings(game, result)
-        
-        # Broadcast game_finished event
-        if result:
-            channel_layer = get_channel_layer()
-            game_data = GameSerializer(game).data
-            try:
-                async_to_sync(channel_layer.group_send)(
-                    f"game_{game.id}",
-                    {
-                        "type": "game.event",
-                        "payload": {
-                            "type": "game_finished",
-                            "game_id": game.id,
-                            "result": result,
-                            "reason": reason,
-                            "game": game_data,
-                        },
-                    },
-                )
-            except Exception:
-                pass  # Don't fail if channel layer unavailable
 
     def post(self, request, pk: int):
         game = get_object_or_404(Game, id=pk)
@@ -365,180 +202,28 @@ class GameMoveView(APIView):
         serializer = MoveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        board = self._load_board(game)
-        now = timezone.now()
-
-        # Clock handling
-        elapsed = 0
-        if game.last_move_at:
-            elapsed = (now - game.last_move_at).total_seconds()
-
-        # Optimized move processing with latency tracking (Lichess-style)
         move_san = serializer.validated_data["move"]
-        from games.move_optimizer import process_move_optimized
-        
-        success, error_msg, move, extra_data = process_move_optimized(game, move_san, board)
-        if not success or not move:
-            return Response({"detail": error_msg or "Illegal move."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Move is valid, use optimized processing result
-        san = extra_data.get('san', move_san)
-        # Board is already updated by process_move_optimized
-        # board.push(move)  # Already done in process_move_optimized
+        result = self._apply_and_broadcast(game.id, request.user, move_san)
+        if not result.ok:
+            return Response({"detail": result.error or "Illegal move."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if game.status == Game.STATUS_PENDING:
-            game.start()
-        move_list = (game.moves or "").strip().split()
-        move_list.append(san)
-        game.moves = " ".join(move_list)
-        game.current_fen = extra_data.get('fen', board.fen())  # Use from optimized processing
-        # Deduct time
-        is_white_move = (len(move_list) % 2) == 1  # after push, move count odd means white just moved
-        if game.last_move_at:
-            if is_white_move:
-                game.white_time_left -= int(elapsed)
-                if game.white_time_left <= 0:
-                    result = Game.RESULT_BLACK
-                    game.finish(result)
-                    # Refresh game from database to get updated rated status
-                    game.refresh_from_db()
-                    # Update ratings for rated games
-                    if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        # Always update ratings synchronously to ensure they're updated immediately
-                        FinishGameView().update_ratings(game, result)
-                    # Broadcast game_finished event for timeout
-                    channel_layer = get_channel_layer()
-                    game_data = GameSerializer(game).data
-                    try:
-                        async_to_sync(channel_layer.group_send)(
-                            f"game_{game.id}",
-                            {
-                                "type": "game.event",
-                                "payload": {
-                                    "type": "game_finished",
-                                    "game_id": game.id,
-                                    "result": result,
-                                    "reason": "timeout",
-                                    "game": game_data,
-                                },
-                            },
-                        )
-                    except Exception:
-                        pass  # Don't fail if channel layer unavailable
-            else:
-                game.black_time_left -= int(elapsed)
-                if game.black_time_left <= 0:
-                    result = Game.RESULT_WHITE
-                    game.finish(result)
-                    # Refresh game from database to get updated rated status
-                    game.refresh_from_db()
-                    # Update ratings for rated games
-                    if game.rated and result in {Game.RESULT_WHITE, Game.RESULT_BLACK, Game.RESULT_DRAW}:
-                        # Always update ratings synchronously to ensure they're updated immediately
-                        FinishGameView().update_ratings(game, result)
-                    # Broadcast game_finished event for timeout
-                    channel_layer = get_channel_layer()
-                    game_data = GameSerializer(game).data
-                    try:
-                        async_to_sync(channel_layer.group_send)(
-                            f"game_{game.id}",
-                            {
-                                "type": "game.event",
-                                "payload": {
-                                    "type": "game_finished",
-                                    "game_id": game.id,
-                                    "result": result,
-                                    "reason": "timeout",
-                                    "game": game_data,
-                                },
-                            },
-                        )
-                    except Exception:
-                        pass  # Don't fail if channel layer unavailable
-        # Apply increment to mover if still active
-        if game.status == Game.STATUS_ACTIVE:
-            if is_white_move:
-                game.white_time_left += game.white_increment_seconds
-            else:
-                game.black_time_left += game.black_increment_seconds
-            game.last_move_at = now
-            # Use GameProxy for batched writes
-            from games.game_proxy import GameProxy
-            GameProxy.update_game(game, immediate_flush=False)
-            self._update_result(game, board)
-        else:
-            game.last_move_at = now
-            game.save(update_fields=["moves", "current_fen", "white_time_left", "black_time_left", "last_move_at"])
-        data = GameSerializer(game).data
-        # Broadcast to WS group
-        channel_layer = get_channel_layer()
-        # Store clocks in Redis for quick reads
-        try:
-            r = get_redis()
-            turn = "white" if board.turn is chess.WHITE else "black"
-            r.hset(
-                f"game:clock:{game.id}",
-                mapping={
-                    "white_time_left": game.white_time_left,
-                    "black_time_left": game.black_time_left,
-                    "last_move_at": int(now.timestamp()),
-                    "turn": turn,
-                },
+        data = GameSerializer(result.game).data if result.game else {}
+
+        if result.game and result.game.status == Game.STATUS_ACTIVE:
+            try:
+                board = chess.Board(result.game.current_fen or chess.STARTING_FEN)
+            except Exception:
+                board = chess.Board()
+            next_player = (
+                result.game.white if board.turn == chess.WHITE else result.game.black
             )
-        except Exception:
-            pass
-        
-        # Get legal moves and enhanced game state for WebSocket payload (like Lichess)
-        from games.lichess_game_flow import get_game_state_export
-        try:
-            game_state = get_game_state_export(
-                game.current_fen or chess.STARTING_FEN,
-                game.moves or "",
-                "standard"
-            )
-            legal_moves = game_state.get("legal_moves", {}).get("san", []) if game_state else []
-        except Exception:
-            legal_moves = []
-        
-        # Broadcast move with full game state (like Lichess gameState message)
-        # Wrap in try-except to handle Redis/channel layer unavailability gracefully
-        try:
-            async_to_sync(channel_layer.group_send)(
-                f"game_{game.id}",
-                {
-                    "type": "game.event",
-                    "payload": {
-                        "type": "gameState",
-                        "game_id": game.id,
-                        "san": san,
-                        "fen": game.current_fen,
-                        "moves": game.moves,
-                        "white_time_left": game.white_time_left,
-                        "black_time_left": game.black_time_left,
-                        "legal_moves": legal_moves,
-                        "status": game.status,
-                        "result": game.result,
-                    },
-                },
-            )
-        except Exception as e:
-            # Don't fail if channel layer unavailable (e.g., Redis down or test mode)
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to broadcast game state via WebSocket: {e}")
-        
-        # Check if opponent is a bot and make bot move automatically
-        if game.status == Game.STATUS_ACTIVE:
-            # Determine if the next player is a bot
-            next_player = game.white if board.turn == chess.WHITE else game.black
             if next_player and next_player.is_bot:
-                # Make bot move synchronously (immediate)
                 try:
-                    self._make_bot_move(game, next_player)
+                    self._make_bot_move(result.game, next_player)
                 except Exception as e:
                     import sys
                     print(f"[bot_move] Error making bot move synchronously: {e}", file=sys.stderr)
-        
+
         return Response(data)
 
 

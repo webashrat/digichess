@@ -80,9 +80,8 @@ export const ChessPiece = ({
     }
   }
   
-  // Try to load from public Lichess CDN (lichess.org, not lichess1.org)
-  // Add timestamp or pieceSet to URL to force reload when pieceSet changes
-  const lichessUrl = `https://lichess.org/assets/piece/${pieceSet}/${pieceCode}.webp`;
+  // Try to load from Lichess CDN (SVG is the most reliable across sets)
+  const lichessUrl = `https://lichess1.org/assets/piece/${pieceSet}/${pieceCode}.svg`;
   
   return (
     <img
@@ -95,8 +94,12 @@ export const ChessPiece = ({
         display: 'block',
         margin: 'auto',
         filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))',
-        objectFit: 'contain'
+        objectFit: 'contain',
+        userSelect: 'none',
+        WebkitUserDrag: 'none'
       }}
+      loading="lazy"
+      decoding="async"
       onError={() => {
         // Fallback to custom SVG on error
         setImageError(true);

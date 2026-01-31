@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { register, verifyOTP, resendOTP } from '../api/auth';
 import { CountrySelect } from '../components/CountrySelect';
 
@@ -31,16 +31,16 @@ export default function Register() {
       
       // Check for common field errors
       if (data.email) {
-        errors.push(`Email: ${Array.isArray(data.email) ? data.email.join(', ') : data.email}`);
+        errors.push(Array.isArray(data.email) ? data.email.join(', ') : data.email);
       }
       if (data.username) {
-        errors.push(`Username: ${Array.isArray(data.username) ? data.username.join(', ') : data.username}`);
+        errors.push(Array.isArray(data.username) ? data.username.join(', ') : data.username);
       }
       if (data.password) {
-        errors.push(`Password: ${Array.isArray(data.password) ? data.password.join(', ') : data.password}`);
+        errors.push(Array.isArray(data.password) ? data.password.join(', ') : data.password);
       }
       if (data.country) {
-        errors.push(`Country: ${Array.isArray(data.country) ? data.country.join(', ') : data.country}`);
+        errors.push(Array.isArray(data.country) ? data.country.join(', ') : data.country);
       }
       
       // Check for non-field errors
@@ -55,6 +55,12 @@ export default function Register() {
     
     return 'Registration failed. Please check your input and try again.';
   };
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

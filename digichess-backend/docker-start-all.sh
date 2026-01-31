@@ -27,13 +27,13 @@ trap cleanup SIGTERM SIGINT
 echo "[1/3] Starting Celery Worker..."
 celery -A config worker -l info -Q scm_default,scm_emails --concurrency=4 &
 CELERY_WORKER_PID=$!
-echo "   ✓ Celery Worker started (PID: $CELERY_WORKER_PID)"
+echo "   ??? Celery Worker started (PID: $CELERY_WORKER_PID)"
 
 # Start Celery Beat in background
 echo "[2/3] Starting Celery Beat..."
 celery -A config beat -l info &
 CELERY_BEAT_PID=$!
-echo "   ✓ Celery Beat started (PID: $CELERY_BEAT_PID)"
+echo "   ??? Celery Beat started (PID: $CELERY_BEAT_PID)"
 
 # Wait a moment for Celery services to initialize
 echo "[3/3] Waiting for Celery services to initialize..."
@@ -43,9 +43,10 @@ sleep 3
 echo "========================================="
 echo "Starting Daphne (ASGI server) on port 8000..."
 echo ""
-echo "✅ All services are now running:"
-echo "   • Daphne (ASGI) - Port 8000"
-echo "   • Celery Worker - Queues: scm_default, scm_emails"
-echo "   • Celery Beat - Scheduler"
+echo "??? All services are now running:"
+echo "   ??? Daphne (ASGI) - Port 8000"
+echo "   ??? Celery Worker - Queues: scm_default, scm_emails"
+echo "   ??? Celery Beat - Scheduler"
 echo "========================================="
 exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
+

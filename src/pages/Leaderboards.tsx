@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import { LeaderboardRow, Mode } from '../api/types';
-import { flagFromCode } from '../utils/flags';
+import FlagIcon from '../components/FlagIcon';
 
 const modes: (Mode | 'digiquiz')[] = ['bullet', 'blitz', 'rapid', 'classical', 'digiquiz'];
 
@@ -159,7 +159,7 @@ export default function Leaderboards() {
                   fontSize: 15
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>{flagFromCode(r.country)}</span>
+                    <FlagIcon code={r.country} size={18} />
                     <a 
                       href={`/profile/${r.username}`} 
                       style={{ 

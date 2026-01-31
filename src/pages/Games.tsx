@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react';
 import api from '../api/client';
 import { GameSummary } from '../api/types';
 import IdentityStrip from '../components/IdentityStrip';
+import { fetchMe } from '../api/account';
 
 export default function Games() {
   const [games, setGames] = useState<GameSummary[]>([]);
+  const [me, setMe] = useState<{ id: number } | null>(null);
 
   useEffect(() => {
     api
       .get('/api/games/public/', { params: { status: 'active', page_size: 20 } })
       .then((r) => setGames(r.data?.results || r.data || []))
+      .catch(() => {});
+    fetchMe()
+      .then((u) => setMe({ id: u.id }))
       .catch(() => {});
   }, []);
 
@@ -72,12 +77,25 @@ export default function Games() {
               <span style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>VS</span>
               <IdentityStrip user={g.black} mode={g.mode} />
               <a 
-                className="btn btn-info" 
+                className="btn"
                 href={`/games/${g.id}`}
                 onClick={(e) => e.stopPropagation()}
-                style={{ fontSize: 14, padding: '10px 20px', fontWeight: 600 }}
+                style={{
+                  fontSize: 14,
+                  padding: '10px 20px',
+                  fontWeight: 600,
+                  background:
+                    me && (g.white.id === me.id || g.black.id === me.id)
+                      ? 'linear-gradient(90deg, #4caf50, #388e3c)'
+                      : 'linear-gradient(90deg, #2196f3, #1976d2)',
+                  color: '#ffffff',
+                  border:
+                    me && (g.white.id === me.id || g.black.id === me.id)
+                      ? '1px solid #66bb6a'
+                      : '1px solid #64b5f6'
+                }}
               >
-                👀 Watch
+                {me && (g.white.id === me.id || g.black.id === me.id) ? '▶️ Play' : '👀 Watch'}
               </a>
             </div>
             <div style={{ 

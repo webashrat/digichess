@@ -84,7 +84,9 @@ class Game(models.Model):
         if self.status == self.STATUS_PENDING:
             self.status = self.STATUS_ACTIVE
             self.started_at = timezone.now()
-            self.last_move_at = timezone.now()
+            # Start the clock only after the first move is made
+            if (self.moves or "").strip():
+                self.last_move_at = timezone.now()
             self.save(update_fields=["status", "started_at", "last_move_at"])
             
             # Initialize clock in Redis
@@ -94,15 +96,14 @@ class Game(models.Model):
                 r = get_redis()
                 board = chess.Board(self.current_fen or self.START_FEN)
                 turn = "white" if board.turn is chess.WHITE else "black"
-                r.hset(
-                    f"game:clock:{self.id}",
-                    mapping={
-                        "white_time_left": self.white_time_left,
-                        "black_time_left": self.black_time_left,
-                        "last_move_at": int(self.last_move_at.timestamp()),
-                        "turn": turn,
-                    },
-                )
+                mapping = {
+                    "white_time_left": self.white_time_left,
+                    "black_time_left": self.black_time_left,
+                    "turn": turn,
+                }
+                if self.last_move_at:
+                    mapping["last_move_at"] = int(self.last_move_at.timestamp())
+                r.hset(f"game:clock:{self.id}", mapping=mapping)
             except Exception:
                 pass  # Continue even if Redis initialization fails
 

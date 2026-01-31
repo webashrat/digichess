@@ -4,6 +4,7 @@ import api from '../api/client';
 import { GameCreatePayload, Mode, AccountListItem } from '../api/types';
 import { fetchAccounts } from '../api/users';
 import { fetchMe } from '../api/account';
+import { flagFromCode } from '../utils/flags';
 
 const modeOptions: Mode[] = ['bullet', 'blitz', 'rapid', 'classical', 'custom'];
 
@@ -358,7 +359,7 @@ export default function GameCreate() {
               .filter((a) => (me ? a.id !== me.id : true))
               .map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.username} ({a.country})
+                  {flagFromCode(a.country)} {a.username} ({(a.country || 'INTL').toString().toUpperCase()})
                 </option>
               ))}
           </select>

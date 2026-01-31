@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { GameSummary, LeaderboardRow, Mode } from '../api/types';
 import IdentityStrip from '../components/IdentityStrip';
-import { flagFromCode } from '../utils/flags';
+import FlagIcon from '../components/FlagIcon';
 import { AccountListItem } from '../api/types';
 import { fetchMe } from '../api/account';
+import { fetchAccountDetail } from '../api/users';
 import { listBots, createBotGame } from '../api/games';
 
 const defaultModes: Mode[] = ['bullet', 'blitz', 'rapid', 'classical'];
@@ -21,6 +22,8 @@ export default function Home() {
   const [mmStatus, setMmStatus] = useState('');
   const [queueing, setQueueing] = useState(false);
   const [online, setOnline] = useState<AccountListItem[]>([]);
+  const [activeGameId, setActiveGameId] = useState<number | null>(null);
+  const [challengingId, setChallengingId] = useState<number | null>(null);
   const [myGames, setMyGames] = useState<GameHistoryItem[]>([]);
   const [myGamesPage, setMyGamesPage] = useState(1);
   const [myGamesTotal, setMyGamesTotal] = useState(0);
@@ -110,11 +113,63 @@ export default function Home() {
     }
   };
 
+  const challengePlayer = async (userId: number) => {
+    if (!localStorage.getItem('token')) {
+      alert('Please login to challenge players');
+      return;
+    }
+    setChallengingId(userId);
+    try {
+      const { data } = await api.post('/api/games/', {
+        opponent_id: userId,
+        preferred_color: 'auto',
+        time_control: mode,
+        rated: true
+      });
+      const id = data?.id;
+      if (id) {
+        navigate(`/games/${id}`);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || 'Failed to challenge player';
+      alert(errorMsg);
+    } finally {
+      setChallengingId(null);
+    }
+  };
+
   useEffect(() => {
     if (me?.username) {
       loadMyGames();
     }
   }, [me?.username, myGamesPage]);
+
+  useEffect(() => {
+    if (!me?.username) {
+      setActiveGameId(null);
+      return;
+    }
+    let mounted = true;
+    const loadActiveGame = async () => {
+      try {
+        const detail = await fetchAccountDetail(me.username);
+        if (!mounted) return;
+        if (detail.is_playing && detail.spectate_game_id) {
+          setActiveGameId(detail.spectate_game_id);
+        } else {
+          setActiveGameId(null);
+        }
+      } catch {
+        if (mounted) setActiveGameId(null);
+      }
+    };
+    loadActiveGame();
+    const interval = window.setInterval(loadActiveGame, 30000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [me?.username]);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -201,8 +256,39 @@ export default function Home() {
       });
   };
 
+  const visibleOnline = online.filter((u) => (me ? u.id !== me.id : true));
+
   return (
     <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 20, paddingBottom: 20, width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
+      {activeGameId && (
+        <div
+          className="card"
+          style={{
+            border: '1px solid rgba(245, 196, 81, 0.4)',
+            background: 'linear-gradient(120deg, rgba(245, 196, 81, 0.18) 0%, rgba(44, 230, 194, 0.08) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '16px 18px'
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: '#f5c451' }}>♟️ Live game in progress</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              You have an active game. Resume from where you left off.
+            </div>
+          </div>
+          <button
+            className="btn btn-gold"
+            type="button"
+            onClick={() => navigate(`/games/${activeGameId}`)}
+            style={{ fontSize: 13, padding: '10px 16px', fontWeight: 700, whiteSpace: 'nowrap' }}
+          >
+            Resume Game →
+          </button>
+        </div>
+      )}
       {/* Hero Section */}
       <div className="card" style={{ 
         background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.1) 0%, rgba(21, 163, 116, 0.05) 100%)',
@@ -646,7 +732,7 @@ export default function Home() {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
-            {online.slice(0, 4).map((u) => (
+            {visibleOnline.slice(0, 4).map((u) => (
               <div 
                 key={u.id} 
                 style={{ 
@@ -673,27 +759,22 @@ export default function Home() {
                 onClick={() => window.location.href = `/profile/${u.username}`}
               >
                 <IdentityStrip user={u as any} />
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 6,
-                  padding: '4px 10px',
-                  background: 'rgba(44, 230, 194, 0.15)',
-                  borderRadius: 6,
-                  border: '1px solid rgba(44, 230, 194, 0.3)'
-                }}>
-                  <span style={{ 
-                    width: 8, 
-                    height: 8, 
-                    borderRadius: '50%', 
-                    background: 'var(--accent)',
-                    boxShadow: '0 0 8px rgba(44, 230, 194, 0.6)'
-                  }}></span>
-                  <span style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 600 }}>Online</span>
-                </div>
+                <button
+                  className="btn btn-info"
+                  type="button"
+                  disabled={challengingId === u.id}
+                  style={{ fontSize: 11, padding: '6px 10px', fontWeight: 600 }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    challengePlayer(u.id);
+                  }}
+                >
+                  {challengingId === u.id ? 'Sending...' : '⚔️ Challenge'}
+                </button>
               </div>
             ))}
-            {online.length === 0 && (
+            {visibleOnline.length === 0 && (
               <div style={{ 
                 color: 'var(--muted)', 
                 fontSize: 14, 
@@ -792,12 +873,25 @@ export default function Home() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <a
-                    className="btn btn-info"
-                    style={{ fontSize: 12, padding: '6px 14px', fontWeight: 600 }}
+                    className="btn"
+                    style={{
+                      fontSize: 12,
+                      padding: '6px 14px',
+                      fontWeight: 600,
+                      background:
+                        me && (g.white.id === me.id || g.black.id === me.id)
+                          ? 'linear-gradient(90deg, #4caf50, #388e3c)'
+                          : 'linear-gradient(90deg, #2196f3, #1976d2)',
+                      color: '#ffffff',
+                      border:
+                        me && (g.white.id === me.id || g.black.id === me.id)
+                          ? '1px solid #66bb6a'
+                          : '1px solid #64b5f6'
+                    }}
                     href={`/games/${g.id}`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    👀 Watch
+                    {me && (g.white.id === me.id || g.black.id === me.id) ? '▶️ Play' : '👀 Watch'}
                   </a>
                 </div>
               </div>
@@ -862,7 +956,7 @@ export default function Home() {
                     padding: '10px 12px',
                     fontSize: 14
                   }}>
-                    <span style={{ fontSize: 16 }}>{flagFromCode(row.country)}</span>
+                    <FlagIcon code={row.country} size={18} />
                     <a 
                       href={`/profile/${row.username}`} 
                       style={{ 

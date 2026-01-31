@@ -118,6 +118,12 @@ sys.exit(1)
 # Check if we should skip database setup
 SKIP_DB=${SKIP_DB_SETUP:-"false"}
 
+# Guard: Celery should never run migrations/DB setup
+if [[ "$*" == *"celery"* ]] && [ "$SKIP_DB" != "true" ]; then
+    echo "Warning: Celery command detected without SKIP_DB_SETUP=true; skipping DB setup to avoid migration races."
+    SKIP_DB="true"
+fi
+
 # Check if command needs database
 if [ "$SKIP_DB" = "true" ] || ! needs_database "$@"; then
     echo "Skipping database setup for command: $@"
@@ -141,3 +147,4 @@ fi
 
 # Execute the command passed to the container
 exec "$@"
+

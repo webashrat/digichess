@@ -12,6 +12,9 @@ import random
 import os
 from django.conf import settings
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Try to import Maia integration
 try:
@@ -162,20 +165,48 @@ def get_bot_move(board: chess.Board, bot_rating: int, time_control: str = "blitz
                 pass  # Fall through to Maia
     
     # Strategy 3: Mid-game - use Maia for human-like play
-    if not MAIA_AVAILABLE:
-        raise RuntimeError("Maia is not available. Please ensure lc0 and Maia models are configured.")
-    
-    if not should_use_maia(bot_rating):
-        raise ValueError(f"Bot rating {bot_rating} is outside Maia range (800-2400)")
-    
-    maia_move = get_maia_move(board, bot_rating)
-    if not maia_move:
-        raise RuntimeError(
-            f"Failed to get Maia move for rating {bot_rating}. "
-            "Please check that lc0 is installed and Maia models are available."
-        )
-    
-    return maia_move
+    if MAIA_AVAILABLE and should_use_maia(bot_rating):
+        try:
+            maia_move = get_maia_move(board, bot_rating)
+            if maia_move and maia_move in board.legal_moves:
+                return maia_move
+        except Exception as exc:
+            logger.warning(f"Maia move failed, falling back to Stockfish: {exc}")
+    else:
+        logger.info("Maia unavailable or rating outside range; using Stockfish fallback.")
+
+    # Strategy 4: Fallback to Stockfish (fast + deterministic)
+    try:
+        from games.stockfish_utils import get_stockfish_path, ensure_stockfish_works
+        engine_path = get_stockfish_path()
+        ok, msg = ensure_stockfish_works(engine_path)
+        if ok:
+            import chess.engine
+            config = get_stockfish_config(bot_rating)
+            with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
+                if config.get('use_elo_limit'):
+                    engine.configure({
+                        "UCI_LimitStrength": True,
+                        "UCI_Elo": config.get('elo')
+                    })
+                else:
+                    engine.configure({
+                        "Skill Level": config.get('skill', 10)
+                    })
+                limit = chess.engine.Limit(time=config.get('time', 0.2), depth=config.get('depth', 8))
+                result = engine.play(board, limit)
+                if result and result.move in board.legal_moves:
+                    return result.move
+        else:
+            logger.warning(f"Stockfish unavailable: {msg}")
+    except Exception as exc:
+        logger.warning(f"Stockfish fallback failed: {exc}")
+
+    # Strategy 5: Last-resort random legal move
+    legal_moves = list(board.legal_moves)
+    if not legal_moves:
+        raise RuntimeError("No legal moves available.")
+    return random.choice(legal_moves)
 
 
 def get_bot_move_with_error(board: chess.Board, bot_rating: int, time_control: str = "blitz", ply_count: int = 0) -> chess.Move:
