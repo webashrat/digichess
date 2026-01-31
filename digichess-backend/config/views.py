@@ -22,7 +22,7 @@ def _check_redis():
     """Check if Redis is accessible"""
     try:
         import redis
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_url = os.getenv("CELERY_BROKER_URL", os.getenv("REDIS_URL", "redis://localhost:6379/0"))
         parsed = urlparse(redis_url)
         
         db = int(parsed.path.lstrip("/") or 0)

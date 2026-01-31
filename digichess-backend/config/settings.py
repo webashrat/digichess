@@ -140,8 +140,8 @@ CHANNEL_LAYERS = {
     }
 }
 
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BEAT_SCHEDULE = {
     "broadcast_clocks": {
         "task": "games.tasks.broadcast_clock_updates",
