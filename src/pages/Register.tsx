@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { register, verifyOTP, resendOTP } from '../api/auth';
 import { CountrySelect } from '../components/CountrySelect';
+import { setHashRoute } from '../utils/hashNavigate';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -80,7 +81,7 @@ export default function Register() {
       .then((res) => {
         if (res?.token) localStorage.setItem('token', res.token);
         setOtpMsg('Verified! Redirecting...');
-        window.location.href = '/';
+        setHashRoute('/');
       })
       .catch((err) => setError(err.response?.data?.detail || 'Invalid or expired code'));
   };

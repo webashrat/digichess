@@ -8,6 +8,7 @@ import { AccountListItem } from '../api/types';
 import { fetchMe } from '../api/account';
 import { fetchAccountDetail } from '../api/users';
 import { listBots, createBotGame } from '../api/games';
+import { setHashRoute } from '../utils/hashNavigate';
 
 const defaultModes: Mode[] = ['bullet', 'blitz', 'rapid', 'classical'];
 
@@ -231,7 +232,7 @@ export default function Home() {
       .then((res) => {
         if (res.data?.id) {
           setMmStatus('Match found, opening game...');
-          window.location.href = `/games/${res.data.id}`;
+          setHashRoute(`/games/${res.data.id}`);
         } else {
           setMmStatus('Enqueued. Waiting for opponent...');
         }
@@ -756,7 +757,7 @@ export default function Home() {
                   e.currentTarget.style.borderColor = 'var(--border)';
                   e.currentTarget.style.transform = 'translateX(0)';
                 }}
-                onClick={() => window.location.href = `/profile/${u.username}`}
+                onClick={() => setHashRoute(`/profile/${u.username}`)}
               >
                 <IdentityStrip user={u as any} />
                 <button
@@ -851,7 +852,7 @@ export default function Home() {
                 e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.1)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
-              onClick={() => window.location.href = `/games/${g.id}`}
+              onClick={() => setHashRoute(`/games/${g.id}`)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                   <IdentityStrip user={g.white} rating={undefined} mode={g.mode} />

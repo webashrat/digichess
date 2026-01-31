@@ -5,6 +5,7 @@ import NotificationBell from './NotificationBell';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 import { pingPresence } from '../api/account';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
+import { setHashRoute } from '../utils/hashNavigate';
 
 const links = [
   { to: '/', label: 'Home', icon: '🏠' },
@@ -116,7 +117,7 @@ export default function NavBar() {
 
   const logout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/';
+    setHashRoute('/');
   };
   const showSettings = pathname === '/';
 

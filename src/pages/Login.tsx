@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { login, forgotPassword, forgotUsername, verifyForgotOTP } from '../api/auth';
+import { setHashRoute } from '../utils/hashNavigate';
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('');
@@ -32,7 +33,7 @@ export default function Login() {
       login(payload)
         .then((res) => {
           if (res?.token) localStorage.setItem('token', res.token);
-          window.location.href = '/';
+          setHashRoute('/');
         })
         .catch((err) => {
           const errorMsg = err.response?.data?.detail || err.response?.data?.email?.[0] || err.response?.data?.username?.[0] || 'Login failed';
@@ -72,7 +73,7 @@ export default function Login() {
         verifyForgotOTP({ email, code: otp })
           .then((res) => {
             if (res?.token) localStorage.setItem('token', res.token);
-            window.location.href = '/';
+            setHashRoute('/');
           })
           .catch((err) => {
             const errorMsg = err.response?.data?.detail || 'Invalid or expired OTP';
@@ -102,7 +103,7 @@ export default function Login() {
         verifyForgotOTP({ email, code: otp })
           .then((res) => {
             if (res?.token) localStorage.setItem('token', res.token);
-            window.location.href = '/';
+            setHashRoute('/');
           })
           .catch((err) => {
             const errorMsg = err.response?.data?.detail || 'Invalid or expired OTP';

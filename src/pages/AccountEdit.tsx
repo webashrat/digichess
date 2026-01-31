@@ -4,6 +4,7 @@ import { UserDetail } from '../api/types';
 import { CountrySelect } from '../components/CountrySelect';
 import api from '../api/client';
 import { socialPlatforms, detectPlatform } from '../utils/socialPlatforms';
+import { setHashRoute } from '../utils/hashNavigate';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 
 export default function AccountEdit() {
@@ -104,7 +105,7 @@ export default function AccountEdit() {
       .then(() => {
         localStorage.removeItem('token');
         setDeleteMsg('Account deleted. Redirecting...');
-        window.location.href = '/';
+        setHashRoute('/');
       })
       .catch((err) => setDeleteMsg(err.response?.data?.detail || 'Delete failed'));
   };

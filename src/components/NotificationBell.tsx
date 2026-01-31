@@ -4,6 +4,7 @@ import { listThreads } from '../api/social';
 import { listPublicGames, acceptChallenge, rejectChallenge, rematchAccept, rematchReject } from '../api/games';
 import { fetchNotifications, markNotificationRead, Notification as ApiNotification } from '../api/notifications';
 import { makeWsUrl } from '../utils/ws';
+import { setHashRoute } from '../utils/hashNavigate';
 
 type Notification = { id: string; type: 'message' | 'challenge' | 'notification'; text: string; action?: 'accept' | 'reject'; gameId?: number; title?: string; read?: boolean; notificationType?: string };
 
@@ -392,7 +393,7 @@ export default function NotificationBell() {
         console.log('[NotificationBell] Redirecting to game:', gameId, 'game status:', data?.status);
         // Small delay to ensure backend has processed the start
         setTimeout(() => {
-          window.location.href = `/games/${gameId}`;
+          setHashRoute(`/games/${gameId}`);
         }, 100);
       })
       .catch(() => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { setHashRoute } from '../utils/hashNavigate';
 
 interface Tournament {
   id: number;
@@ -99,7 +100,7 @@ export default function Tournaments() {
         }}
       >
         {rows.map((t) => (
-          <div key={t.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }} onClick={() => window.location.href = `/tournaments/${t.id}`}>
+          <div key={t.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }} onClick={() => setHashRoute(`/tournaments/${t.id}`)}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>

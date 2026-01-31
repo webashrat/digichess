@@ -5,6 +5,7 @@ import { GameCreatePayload, Mode, AccountListItem } from '../api/types';
 import { fetchAccounts } from '../api/users';
 import { fetchMe } from '../api/account';
 import { flagFromCode } from '../utils/flags';
+import { setHashRoute } from '../utils/hashNavigate';
 
 const modeOptions: Mode[] = ['bullet', 'blitz', 'rapid', 'classical', 'custom'];
 
@@ -126,7 +127,7 @@ export default function GameCreate() {
       .then((res) => {
         setMsg('Game created. Redirecting…');
         const id = res.data?.id;
-        if (id) window.location.href = `/games/${id}`;
+        if (id) setHashRoute(`/games/${id}`);
       })
       .catch((err) => {
         // Extract error message from response

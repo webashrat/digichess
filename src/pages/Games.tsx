@@ -3,6 +3,7 @@ import api from '../api/client';
 import { GameSummary } from '../api/types';
 import IdentityStrip from '../components/IdentityStrip';
 import { fetchMe } from '../api/account';
+import { setHashRoute } from '../utils/hashNavigate';
 
 export default function Games() {
   const [games, setGames] = useState<GameSummary[]>([]);
@@ -70,7 +71,7 @@ export default function Games() {
             e.currentTarget.style.borderColor = 'var(--border)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
-          onClick={() => window.location.href = `/games/${g.id}`}
+          onClick={() => setHashRoute(`/games/${g.id}`)}
           >
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <IdentityStrip user={g.white} mode={g.mode} />
