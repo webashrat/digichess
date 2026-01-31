@@ -86,7 +86,7 @@ jobs:
 
       - name: Run migrations
         run: |
-          kubectl -n $K8S_NAMESPACE wait --for=condition=Ready pod -l app=digichess-backend --timeout=5m
+          kubectl -n $K8S_NAMESPACE wait --for=condition=Available deployment/digichess-backend --timeout=10m
           kubectl -n $K8S_NAMESPACE exec deploy/digichess-backend -c web -- python manage.py migrate --noinput
 
   deploy-frontend:
