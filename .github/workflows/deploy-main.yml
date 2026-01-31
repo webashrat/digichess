@@ -75,7 +75,14 @@ jobs:
 
       - name: Wait for rollout
         run: |
-          kubectl -n $K8S_NAMESPACE rollout status deployment/digichess-backend --timeout=5m
+          kubectl -n $K8S_NAMESPACE rollout status deployment/digichess-backend --timeout=10m
+
+      - name: Debug rollout (if needed)
+        if: failure()
+        run: |
+          kubectl -n $K8S_NAMESPACE get pods -l app=digichess-backend -o wide
+          kubectl -n $K8S_NAMESPACE describe deployment/digichess-backend
+          kubectl -n $K8S_NAMESPACE describe pods -l app=digichess-backend
 
       - name: Run migrations
         run: |
