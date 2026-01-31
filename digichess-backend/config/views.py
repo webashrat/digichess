@@ -52,8 +52,23 @@ def _check_celery_worker():
     try:
         from config.celery import app
         inspect = app.control.inspect(timeout=2)
+        # Prefer a ping check so idle workers still report as running.
+        ping = None
+        try:
+            ping = inspect.ping()
+        except Exception:
+            ping = None
+
+        if ping:
+            worker_count = len(ping)
+            return {
+                "status": "running",
+                "worker_count": worker_count,
+                "workers": list(ping.keys()),
+                "error": None
+            }
+
         active_workers = inspect.active()
-        
         if active_workers:
             worker_count = len(active_workers)
             return {
@@ -62,13 +77,13 @@ def _check_celery_worker():
                 "workers": list(active_workers.keys()),
                 "error": None
             }
-        else:
-            return {
-                "status": "not_running",
-                "worker_count": 0,
-                "workers": [],
-                "error": "No active workers found"
-            }
+
+        return {
+            "status": "not_running",
+            "worker_count": 0,
+            "workers": [],
+            "error": "No responsive workers found"
+        }
     except Exception as e:
         return {
             "status": "unknown",

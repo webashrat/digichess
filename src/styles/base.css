@@ -48,7 +48,8 @@ p {
 body {
   margin: 0;
   background: transparent;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 html {
@@ -212,7 +213,7 @@ label {
 }
 
 label > div:first-child {
-  font-size: 14;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   margin-bottom: 6px;
@@ -246,13 +247,6 @@ input::placeholder,
 textarea::placeholder {
   color: var(--muted);
   opacity: 0.6;
-}
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--accent);
 }
 
 .layout {

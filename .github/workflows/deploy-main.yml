@@ -1,0 +1,121 @@
+name: Deploy Main (GKE + GCS)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GAR_REPO: ${{ secrets.GAR_REPO }}
+  K8S_NAMESPACE: digichess
+  BACKEND_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GAR_REPO }}/backend
+  GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy-backend:
+    name: Build + Deploy Backend (GKE)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./digichess-backend
+          file: ./digichess-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.BACKEND_IMAGE }}:latest
+          platforms: linux/amd64
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Update deployments
+        run: |
+          kubectl -n $K8S_NAMESPACE set image deployment/digichess-backend web=${BACKEND_IMAGE}:${IMAGE_TAG}
+          kubectl -n $K8S_NAMESPACE set image deployment/digichess-celery-worker worker=${BACKEND_IMAGE}:${IMAGE_TAG}
+          kubectl -n $K8S_NAMESPACE set image deployment/digichess-celery-beat beat=${BACKEND_IMAGE}:${IMAGE_TAG}
+
+      - name: Wait for rollout
+        run: |
+          kubectl -n $K8S_NAMESPACE rollout status deployment/digichess-backend --timeout=5m
+
+      - name: Run migrations
+        run: |
+          kubectl -n $K8S_NAMESPACE wait --for=condition=Ready pod -l app=digichess-backend --timeout=5m
+          POD=$(kubectl -n $K8S_NAMESPACE get pod -l app=digichess-backend -o jsonpath='{.items[0].metadata.name}')
+          kubectl -n $K8S_NAMESPACE exec "$POD" -c web -- python manage.py migrate --noinput
+
+  deploy-frontend:
+    name: Build + Deploy Frontend (GCS)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_WS_BASE_URL: ${{ secrets.VITE_WS_BASE_URL }}
+        run: npm run build
+
+      - name: Sync to GCS bucket
+        run: |
+          gsutil -m rsync -R dist gs://$GCS_BUCKET
+          gsutil web set -m index.html -e index.html gs://$GCS_BUCKET
+          gsutil iam ch allUsers:objectViewer gs://$GCS_BUCKET
