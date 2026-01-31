@@ -8,6 +8,8 @@ lila/
 .vscode/
 .DS_Store
 digichess-backend/.venv/
+digichess-backend/staticfiles/
+digichess-backend/celerybeat-schedule
 
 **/__pycache__/
 **/*.pyc
