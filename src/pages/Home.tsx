@@ -698,8 +698,8 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <a 
-                href="/players" 
+              <a
+                href="#/players"
                 style={{ 
                   fontSize: 13, 
                   padding: '10px 18px',
