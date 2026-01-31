@@ -188,6 +188,8 @@ else:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://storage.googleapis.com",
+        "http://digichess-frontend-6759.storage.googleapis.com",
     ]
 
 csrf_origins_env = os.getenv("CSRF_TRUSTED_ORIGINS", "")
@@ -200,5 +202,7 @@ else:
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://storage.googleapis.com",
+        "http://digichess-frontend-6759.storage.googleapis.com",
     ]
 CORS_ALLOW_CREDENTIALS = True
