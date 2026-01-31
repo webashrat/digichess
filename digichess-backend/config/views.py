@@ -164,8 +164,6 @@ def readyz(request):
     db_check = _check_database()
     redis_check = _check_redis()
     celery_worker_check = _check_celery_worker()
-    celery_beat_check = _check_celery_beat()
-    
     # All critical services must be ready
     all_ready = (
         db_check["status"] == "connected" and
@@ -183,8 +181,7 @@ def readyz(request):
                 "status": celery_worker_check["status"],
                 "worker_count": celery_worker_check.get("worker_count", 0),
                 "workers": celery_worker_check.get("workers", [])
-            },
-            "celery_beat": celery_beat_check["status"]
+            }
         }
     }
     
@@ -196,9 +193,6 @@ def readyz(request):
         errors["redis"] = redis_check["error"]
     if celery_worker_check["error"]:
         errors["celery_worker"] = celery_worker_check["error"]
-    if celery_beat_check["error"]:
-        errors["celery_beat"] = celery_beat_check["error"]
-    
     if errors:
         response_data["errors"] = errors
     
