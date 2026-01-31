@@ -80,8 +80,7 @@ jobs:
       - name: Run migrations
         run: |
           kubectl -n $K8S_NAMESPACE wait --for=condition=Ready pod -l app=digichess-backend --timeout=5m
-          POD=$(kubectl -n $K8S_NAMESPACE get pod -l app=digichess-backend -o jsonpath='{.items[0].metadata.name}')
-          kubectl -n $K8S_NAMESPACE exec "$POD" -c web -- python manage.py migrate --noinput
+          kubectl -n $K8S_NAMESPACE exec deploy/digichess-backend -c web -- python manage.py migrate --noinput
 
   deploy-frontend:
     name: Build + Deploy Frontend (GCS)
