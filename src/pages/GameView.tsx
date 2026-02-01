@@ -1022,6 +1022,50 @@ export default function GameView() {
                     }
                   }
                 }
+
+                // Toast feedback (win/lose/draw with reason)
+                if (me && updatedGame && isPlayer) {
+                  const isWhite = updatedGame.white?.id === me.id;
+                  const isBlack = updatedGame.black?.id === me.id;
+                  const result = payload.result || updatedGame.result;
+                  const reason = (payload.reason || 'unknown').toString();
+
+                  let type: 'success' | 'error' | 'info' = 'info';
+                  let label = 'Game ended';
+
+                  if (result === '1/2-1/2') {
+                    type = 'info';
+                    label = 'Draw';
+                  } else if (result === '1-0' && isWhite) {
+                    type = 'success';
+                    label = 'You won';
+                  } else if (result === '0-1' && isBlack) {
+                    type = 'success';
+                    label = 'You won';
+                  } else if (result === '1-0' && isBlack) {
+                    type = 'error';
+                    label = 'You lost';
+                  } else if (result === '0-1' && isWhite) {
+                    type = 'error';
+                    label = 'You lost';
+                  }
+
+                  const reasonMap: Record<string, string> = {
+                    checkmate: 'by checkmate',
+                    timeout: 'by timeout',
+                    resign: 'by resignation',
+                    stalemate: 'by stalemate',
+                    threefold_repetition: 'by repetition',
+                    fifty_moves: 'by 50-move rule',
+                    insufficient_material: 'by insufficient material',
+                    first_move_timeout: 'by first-move timeout'
+                  };
+                  const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
+
+                  window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: `${label}${suffix}`, type }
+                  }));
+                }
               })
               .catch(() => {});
             
@@ -1380,7 +1424,7 @@ export default function GameView() {
                 }
               })
               .catch(() => {});
-          }, 1200);
+          }, 300);
         }
       })
       .catch((err) => {

@@ -183,7 +183,7 @@ class GameMoveView(APIView):
             )
             if next_player and next_player.is_bot:
                 import time
-                time.sleep(0.5)
+                time.sleep(0.1)
                 self._make_bot_move(result.game, next_player)
 
     def _load_board(self, game: Game) -> chess.Board:
