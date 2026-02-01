@@ -447,11 +447,9 @@ export default function GameView() {
     let deadlineMs: number | null = null;
     let color: 'white' | 'black' | null = null;
 
-    if (moveCount === 0 && myColor === 'white' && (game.status === 'pending' || game.status === 'active')) {
-      if (game.created_at) {
-        deadlineMs = new Date(game.created_at).getTime() + 20000;
-        color = 'white';
-      }
+    if (moveCount === 0 && myColor === 'white' && game.status === 'active' && game.started_at) {
+      deadlineMs = new Date(game.started_at).getTime() + 20000;
+      color = 'white';
     } else if (moveCount === 1 && myColor === 'black' && game.status === 'active' && game.started_at) {
       deadlineMs = new Date(game.started_at).getTime() + 20000;
       color = 'black';
