@@ -11,6 +11,21 @@ const pieceMap: { [key: string]: string } = {
   'k': 'K'
 };
 
+const pieceCodes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK'];
+const preloadedSets = new Set<string>();
+
+const preloadPieceSet = (pieceSet: string) => {
+  if (!pieceSet || pieceSet === 'custom') return;
+  if (preloadedSets.has(pieceSet)) return;
+  preloadedSets.add(pieceSet);
+  pieceCodes.forEach((code) => {
+    const url = `https://lichess1.org/assets/piece/${pieceSet}/${code}.svg`;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+  });
+};
+
 export const ChessPiece = ({ 
   piece, 
   size = 40,
@@ -38,6 +53,10 @@ export const ChessPiece = ({
   // Reset error state when pieceSet changes
   useEffect(() => {
     setImageError(false);
+  }, [pieceSet]);
+
+  useEffect(() => {
+    preloadPieceSet(pieceSet);
   }, [pieceSet]);
   
   // If using custom SVG pieces, use SVG components directly

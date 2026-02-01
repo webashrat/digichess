@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { ChessPiece } from './ChessPieces';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
@@ -75,7 +75,6 @@ export const ChessBoard = memo(function ChessBoard({
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [wasDragged, setWasDragged] = useState(false);
-  const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
   const [boardSize, setBoardSize] = useState<number>(500);
   const squareSize = useMemo(() => Math.max(32, Math.floor(boardSize / 8)), [boardSize]);
   const pieceSize = useMemo(() => Math.max(28, Math.floor(squareSize * 0.9)), [squareSize]);
@@ -286,7 +285,7 @@ export const ChessBoard = memo(function ChessBoard({
     return String.fromCharCode(97 + col) + (8 - row);
   };
 
-  const handleSquareClick = (coord: string, pieceType: string | null) => {
+  const handleSquareClick = useCallback((coord: string, pieceType: string | null) => {
     if (!onMove) return;
 
     if (!selected) {
@@ -387,9 +386,9 @@ export const ChessBoard = memo(function ChessBoard({
       // Don't clear selected here - let FEN update handle it
       // Keep draggedPiece visible until FEN updates
     }
-  };
+  }, [onMove, selected, squares]);
 
-  const handleDragStart = (e: React.DragEvent | React.TouchEvent, coord: string, piece: string, pieceType: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent | React.TouchEvent, coord: string, piece: string, pieceType: string) => {
     if (!onMove) return;
     
     const square = squares.find(s => s.coord === coord);
@@ -431,10 +430,10 @@ export const ChessBoard = memo(function ChessBoard({
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       e.dataTransfer.setDragImage(img, 0, 0);
     }
-  };
+  }, [onMove, squares]);
 
 
-  const handleDrop = (e: React.DragEvent | React.TouchEvent, targetCoord: string) => {
+  const handleDrop = useCallback((e: React.DragEvent | React.TouchEvent, targetCoord: string) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -529,15 +528,15 @@ export const ChessBoard = memo(function ChessBoard({
     setDraggedPiece(null);
     setSelected(null);
     setWasDragged(false);
-  };
+  }, [draggedPiece, onMove, squares, orientation, boardRef]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
-  };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!draggedPiece || !boardRef.current) return;
     e.preventDefault();
     const touch = e.touches[0];
@@ -546,9 +545,9 @@ export const ChessBoard = memo(function ChessBoard({
       x: touch.clientX - rect.left,
       y: touch.clientY - rect.top
     });
-  };
+  }, [draggedPiece]);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (!draggedPiece || !boardRef.current) {
       setDraggedPiece(null);
       setDragOffset(null);
@@ -586,7 +585,7 @@ export const ChessBoard = memo(function ChessBoard({
     }
     
     handleDrop(e, targetCoord);
-  };
+  }, [draggedPiece, orientation, handleDrop]);
 
   // Create display squares based on orientation - reverse for black
   const displaySquares = useMemo(() => {
@@ -599,6 +598,14 @@ export const ChessBoard = memo(function ChessBoard({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', width: '100%', height: '100%', minHeight: 0, justifyContent: 'center' }}>
+      <style>{`
+        .chess-square[data-interactive="true"]:hover .chess-piece {
+          transform: scale(1.08);
+        }
+        .chess-square[data-interactive="true"]:hover .chess-hover {
+          opacity: 1;
+        }
+      `}</style>
       {showControls && (onThemeChange || onPieceSetChange) && (
         <div
           style={{
@@ -735,8 +742,8 @@ export const ChessBoard = memo(function ChessBoard({
               onTouchStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onMouseEnter={() => onMove && setHoveredSquare(sq.coord)}
-              onMouseLeave={() => setHoveredSquare(null)}
+              className="chess-square"
+              data-interactive={onMove ? 'true' : 'false'}
           style={{
                 background: isValidMove
                   ? sq.color === 'dark'
@@ -787,9 +794,10 @@ export const ChessBoard = memo(function ChessBoard({
                 <div
                   style={{
                     transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: hoveredSquare === sq.coord && onMove && !isDragging ? 'scale(1.08)' : 'scale(1)',
+                    transform: 'scale(1)',
                     cursor: onMove ? 'grab' : 'default'
                   }}
+                  className="chess-piece"
                 >
                   <ChessPiece 
                     piece={sq.pieceType} 
@@ -829,8 +837,9 @@ export const ChessBoard = memo(function ChessBoard({
                   }}
                 />
               )}
-              {hoveredSquare === sq.coord && sq.piece && onMove && !isDragging && (
+              {sq.piece && onMove && !isDragging && (
                 <div
+                  className="chess-hover"
                   style={{
                     position: 'absolute',
                     inset: 0,
@@ -838,6 +847,7 @@ export const ChessBoard = memo(function ChessBoard({
                       ? 'rgba(255, 255, 255, 0.1)'
                       : 'rgba(0, 0, 0, 0.05)',
                     pointerEvents: 'none',
+                    opacity: 0,
                     transition: 'opacity 150ms ease'
                   }}
                 />
