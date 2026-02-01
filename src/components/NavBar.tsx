@@ -49,6 +49,11 @@ export default function NavBar() {
   }, []);
 
   useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    setAuthed(!!localStorage.getItem('token'));
+  }, [pathname]);
+
+  useEffect(() => {
     if (!authed) {
       setMe(null);
       return;
