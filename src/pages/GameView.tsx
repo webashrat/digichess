@@ -537,6 +537,12 @@ export default function GameView() {
     lastToastGameIdRef.current = game.id;
   }, [game?.status, game?.id, game?.result, isPlayer, me?.id, game?.white?.id, game?.black?.id]);
 
+  useEffect(() => {
+    if (!gameResultPopup) return;
+    const timer = window.setTimeout(() => setGameResultPopup(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [gameResultPopup]);
+
   // Clock update - Lichess-style smart scheduling with setTimeout
   useEffect(() => {
     if (game?.status !== 'active' || !clock.turn) {
@@ -2777,82 +2783,61 @@ export default function GameView() {
         </div>
       </div>
       
-      {/* Win/Loss Popup for Time Finishes */}
+      {/* Game result toast (centered on board) */}
       {gameResultPopup && (
         <div
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
             zIndex: 20000,
-            animation: 'fadeIn 0.3s ease-in'
+            pointerEvents: 'none',
+            animation: 'scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
-          onClick={() => setGameResultPopup(null)}
         >
           <div
             style={{
-              background: gameResultPopup.type === 'win' 
-                ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95))'
+              background: gameResultPopup.type === 'win'
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95))'
                 : gameResultPopup.type === 'draw'
-                ? 'linear-gradient(135deg, rgba(255, 152, 0, 0.95), rgba(255, 143, 0, 0.95))'
-                : 'linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95))',
-              padding: '60px 80px',
-              borderRadius: 20,
+                ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.95), rgba(245, 158, 11, 0.95))'
+                : 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95))',
+              padding: '14px 22px',
+              borderRadius: 16,
               textAlign: 'center',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-              border: `3px solid ${gameResultPopup.type === 'win' ? 'rgba(46, 204, 113, 1)' : gameResultPopup.type === 'draw' ? 'rgba(255, 152, 0, 1)' : 'rgba(231, 76, 60, 1)'}`,
-              maxWidth: '90vw',
-              animation: 'scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+              border: `2px solid ${gameResultPopup.type === 'win' ? 'rgba(34, 197, 94, 1)' : gameResultPopup.type === 'draw' ? 'rgba(250, 204, 21, 1)' : 'rgba(239, 68, 68, 1)'}`,
+              minWidth: 220,
+              maxWidth: 420
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 120, marginBottom: 20, lineHeight: 1 }}>
-              {gameResultPopup.type === 'win' ? '🎉' : gameResultPopup.type === 'draw' ? '🤝' : '😢'}
+            <div style={{ fontSize: 28, marginBottom: 6, lineHeight: 1 }}>
+              {gameResultPopup.type === 'win' ? '🏆😄' : gameResultPopup.type === 'draw' ? '🤝😅' : '😵‍💫💥'}
             </div>
             <div
               style={{
-                fontSize: gameResultPopup.type === 'win' ? 48 : gameResultPopup.type === 'draw' ? 44 : 42,
+                fontSize: 18,
                 fontWeight: 800,
-                color: '#fff',
-                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                marginBottom: 10,
-                letterSpacing: '2px'
+                color: '#0b0b0b',
+                textShadow: '0 1px 1px rgba(255,255,255,0.3)',
+                marginBottom: 4,
+                letterSpacing: '0.5px'
               }}
             >
-              {gameResultPopup.type === 'win' ? 'YOU WIN' : gameResultPopup.type === 'draw' ? 'DRAW' : 'You Lost'}
+              {gameResultPopup.type === 'win' ? 'You won!' : gameResultPopup.type === 'draw' ? 'Draw!' : 'You lost!'}
             </div>
             {gameResultPopup.reason && (
-              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.9)', marginTop: 10 }}>
-                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'timeout' && 'Opponent ran out of time!'}
-                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'timeout' && 'You ran out of time'}
-                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'checkmate' && 'Checkmate!'}
-                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'checkmate' && 'Checkmated!'}
-                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'resignation' && 'Opponent resigned!'}
-                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'resignation' && 'You resigned'}
-                {gameResultPopup.type === 'draw' && 'Game ended in a draw'}
+              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.75)' }}>
+                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'timeout' && 'Opponent ran out of time'}
+                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'timeout' && 'Time ran out'}
+                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'checkmate' && 'Checkmate'}
+                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'checkmate' && 'Checkmated'}
+                {gameResultPopup.type === 'win' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Opponent resigned'}
+                {gameResultPopup.type === 'loss' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Resigned'}
+                {gameResultPopup.type === 'draw' && 'Game drawn'}
               </div>
             )}
-            <button
-              className="btn btn-primary"
-              onClick={() => setGameResultPopup(null)}
-              style={{
-                marginTop: 30,
-                padding: '12px 30px',
-                fontSize: 16,
-                fontWeight: 600,
-                background: 'rgba(255,255,255,0.2)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                color: '#fff'
-              }}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}

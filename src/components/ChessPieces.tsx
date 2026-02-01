@@ -98,7 +98,7 @@ export const ChessPiece = ({
         userSelect: 'none',
         WebkitUserDrag: 'none'
       }}
-      loading="lazy"
+      loading="eager"
       decoding="async"
       onError={() => {
         // Fallback to custom SVG on error
