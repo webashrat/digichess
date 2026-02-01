@@ -1392,6 +1392,7 @@ export default function GameView() {
     fn()
       .then((res) => {
         setActionMsg(successMsg);
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: successMsg, type: 'success' } }));
         if (res?.data) setGame(res.data);
         else if (res?.result) setGame(res);
         if (redirect && id) {
@@ -1401,7 +1402,11 @@ export default function GameView() {
           }, 500);
         }
       })
-      .catch((err) => setActionErr(err.response?.data?.detail || 'Action failed'));
+      .catch((err) => {
+        const msg = err.response?.data?.detail || 'Action failed';
+        setActionErr(msg);
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: msg, type: 'error' } }));
+      });
   };
 
   const handleAcceptChallenge = () => {
@@ -2623,8 +2628,6 @@ export default function GameView() {
               >
                 Create Challenge
                       </button>
-              {actionMsg && <div style={{ color: 'var(--accent)', fontSize: 9, marginTop: 4 }}>{actionMsg}</div>}
-              {actionErr && <div style={{ color: 'var(--danger)', fontSize: 9, marginTop: 4 }}>{actionErr}</div>}
                     </div>
           )}
 

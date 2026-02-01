@@ -58,22 +58,33 @@ function App() {
         <div
           style={{
             position: 'fixed',
-            top: 16,
-            right: 16,
-            background: toast.type === 'error' ? 'var(--danger)' : toast.type === 'success' ? 'var(--accent)' : 'rgba(15, 23, 42, 0.9)',
-            color: 'var(--text)',
-            padding: '10px 14px',
-            borderRadius: 10,
-            boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+            top: hideNav ? '50%' : 16,
+            left: hideNav ? '50%' : 'auto',
+            right: hideNav ? 'auto' : 16,
+            transform: hideNav ? 'translate(-50%, -50%)' : 'none',
+            background: toast.type === 'error'
+              ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95))'
+              : toast.type === 'success'
+              ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95))'
+              : 'linear-gradient(135deg, rgba(250, 204, 21, 0.95), rgba(245, 158, 11, 0.95))',
+            color: hideNav ? '#0b0b0b' : 'var(--text)',
+            padding: hideNav ? '14px 22px' : '10px 14px',
+            borderRadius: hideNav ? 16 : 10,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
             zIndex: 10000,
-            maxWidth: 360,
-            border: `1px solid ${toast.type === 'error' ? 'var(--danger)' : toast.type === 'success' ? 'var(--accent)' : 'rgba(148,163,184,0.25)'}`,
-            fontSize: 13,
-            fontWeight: 600
+            maxWidth: hideNav ? 420 : 360,
+            border: `2px solid ${toast.type === 'error' ? 'rgba(239, 68, 68, 1)' : toast.type === 'success' ? 'rgba(34, 197, 94, 1)' : 'rgba(250, 204, 21, 1)'}`,
+            fontSize: hideNav ? 14 : 13,
+            fontWeight: 700,
+            textAlign: 'center',
+            pointerEvents: 'none',
+            animation: 'scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>{toast.type === 'error' ? '❌' : toast.type === 'success' ? '✓' : 'ℹ️'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span style={{ fontSize: hideNav ? 22 : 14 }}>
+              {toast.type === 'error' ? '😵‍💫💥' : toast.type === 'success' ? '🏆😄' : '🤝😅'}
+            </span>
             <span>{toast.message}</span>
           </div>
         </div>
