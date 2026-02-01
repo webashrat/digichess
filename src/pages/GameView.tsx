@@ -20,7 +20,6 @@ import {
   acceptChallenge,
   rejectChallenge,
   makeMove,
-  validateMoveOptimistic,
   claimDraw,
   fetchAnalysis,
   fetchPlayerStatus,
@@ -82,6 +81,8 @@ export default function GameView() {
   const lastCountdownSecondRef = useRef<number | null>(null);
   const serverTimeOffsetRef = useRef(0);
   const lastFenRef = useRef<string | null>(null);
+  const lastFinishReasonRef = useRef<string | null>(null);
+  const lastToastGameIdRef = useRef<number | null>(null);
   const [loadErr, setLoadErr] = useState('');
   const [boardTheme, setBoardTheme] = useState(() => {
     if (typeof localStorage === 'undefined') return 0;
@@ -422,6 +423,18 @@ export default function GameView() {
     }
   }, [game?.current_fen]);
 
+  useEffect(() => {
+    lastFinishReasonRef.current = null;
+    lastToastGameIdRef.current = null;
+  }, [game?.id]);
+
+  useEffect(() => {
+    if (!game || game.status === 'active') return;
+    if (moveErr) {
+      setMoveErr('');
+    }
+  }, [game?.status, moveErr]);
+
   const getServerNow = useCallback(() => Date.now() + serverTimeOffsetRef.current, []);
 
   // First-move countdown (white then black)
@@ -472,6 +485,57 @@ export default function GameView() {
       playTick();
     }
   }, [firstMoveCountdown]);
+
+  useEffect(() => {
+    if (!game || !me || !isPlayer) return;
+    if (game.status !== 'finished') return;
+    if (lastToastGameIdRef.current === game.id) return;
+
+    const isWhite = game.white?.id === me.id;
+    const isBlack = game.black?.id === me.id;
+    const result = game.result || '*';
+    const reason = (lastFinishReasonRef.current || '').toString();
+
+    let type: 'success' | 'error' | 'info' = 'info';
+    let label = 'Game ended';
+
+    if (result === '1/2-1/2') {
+      type = 'info';
+      label = 'Draw';
+    } else if (result === '1-0' && isWhite) {
+      type = 'success';
+      label = 'You won';
+    } else if (result === '0-1' && isBlack) {
+      type = 'success';
+      label = 'You won';
+    } else if (result === '1-0' && isBlack) {
+      type = 'error';
+      label = 'You lost';
+    } else if (result === '0-1' && isWhite) {
+      type = 'error';
+      label = 'You lost';
+    }
+
+    const reasonMap: Record<string, string> = {
+      checkmate: 'by checkmate',
+      timeout: 'by timeout',
+      resign: 'by resignation',
+      resignation: 'by resignation',
+      stalemate: 'by stalemate',
+      draw_accepted: 'by agreement',
+      threefold_repetition: 'by repetition',
+      fifty_moves: 'by 50-move rule',
+      insufficient_material: 'by insufficient material',
+      first_move_timeout: 'by first-move timeout'
+    };
+    const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
+
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: { message: `${label}${suffix}`, type }
+    }));
+
+    lastToastGameIdRef.current = game.id;
+  }, [game?.status, game?.id, game?.result, isPlayer, me?.id, game?.white?.id, game?.black?.id]);
 
   // Clock update - Lichess-style smart scheduling with setTimeout
   useEffect(() => {
@@ -1017,6 +1081,7 @@ export default function GameView() {
                   const isBlack = updatedGame.black?.id === me.id;
                   const result = payload.result || updatedGame.result;
                   const reason = payload.reason || 'unknown';
+                  lastFinishReasonRef.current = reason?.toString?.() ?? String(reason);
                   
                   // Show popup for draws
                   if (result === '1/2-1/2') {
@@ -1397,32 +1462,44 @@ export default function GameView() {
     setMoveInProgress(true);
     setMoveErr('');
     
-    // Step 1: Optimistic validation - show move instantly for better UX
-    validateMoveOptimistic(id, uci)
-      .then((optimisticData) => {
-        if (optimisticData.valid && optimisticData.fen_after) {
-          // Update UI immediately with optimistic move (instant feedback)
-          setGame((prevGame) => {
-            if (!prevGame) return prevGame;
-            return {
-              ...prevGame,
-              current_fen: optimisticData.fen_after,
-              moves: prevGame.moves ? `${prevGame.moves} ${optimisticData.san}` : optimisticData.san,
-              legal_moves: optimisticData.legal_moves_after || prevGame.legal_moves,
-            };
-          });
-          playMoveSound(optimisticData.san, optimisticData.fen_after);
-          lastFenRef.current = optimisticData.fen_after;
-          
-          // Step 2: Then confirm with server
-          return makeMove(id, optimisticData.san);
-        } else {
-          // Validation failed - show error immediately
-          setMoveInProgress(false);
-          setMoveErr(optimisticData.error || 'Invalid move');
-          throw new Error(optimisticData.error || 'Invalid move');
-        }
-      })
+    // Step 1: Local optimistic move for instant UI feedback
+    let optimisticSan: string | null = null;
+    try {
+      const from = uci.slice(0, 2);
+      const to = uci.slice(2, 4);
+      const promotion = uci.length > 4 ? uci[4].toLowerCase() : undefined;
+      const chess = new Chess(game?.current_fen || 'start');
+      const move = chess.move({ from: from as any, to: to as any, promotion: promotion as any }, { strict: false });
+      if (!move) {
+        setMoveInProgress(false);
+        setMoveErr('Invalid move');
+        return;
+      }
+
+      optimisticSan = move.san;
+      const nextFen = chess.fen();
+      const nextMoves = game?.moves ? `${game.moves} ${move.san}` : move.san;
+      const nextLegalMoves = chess.moves();
+
+      setGame((prevGame) => {
+        if (!prevGame) return prevGame;
+        return {
+          ...prevGame,
+          current_fen: nextFen,
+          moves: nextMoves,
+          legal_moves: nextLegalMoves
+        };
+      });
+      playMoveSound(move.san, nextFen);
+      lastFenRef.current = nextFen;
+    } catch (err) {
+      setMoveInProgress(false);
+      setMoveErr('Invalid move');
+      return;
+    }
+
+    // Step 2: Confirm with server
+    makeMove(id, optimisticSan!)
       .then((res) => {
         // Server confirmed move - update with server response
         setGame(res);
@@ -1845,7 +1922,7 @@ export default function GameView() {
                   onPieceSetChange={setPieceSet}
                   showControls={false}
                 />
-                {moveErr && (
+                {moveErr && game?.status === 'active' && (
                   <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6, textAlign: 'center', position: 'absolute', bottom: 8, left: 0, right: 0 }}>
                     {moveErr}
         </div>
