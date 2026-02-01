@@ -4,12 +4,14 @@ import { Chess } from 'chess.js';
 interface MaterialDiff {
   white: { [key: string]: number };
   black: { [key: string]: number };
+  advantage: { white: number; black: number };
 }
 
 function getMaterialDiff(fen: string): MaterialDiff {
   const diff: MaterialDiff = {
     white: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
     black: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
+    advantage: { white: 0, black: 0 },
   };
 
   if (!fen || typeof fen !== 'string') return diff;
@@ -57,23 +59,32 @@ function getMaterialDiff(fen: string): MaterialDiff {
       }
     });
 
-    // Calculate differences from starting position
-    const starting = {
-      white: { king: 1, queen: 1, rook: 2, bishop: 2, knight: 2, pawn: 8 },
-      black: { king: 1, queen: 1, rook: 2, bishop: 2, knight: 2, pawn: 8 },
+    const pieceValues: Record<PieceType, number> = {
+      king: 0,
+      queen: 9,
+      rook: 5,
+      bishop: 3,
+      knight: 3,
+      pawn: 1
     };
 
-    (['king', 'queen', 'rook', 'bishop', 'knight', 'pawn'] as const).forEach(piece => {
-      const whiteLost = starting.white[piece] - counts.white[piece];
-      const blackLost = starting.black[piece] - counts.black[piece];
-      
-      if (whiteLost > 0) {
-        diff.black[piece] = whiteLost;
-      }
-      if (blackLost > 0) {
-        diff.white[piece] = blackLost;
-      }
+    (['queen', 'rook', 'bishop', 'knight', 'pawn'] as const).forEach(piece => {
+      const whiteExtra = Math.max(0, counts.white[piece] - counts.black[piece]);
+      const blackExtra = Math.max(0, counts.black[piece] - counts.white[piece]);
+      if (whiteExtra > 0) diff.white[piece] = whiteExtra;
+      if (blackExtra > 0) diff.black[piece] = blackExtra;
     });
+
+    const whitePoints = (['queen', 'rook', 'bishop', 'knight', 'pawn'] as const)
+      .reduce((sum, piece) => sum + (diff.white[piece] || 0) * pieceValues[piece], 0);
+    const blackPoints = (['queen', 'rook', 'bishop', 'knight', 'pawn'] as const)
+      .reduce((sum, piece) => sum + (diff.black[piece] || 0) * pieceValues[piece], 0);
+
+    if (whitePoints > blackPoints) {
+      diff.advantage.white = whitePoints - blackPoints;
+    } else if (blackPoints > whitePoints) {
+      diff.advantage.black = blackPoints - whitePoints;
+    }
   } catch (e) {
     // Silently handle errors - return empty diff to prevent UI crashes
     console.debug('Error calculating material diff:', e);
@@ -96,6 +107,7 @@ export function MaterialDiff({ fen, color, position }: { fen?: string; color: 'w
   const diff = useMemo(() => getMaterialDiff(fen || ''), [fen]);
   const material = diff[color];
   const hasMaterial = Object.values(material).some(count => count > 0);
+  const advantage = diff.advantage[color];
 
   // Only show if there are captured pieces
   if (!hasMaterial) return null;
@@ -124,8 +136,11 @@ export function MaterialDiff({ fen, color, position }: { fen?: string; color: 'w
           }}>
             {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
               <span key={i} style={{ 
-                color: color === 'white' ? '#fff' : '#000',
-                lineHeight: 1
+                color: color === 'white' ? '#f5f7ff' : '#e7d3a5',
+                lineHeight: 1,
+                textShadow: color === 'white'
+                  ? '0 1px 2px rgba(0,0,0,0.35)'
+                  : '0 1px 2px rgba(0,0,0,0.45)'
               }}>
                 {pieceSymbols[piece]}
               </span>
@@ -134,6 +149,17 @@ export function MaterialDiff({ fen, color, position }: { fen?: string; color: 'w
           </span>
         );
       })}
+      {advantage > 0 && (
+        <span style={{ 
+          fontSize: '11px',
+          fontWeight: 700,
+          marginLeft: 4,
+          color: color === 'white' ? '#a6f4c5' : '#ffd26a',
+          textShadow: '0 1px 2px rgba(0,0,0,0.45)'
+        }}>
+          +{advantage}
+        </span>
+      )}
     </div>
   );
 }
