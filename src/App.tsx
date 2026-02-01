@@ -20,7 +20,8 @@ import NavBar from './components/NavBar';
 
 function App() {
   const location = useLocation();
-  const isGameRoute = /^\/games\/\d+$/.test(location.pathname) || /#\/games\/\d+/.test(location.hash);
+  const routeProbe = `${location.pathname}${location.hash}${window.location.pathname}${window.location.hash}`;
+  const isGameRoute = /\/games\/\d+/.test(routeProbe);
   const hideNav = isGameRoute;
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
 

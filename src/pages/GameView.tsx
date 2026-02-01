@@ -139,6 +139,15 @@ export default function GameView() {
   const previousMoveCountRef = useRef<number>(0);
   const lastMovesRef = useRef<string>('');
   const botFallbackRef = useRef<{ moves: string; timeoutId: number } | null>(null);
+  const shouldApplyGameUpdate = useCallback((nextGame: GameSummary | null) => {
+    if (!nextGame) return false;
+    const nextMoves = nextGame.moves || '';
+    const currentMoves = lastMovesRef.current || '';
+    if (!currentMoves) return true;
+    const nextCount = nextMoves ? nextMoves.trim().split(/\s+/).filter(Boolean).length : 0;
+    const currentCount = currentMoves ? currentMoves.trim().split(/\s+/).filter(Boolean).length : 0;
+    return nextCount >= currentCount;
+  }, []);
 
   const countPiecesInFen = (fen?: string) => {
     const board = (fen || '').split(' ')[0] || '';
@@ -717,7 +726,9 @@ export default function GameView() {
       return spectateGame(id)
         .then((data) => {
           if (!silent) setLoadErr('');
-          setGame(data);
+          if (shouldApplyGameUpdate(data)) {
+            setGame(data);
+          }
           refreshInProgressRef.current = false;
           return data;
         })
@@ -725,7 +736,9 @@ export default function GameView() {
           return fetchGameDetail(id)
             .then((data) => {
               if (!silent) setLoadErr('');
-              setGame(data);
+              if (shouldApplyGameUpdate(data)) {
+                setGame(data);
+              }
               // If game is active and we don't have clock data yet, fetch it immediately
               if (data.status === 'active' && (!clock.white_time_left && !clock.black_time_left)) {
                 fetchClock(id)
@@ -1074,7 +1087,9 @@ export default function GameView() {
             // Handle draw response - refresh game to get updated draw_offer_by state
             fetchGameDetail(id!)
               .then((updatedGame) => {
-                setGame(updatedGame);
+                if (shouldApplyGameUpdate(updatedGame)) {
+                  setGame(updatedGame);
+                }
                 const decision = payload.decision;
                 if (decision === 'decline') {
                   setActionMsg('Draw offer declined');
@@ -1084,7 +1099,13 @@ export default function GameView() {
               })
               .catch(() => {});
             updateClock();
-          } else if (['draw_offer', 'resign', 'claim_draw', 'rematch_offer'].includes(t)) {
+          } else if (t === 'draw_offer') {
+            setGame((prevGame) => {
+              if (!prevGame) return prevGame;
+              return { ...prevGame, draw_offer_by: payload.by ?? prevGame.draw_offer_by };
+            });
+            updateClock();
+          } else if (['resign', 'claim_draw', 'rematch_offer'].includes(t)) {
             refreshGame(true); // Silent refresh for background updates
             updateClock();
           } else if (t === 'game_finished') {
@@ -1092,7 +1113,9 @@ export default function GameView() {
             // Refresh game immediately to get updated status
             fetchGameDetail(id!)
               .then((updatedGame) => {
-                setGame(updatedGame);
+                if (shouldApplyGameUpdate(updatedGame)) {
+                  setGame(updatedGame);
+                }
                 // Show win/loss popup for all finish types (checkmate, timeout, resignation, draw)
                 if (me && updatedGame && isPlayer) {
                   const isWhite = updatedGame.white?.id === me.id;
@@ -1525,7 +1548,9 @@ export default function GameView() {
     makeMove(id, optimisticSan!)
       .then((res) => {
         // Server confirmed move - update with server response
-        setGame(res);
+        if (shouldApplyGameUpdate(res)) {
+          setGame(res);
+        }
         setMoveInProgress(false);
         // Only fetch clock if game is still active
         if (res.status === 'active') {
@@ -1541,7 +1566,9 @@ export default function GameView() {
             if (lastMovesRef.current === scheduledMoves) {
               fetchGameDetail(id)
                 .then((updated) => {
-                  setGame(updated);
+                  if (shouldApplyGameUpdate(updated)) {
+                    setGame(updated);
+                  }
                   if (updated.status === 'active') {
                     fetchClock(id).then(setClock).catch(() => {});
                   }
