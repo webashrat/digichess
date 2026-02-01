@@ -29,6 +29,7 @@ import {
 } from '../api/games';
 import { fetchMe, pingPresence } from '../api/account';
 import { makeWsUrl } from '../utils/ws';
+import { playCapture, playMove, playTick, isSoundEnabled } from '../utils/sound';
 import { ChessBoard } from '../components/ChessBoard';
 import { MaterialDiff } from '../components/MaterialDiff';
 import { EvaluationGraph } from '../components/EvaluationGraph';
@@ -77,8 +78,8 @@ export default function GameView() {
   const wsRef = useRef<WebSocket | null>(null);
   const clockIntervalRef = useRef<number | null>(null);
   const clockTickTimeoutRef = useRef<number | null>(null);
-  const tickAudioRef = useRef<AudioContext | null>(null);
   const lastTickSecondRef = useRef<number | null>(null);
+  const lastCountdownSecondRef = useRef<number | null>(null);
   const serverTimeOffsetRef = useRef(0);
   const lastFenRef = useRef<string | null>(null);
   const [loadErr, setLoadErr] = useState('');
@@ -114,17 +115,6 @@ export default function GameView() {
       window.removeEventListener('storage', handleSettingsChange as EventListener);
     };
   }, []);
-  const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
-  
-  // Listen for toast events from notifications
-  useEffect(() => {
-    const handleToast = (e: CustomEvent) => {
-      setToast({ message: e.detail.message, type: e.detail.type || 'info' });
-      setTimeout(() => setToast(null), 5000);
-    };
-    window.addEventListener('show-toast' as any, handleToast as EventListener);
-    return () => window.removeEventListener('show-toast' as any, handleToast as EventListener);
-  }, []);
   const [moveInProgress, setMoveInProgress] = useState(false);
   const [resignConfirm, setResignConfirm] = useState(false);
   const [drawConfirm, setDrawConfirm] = useState(false);
@@ -147,31 +137,30 @@ export default function GameView() {
   const [rematchNow, setRematchNow] = useState<number>(() => Date.now());
   const previousMoveCountRef = useRef<number>(0);
 
-  const playTickSound = () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      if (!tickAudioRef.current) {
-        tickAudioRef.current = new AudioContextClass();
-      }
-      const ctx = tickAudioRef.current;
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 900;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.09);
-    } catch {
-      // Ignore audio errors (autoplay restrictions, unsupported browsers)
+  const countPiecesInFen = (fen?: string) => {
+    const board = (fen || '').split(' ')[0] || '';
+    let count = 0;
+    for (const ch of board) {
+      if (/[prnbqkPRNBQK]/.test(ch)) count += 1;
     }
+    return count;
+  };
+
+  const playMoveSound = (san?: string, nextFen?: string) => {
+    if (!isSoundEnabled()) return;
+    if (san && san.includes('x')) {
+      playCapture();
+      return;
+    }
+    if (nextFen && lastFenRef.current) {
+      const prevCount = countPiecesInFen(lastFenRef.current);
+      const nextCount = countPiecesInFen(nextFen);
+      if (nextCount < prevCount) {
+        playCapture();
+        return;
+      }
+    }
+    playMove();
   };
 
   // Reset orientation mode when switching games or users
@@ -283,7 +272,9 @@ export default function GameView() {
     if (secondsLeft <= 10 && secondsLeft > 0) {
       if (lastTickSecondRef.current !== secondsLeft) {
         lastTickSecondRef.current = secondsLeft;
-        playTickSound();
+        if (isSoundEnabled()) {
+          playTick();
+        }
       }
     } else {
       lastTickSecondRef.current = null;
@@ -425,6 +416,12 @@ export default function GameView() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (game?.current_fen && !lastFenRef.current) {
+      lastFenRef.current = game.current_fen;
+    }
+  }, [game?.current_fen]);
+
   const getServerNow = useCallback(() => Date.now() + serverTimeOffsetRef.current, []);
 
   // First-move countdown (white then black)
@@ -461,6 +458,20 @@ export default function GameView() {
     const interval = window.setInterval(update, 250);
     return () => clearInterval(interval);
   }, [game?.status, game?.created_at, game?.started_at, moveCount, myColor, isPlayer, getServerNow]);
+
+  useEffect(() => {
+    if (!firstMoveCountdown) {
+      lastCountdownSecondRef.current = null;
+      return;
+    }
+    if (!isSoundEnabled()) return;
+    const seconds = firstMoveCountdown.remaining;
+    if (seconds <= 0) return;
+    if (lastCountdownSecondRef.current !== seconds) {
+      lastCountdownSecondRef.current = seconds;
+      playTick();
+    }
+  }, [firstMoveCountdown]);
 
   // Clock update - Lichess-style smart scheduling with setTimeout
   useEffect(() => {
@@ -913,6 +924,11 @@ export default function GameView() {
                 
                 return updated;
               });
+
+              if (lastFenRef.current && lastFenRef.current !== payload.fen) {
+                playMoveSound(payload.san, payload.fen);
+              }
+              lastFenRef.current = payload.fen;
               
               // Update clock immediately from payload - preserve existing values if new ones aren't available
               setClock((prevClock) => {
@@ -1395,6 +1411,8 @@ export default function GameView() {
               legal_moves: optimisticData.legal_moves_after || prevGame.legal_moves,
             };
           });
+          playMoveSound(optimisticData.san, optimisticData.fen_after);
+          lastFenRef.current = optimisticData.fen_after;
           
           // Step 2: Then confirm with server
           return makeMove(id, optimisticData.san);

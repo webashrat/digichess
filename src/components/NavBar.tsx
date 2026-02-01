@@ -37,6 +37,11 @@ export default function NavBar() {
     if (typeof localStorage === 'undefined') return 'cburnett';
     return localStorage.getItem('pieceSet') || 'cburnett';
   });
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof localStorage === 'undefined') return true;
+    const stored = localStorage.getItem('soundEnabled');
+    return stored === null ? true : stored === 'true';
+  });
 
   useEffect(() => {
     const handler = () => setAuthed(!!localStorage.getItem('token'));
@@ -123,6 +128,12 @@ export default function NavBar() {
     localStorage.setItem('pieceSet', pieceSet);
     window.dispatchEvent(new Event('board-settings-change'));
   }, [pieceSet]);
+
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem('soundEnabled', soundEnabled ? 'true' : 'false');
+    window.dispatchEvent(new Event('sound-settings-change'));
+  }, [soundEnabled]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -387,6 +398,20 @@ export default function NavBar() {
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--muted)' }}>
                       Saved for new games.
+                    </div>
+                    <div style={{ marginTop: 6, borderTop: '1px solid rgba(148, 163, 184, 0.15)', paddingTop: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                        Sound
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--muted)' }}>
+                        <input
+                          type="checkbox"
+                          checked={soundEnabled}
+                          onChange={(e) => setSoundEnabled(e.target.checked)}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        Enable sounds
+                      </label>
                     </div>
                   </div>
                 </div>
