@@ -198,7 +198,7 @@ export default function GameView() {
     const chess = new Chess();
     let lastUci: string | undefined;
     for (let i = 0; i <= targetIndex; i += 1) {
-      const move = chess.move(movesList[i], { sloppy: true });
+      const move = chess.move(movesList[i], { strict: false });
       if (!move) break;
       lastUci = `${move.from}${move.to}${move.promotion || ''}`;
     }
