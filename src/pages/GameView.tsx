@@ -137,6 +137,8 @@ export default function GameView() {
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null); // For move navigation
   const [rematchNow, setRematchNow] = useState<number>(() => Date.now());
   const previousMoveCountRef = useRef<number>(0);
+  const lastMovesRef = useRef<string>('');
+  const botFallbackRef = useRef<{ moves: string; timeoutId: number } | null>(null);
 
   const countPiecesInFen = (fen?: string) => {
     const board = (fen || '').split(' ')[0] || '';
@@ -179,6 +181,9 @@ export default function GameView() {
       setCurrentMoveIndex(null);
     }
     previousMoveCountRef.current = currentMoveCount;
+    if (game?.moves !== undefined) {
+      lastMovesRef.current = game.moves;
+    }
   }, [game?.moves]);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -422,6 +427,15 @@ export default function GameView() {
       lastFenRef.current = game.current_fen;
     }
   }, [game?.current_fen]);
+
+  useEffect(() => {
+    return () => {
+      if (botFallbackRef.current?.timeoutId) {
+        clearTimeout(botFallbackRef.current.timeoutId);
+      }
+      botFallbackRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     lastFinishReasonRef.current = null;
@@ -1517,18 +1531,26 @@ export default function GameView() {
         if (res.status === 'active') {
           fetchClock(id).then(setClock).catch(() => {});
         }
-        // If playing a bot, poll once for bot response in case WS drops
+        // If playing a bot, poll once for bot response only if WS didn't update
         if (res.status === 'active' && isBotOpponent) {
-          setTimeout(() => {
-            fetchGameDetail(id)
-              .then((updated) => {
-                setGame(updated);
-                if (updated.status === 'active') {
-                  fetchClock(id).then(setClock).catch(() => {});
-                }
-              })
-              .catch(() => {});
-          }, 300);
+          const scheduledMoves = res.moves || '';
+          if (botFallbackRef.current?.timeoutId) {
+            clearTimeout(botFallbackRef.current.timeoutId);
+          }
+          const timeoutId = window.setTimeout(() => {
+            if (lastMovesRef.current === scheduledMoves) {
+              fetchGameDetail(id)
+                .then((updated) => {
+                  setGame(updated);
+                  if (updated.status === 'active') {
+                    fetchClock(id).then(setClock).catch(() => {});
+                  }
+                })
+                .catch(() => {});
+            }
+            botFallbackRef.current = null;
+          }, 500);
+          botFallbackRef.current = { moves: scheduledMoves, timeoutId };
         }
       })
       .catch((err) => {
