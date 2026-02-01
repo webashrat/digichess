@@ -37,6 +37,7 @@ class GameSerializer(serializers.ModelSerializer):
     legal_moves = serializers.SerializerMethodField(read_only=True)
 
     rematch_requested_by = serializers.SerializerMethodField()
+    draw_offer_by = serializers.SerializerMethodField()
     
     class Meta:
         model = Game
@@ -60,6 +61,7 @@ class GameSerializer(serializers.ModelSerializer):
             "current_fen",
             "legal_moves",
             "rematch_requested_by",
+            "draw_offer_by",
             "created_at",
             "started_at",
             "finished_at",
@@ -82,6 +84,9 @@ class GameSerializer(serializers.ModelSerializer):
     
     def get_rematch_requested_by(self, obj):
         return obj.rematch_requested_by.id if obj.rematch_requested_by else None
+
+    def get_draw_offer_by(self, obj):
+        return obj.draw_offer_by.id if obj.draw_offer_by else None
 
     def _validate_time_settings(
         self,
