@@ -15,12 +15,32 @@ const api = axios.create({
   withCredentials: true
 });
 
+const AUTH_EXEMPT_PATHS = [
+  /^\/api\/accounts\/login\/?$/i,
+  /^\/api\/accounts\/register\/?$/i,
+  /^\/api\/accounts\/verify-otp\/?$/i,
+  /^\/api\/accounts\/resend-otp\/?$/i,
+  /^\/api\/accounts\/forgot-password\/?$/i,
+  /^\/api\/accounts\/reset-password\/?$/i,
+  /^\/api\/accounts\/forgot-username\/?$/i,
+  /^\/api\/accounts\/verify-forgot-otp\/?$/i,
+  /^\/api\/games\/public\/?$/i,
+  /^\/api\/games\/leaderboard\/?.*$/i,
+];
+
 api.interceptors.request.use((config) => {
   if (typeof localStorage !== 'undefined') {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Token ${token}`;
+    } else {
+      const url = config.url || '';
+      const path = url.startsWith('http') ? new URL(url).pathname : url;
+      const isExempt = AUTH_EXEMPT_PATHS.some((re) => re.test(path));
+      if (!isExempt && path.startsWith('/api/')) {
+        return Promise.reject(new axios.Cancel('auth_required'));
+      }
     }
   }
   
@@ -40,7 +60,20 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error) && error.message === 'auth_required') {
+      return Promise.reject(error);
+    }
     if (typeof window !== 'undefined') {
+      if (error.response?.status === 401) {
+        try {
+          localStorage.removeItem('token');
+        } catch {
+          // ignore storage errors
+        }
+        if (!window.location.hash.includes('/login')) {
+          window.location.hash = '#/login';
+        }
+      }
       console.error('[API Error]', {
         url: error.config?.url,
         baseURL: error.config?.baseURL,
