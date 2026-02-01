@@ -204,7 +204,33 @@ export default function Register() {
             <button className="btn btn-warning" type="button" onClick={handleResend} style={{ fontSize: 14, padding: '10px 20px' }}>🔄 Resend OTP</button>
           </div>
         )}
-        <a href="#/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Already have an account? Log in</a>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 6,
+            fontSize: 14,
+            color: 'var(--muted)'
+          }}
+        >
+          <span>Already have an account?</span>
+          <button
+            type="button"
+            onClick={() => setHashRoute('/login')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3
+            }}
+          >
+            Log in
+          </button>
+        </div>
       </form>
     </div>
   );
