@@ -2638,50 +2638,6 @@ export default function GameView() {
         </div>
       </div>
       
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 20,
-            right: 20,
-            background: toast.type === 'error' ? 'var(--danger)' : toast.type === 'success' ? 'var(--accent)' : 'var(--bg-secondary)',
-            color: 'var(--text)',
-            padding: '12px 20px',
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            zIndex: 10000,
-            maxWidth: '400px',
-            border: `1px solid ${toast.type === 'error' ? 'var(--danger)' : toast.type === 'success' ? 'var(--accent)' : 'var(--border)'}`,
-            animation: 'slideIn 0.3s ease-out'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span>{toast.type === 'error' ? '❌' : toast.type === 'success' ? '✓' : 'ℹ️'}</span>
-            <span>{toast.message}</span>
-            <button
-              onClick={() => setToast(null)}
-              style={{
-                marginLeft: 'auto',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text)',
-                cursor: 'pointer',
-                fontSize: 18,
-                padding: 0,
-                width: 20,
-                height: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-      
       {/* Win/Loss Popup for Time Finishes */}
       {gameResultPopup && (
         <div

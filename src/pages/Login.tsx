@@ -32,7 +32,10 @@ export default function Login() {
       
       login(payload)
         .then((res) => {
-          if (res?.token) localStorage.setItem('token', res.token);
+          if (res?.token) {
+            localStorage.setItem('token', res.token);
+            window.dispatchEvent(new Event('auth-changed'));
+          }
           setHashRoute('/');
         })
         .catch((err) => {
@@ -72,7 +75,10 @@ export default function Login() {
         // Verify OTP and log in
         verifyForgotOTP({ email, code: otp })
           .then((res) => {
-            if (res?.token) localStorage.setItem('token', res.token);
+            if (res?.token) {
+              localStorage.setItem('token', res.token);
+              window.dispatchEvent(new Event('auth-changed'));
+            }
             setHashRoute('/');
           })
           .catch((err) => {
@@ -102,7 +108,10 @@ export default function Login() {
         // Verify OTP and log in
         verifyForgotOTP({ email, code: otp })
           .then((res) => {
-            if (res?.token) localStorage.setItem('token', res.token);
+            if (res?.token) {
+              localStorage.setItem('token', res.token);
+              window.dispatchEvent(new Event('auth-changed'));
+            }
             setHashRoute('/');
           })
           .catch((err) => {

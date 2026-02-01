@@ -41,7 +41,11 @@ export default function NavBar() {
   useEffect(() => {
     const handler = () => setAuthed(!!localStorage.getItem('token'));
     window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
+    window.addEventListener('auth-changed', handler as EventListener);
+    return () => {
+      window.removeEventListener('storage', handler);
+      window.removeEventListener('auth-changed', handler as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -117,6 +121,7 @@ export default function NavBar() {
 
   const logout = () => {
     localStorage.removeItem('token');
+    window.dispatchEvent(new Event('auth-changed'));
     setHashRoute('/');
   };
   const showSettings = pathname === '/';

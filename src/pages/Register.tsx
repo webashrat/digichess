@@ -79,7 +79,10 @@ export default function Register() {
     setError(null);
     verifyOTP({ email, code: otpCode })
       .then((res) => {
-        if (res?.token) localStorage.setItem('token', res.token);
+        if (res?.token) {
+          localStorage.setItem('token', res.token);
+          window.dispatchEvent(new Event('auth-changed'));
+        }
         setOtpMsg('Verified! Redirecting...');
         setHashRoute('/');
       })

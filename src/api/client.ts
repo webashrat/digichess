@@ -39,6 +39,11 @@ api.interceptors.request.use((config) => {
       const path = url.startsWith('http') ? new URL(url).pathname : url;
       const isExempt = AUTH_EXEMPT_PATHS.some((re) => re.test(path));
       if (!isExempt && path.startsWith('/api/')) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('show-toast', {
+            detail: { message: 'Please log in to continue.', type: 'info' }
+          }));
+        }
         return Promise.reject(new axios.Cancel('auth_required'));
       }
     }
@@ -69,6 +74,12 @@ api.interceptors.response.use(
           localStorage.removeItem('token');
         } catch {
           // ignore storage errors
+        }
+        window.dispatchEvent(new Event('auth-changed'));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('show-toast', {
+            detail: { message: 'Session expired. Please log in again.', type: 'info' }
+          }));
         }
         if (!window.location.hash.includes('/login')) {
           window.location.hash = '#/login';

@@ -104,6 +104,7 @@ export default function AccountEdit() {
       .delete('/api/accounts/me/')
       .then(() => {
         localStorage.removeItem('token');
+        window.dispatchEvent(new Event('auth-changed'));
         setDeleteMsg('Account deleted. Redirecting...');
         setHashRoute('/');
       })
