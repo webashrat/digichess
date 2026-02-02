@@ -151,10 +151,10 @@ def _build_state(
     move_count = len((game.moves or "").strip().split()) if game.moves else 0
     first_move_deadline = None
     first_move_color = None
-    if move_count == 0:
-        first_move_deadline = int((game.created_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+    if move_count == 0 and game.status == Game.STATUS_ACTIVE and game.started_at:
+        first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
         first_move_color = "white"
-    elif move_count == 1 and game.started_at:
+    elif move_count == 1 and game.status == Game.STATUS_ACTIVE and game.started_at:
         first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
         first_move_color = "black"
 

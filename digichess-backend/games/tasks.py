@@ -224,13 +224,15 @@ def check_first_move_timeouts():
 
     now = timezone.now()
     channel_layer = get_channel_layer()
-    games = Game.objects.filter(status__in=[Game.STATUS_PENDING, Game.STATUS_ACTIVE])
+    games = Game.objects.filter(status=Game.STATUS_ACTIVE)
 
     for game in games:
         move_count = len((game.moves or "").strip().split()) if game.moves else 0
 
         if move_count == 0:
-            deadline = game.created_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
+            if not game.started_at:
+                continue
+            deadline = game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
             if now <= deadline:
                 continue
         elif move_count == 1:
