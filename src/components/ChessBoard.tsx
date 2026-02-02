@@ -501,8 +501,6 @@ export const ChessBoard = memo(function ChessBoard({
         return;
       }
 
-      const square = squares.find(s => s.coord === draggedPiece.coord);
-      
       // Handle promotion
       let finalMove = moveStr;
       if (promotionNeeded && square?.pieceType) {
