@@ -76,6 +76,11 @@ export const ChessBoard = memo(function ChessBoard({
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [wasDragged, setWasDragged] = useState(false);
   const [boardSize, setBoardSize] = useState<number>(500);
+  const [promotionPending, setPromotionPending] = useState<{
+    from: string;
+    to: string;
+    isWhite: boolean;
+  } | null>(null);
   const squareSize = useMemo(() => Math.max(32, Math.floor(boardSize / 8)), [boardSize]);
   const pieceSize = useMemo(() => Math.max(28, Math.floor(squareSize * 0.9)), [squareSize]);
   const ghostPieceSize = useMemo(() => Math.max(36, Math.floor(squareSize * 0.98)), [squareSize]);
@@ -270,6 +275,20 @@ export const ChessBoard = memo(function ChessBoard({
     return null;
   }, [fen, isInCheck]);
 
+  const getMoveMeta = useCallback(
+    (from: string, to: string) => {
+      if (!chessRef.current) return { isLegal: false, promotionNeeded: false };
+      const moves = chessRef.current.moves({ square: from as any, verbose: true }) as any[];
+      const targets = moves.filter((m) => m.to === to);
+      if (targets.length === 0) {
+        return { isLegal: false, promotionNeeded: false };
+      }
+      const promotionNeeded = targets.some((m) => Boolean(m.promotion) || (m.flags && m.flags.includes('p')));
+      return { isLegal: true, promotionNeeded };
+    },
+    []
+  );
+
   // Get square coordinates based on orientation
   const getSquareCoords = (idx: number) => {
     const row = Math.floor(idx / 8);
@@ -316,55 +335,42 @@ export const ChessBoard = memo(function ChessBoard({
       
       // Validate move with chess.js before submitting
       const moveStr = `${selected}${coord}`;
-      let moveObj = null;
-      
+
       // Double-check chess.js board is initialized and in sync
       if (!chessRef.current) {
         setSelected(null);
         return;
       }
+
+      // Verify it's the correct turn
+      const currentTurn = chessRef.current.turn();
+      const square = squares.find(s => s.coord === selected);
+      if (!square || !square.pieceType) {
+        setSelected(null);
+        return;
+      }
+      const isWhitePiece = square.pieceType === square.pieceType.toUpperCase();
       
-      try {
-        // Verify it's the correct turn
-        const currentTurn = chessRef.current.turn();
-        const square = squares.find(s => s.coord === selected);
-        if (!square || !square.pieceType) {
-          setSelected(null);
-          return;
-        }
-        const isWhitePiece = square.pieceType === square.pieceType.toUpperCase();
-        
-        // Strict turn validation
-        if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) {
-          // Wrong turn, don't submit
-          console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, selected, coord });
-          setSelected(null);
-          return;
-        }
-        
-        // Try to parse and validate the move - this will throw if invalid
-        moveObj = chessRef.current.move({ from: selected as any, to: coord as any });
-        if (!moveObj) {
-          // Invalid move, don't submit
-          console.warn('Move rejected: invalid move', { selected, coord });
-          setSelected(null);
-          return;
-        }
-      } catch (err: any) {
-        // Invalid move, don't submit
-        console.warn('Move validation failed:', err?.message || err, { selected, coord });
+      // Strict turn validation
+      if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) {
+        // Wrong turn, don't submit
+        console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, selected, coord });
+        setSelected(null);
+        return;
+      }
+
+      const { isLegal, promotionNeeded } = getMoveMeta(selected, coord);
+      if (!isLegal) {
+        console.warn('Move rejected: invalid move', { selected, coord });
         setSelected(null);
         return;
       }
       
       // Check if promotion is needed (pawn to last rank)
-      const square = squares.find(s => s.coord === selected);
       let finalMove = moveStr;
-      if (square?.pieceType === 'p' && coord[1] === '8') {
-        // Auto-promote to queen
-        finalMove = `${moveStr}q`;
-      } else if (square?.pieceType === 'P' && coord[1] === '1') {
-        finalMove = `${moveStr}Q`;
+      if (promotionNeeded && square?.pieceType) {
+        setPromotionPending({ from: selected, to: coord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
+        return;
       }
       
       // Call onMove callback
@@ -453,20 +459,18 @@ export const ChessBoard = memo(function ChessBoard({
       return;
     }
 
-    // Validate move with chess.js before submitting
-    const moveStr = `${draggedPiece.coord}${targetCoord}`;
-    let moveObj = null;
-    
-    // Double-check chess.js board is initialized and in sync
-    if (!chessRef.current) {
-      // Clear dragged piece state
-      setDraggedPiece(null);
-      setSelected(null);
-      setWasDragged(false);
-      return;
-    }
-    
-    try {
+      // Validate move with chess.js before submitting
+      const moveStr = `${draggedPiece.coord}${targetCoord}`;
+
+      // Double-check chess.js board is initialized and in sync
+      if (!chessRef.current) {
+        // Clear dragged piece state
+        setDraggedPiece(null);
+        setSelected(null);
+        setWasDragged(false);
+        return;
+      }
+      
       // Verify it's the correct turn
       const currentTurn = chessRef.current.turn();
       const square = squares.find(s => s.coord === draggedPiece.coord);
@@ -487,39 +491,30 @@ export const ChessBoard = memo(function ChessBoard({
         setWasDragged(false);
         return;
       }
-      
-      // Try to parse and validate the move - this will throw if invalid
-      moveObj = chessRef.current.move({ from: draggedPiece.coord as any, to: targetCoord as any });
-      if (!moveObj) {
-        // Invalid move, don't submit
+
+      const { isLegal, promotionNeeded } = getMoveMeta(draggedPiece.coord, targetCoord);
+      if (!isLegal) {
         console.warn('Move rejected: invalid move', { from: draggedPiece.coord, to: targetCoord });
         setDraggedPiece(null);
         setSelected(null);
         setWasDragged(false);
         return;
       }
-    } catch (err: any) {
-      // Invalid move, don't submit
-      console.warn('Move validation failed:', err?.message || err, { from: draggedPiece?.coord, to: targetCoord });
-      // Clear dragged piece state
-      setDraggedPiece(null);
-      setSelected(null);
-      setWasDragged(false);
-      return;
-    }
 
-    const square = squares.find(s => s.coord === draggedPiece.coord);
-    
-    // Handle promotion
-    let finalMove = moveStr;
-    if (square?.pieceType === 'p' && targetCoord[1] === '8') {
-      finalMove = `${moveStr}q`;
-    } else if (square?.pieceType === 'P' && targetCoord[1] === '1') {
-      finalMove = `${moveStr}Q`;
-    }
-    
-    // Call onMove callback
-    try {
+      const square = squares.find(s => s.coord === draggedPiece.coord);
+      
+      // Handle promotion
+      let finalMove = moveStr;
+      if (promotionNeeded && square?.pieceType) {
+        setDraggedPiece(null);
+        setSelected(null);
+        setWasDragged(false);
+        setPromotionPending({ from: draggedPiece.coord, to: targetCoord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
+        return;
+      }
+      
+      // Call onMove callback
+      try {
       onMove(finalMove);
     } catch (err) {
       console.error('Move failed:', err);
@@ -698,6 +693,66 @@ export const ChessBoard = memo(function ChessBoard({
             flexShrink: 0
           }}
         >
+          {promotionPending && (
+            <div
+              onClick={() => setPromotionPending(null)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(8, 10, 16, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 20
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: 14,
+                  borderRadius: 12,
+                  background: 'rgba(12, 18, 28, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                }}
+              >
+                {(['q', 'r', 'b', 'n'] as const).map((piece) => {
+                  const pieceChar = promotionPending.isWhite ? piece.toUpperCase() : piece;
+                  return (
+                    <button
+                      key={piece}
+                      onClick={() => {
+                        const move = `${promotionPending.from}${promotionPending.to}${pieceChar}`;
+                        pendingMoveRef.current = { from: promotionPending.from, to: promotionPending.to };
+                        setPromotionPending(null);
+                        try {
+                          onMove?.(move);
+                        } catch (err) {
+                          console.error('Promotion move failed:', err);
+                        }
+                      }}
+                      style={{
+                        width: ghostPieceSize,
+                        height: ghostPieceSize,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 10,
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        background: 'rgba(255,255,255,0.04)',
+                        cursor: 'pointer',
+                      }}
+                      aria-label={`Promote to ${piece}`}
+                    >
+                      <ChessPiece piece={pieceChar} size={Math.max(32, Math.floor(ghostPieceSize * 0.9))} set={pieceSet} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         {displaySquares.map((sq: Square, idx: number) => {
           const isSelected = selected === sq.coord;
           const isValidMove = validMoves.includes(sq.coord);
