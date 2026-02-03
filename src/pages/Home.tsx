@@ -819,7 +819,6 @@ export default function Home() {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      <span style={{ opacity: 0.7, marginRight: 6, fontWeight: 600 }}>Blitz</span>
                       {blitzRating}
                     </div>
                   )}
