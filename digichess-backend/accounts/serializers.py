@@ -95,7 +95,17 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLookupSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "profile_pic", "username", "country", "is_bot", "is_online")
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "profile_pic",
+            "username",
+            "country",
+            "is_bot",
+            "is_online",
+            "rating_blitz",
+        )
 
 
 class RegisterSerializer(serializers.ModelSerializer):

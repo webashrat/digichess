@@ -9,11 +9,9 @@ import { setHashRoute } from '../utils/hashNavigate';
 
 const links = [
   { to: '/', label: 'Home', icon: '🏠' },
-  { to: '/games', label: 'Games', icon: '🎮' },
   { to: '/games/create', label: 'Create', icon: '➕' },
   { to: '/leaderboards', label: 'Leaderboards', icon: '🏆' },
   { to: '/tournaments', label: 'Tournaments', icon: '🏟️' },
-  { to: '/players', label: 'Players', icon: '👥' },
   { to: '/friends', label: 'Friends', icon: '👫' },
   { to: '/messages', label: 'Messages', icon: '💬' }
 ];

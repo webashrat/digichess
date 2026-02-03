@@ -5,6 +5,8 @@ import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 
 type Square = { piece: string | null; color: 'light' | 'dark'; coord: string; pieceType?: string };
 
+const PROMOTION_PIECES = ['q', 'r', 'b', 'n'] as const;
+
 function parseFen(fen?: string): Square[] {
   const normalized =
     !fen || fen === 'start'
@@ -81,6 +83,12 @@ export const ChessBoard = memo(function ChessBoard({
     to: string;
     isWhite: boolean;
   } | null>(null);
+  const [promotionPreview, setPromotionPreview] = useState<{
+    from: string;
+    to: string;
+    isWhite: boolean;
+  } | null>(null);
+  const [promotionHover, setPromotionHover] = useState<string | null>(null);
   const squareSize = useMemo(() => Math.max(32, Math.floor(boardSize / 8)), [boardSize]);
   const pieceSize = useMemo(() => Math.max(28, Math.floor(squareSize * 0.9)), [squareSize]);
   const ghostPieceSize = useMemo(() => Math.max(36, Math.floor(squareSize * 0.98)), [squareSize]);
@@ -146,6 +154,28 @@ export const ChessBoard = memo(function ChessBoard({
       window.removeEventListener('mousemove', handleGlobalMouseMove);
     };
   }, [draggedPiece, wasDragged]);
+
+  useEffect(() => {
+    if (!promotionPreview) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!promotionPreview) return;
+      const key = e.key.toLowerCase();
+      if (!PROMOTION_PIECES.includes(key as any)) return;
+      e.preventDefault();
+      const pieceChar = promotionPreview.isWhite ? key.toUpperCase() : key;
+      const move = `${promotionPreview.from}${promotionPreview.to}${pieceChar}`;
+      pendingMoveRef.current = { from: promotionPreview.from, to: promotionPreview.to };
+      setPromotionPreview(null);
+      setPromotionHover(null);
+      try {
+        onMove?.(move);
+      } catch (err) {
+        console.error('Promotion move failed:', err);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [promotionPreview, onMove]);
   
   useEffect(() => {
     try {
@@ -304,8 +334,56 @@ export const ChessBoard = memo(function ChessBoard({
     return String.fromCharCode(97 + col) + (8 - row);
   };
 
+  const getDisplayCoordsFromCoord = useCallback(
+    (coord: string) => {
+      const file = coord.charCodeAt(0) - 97;
+      const rank = Number(coord[1]);
+      const baseRow = 8 - rank;
+      const baseCol = file;
+      if (orientation === 'black') {
+        return { row: 7 - baseRow, col: 7 - baseCol };
+      }
+      return { row: baseRow, col: baseCol };
+    },
+    [orientation]
+  );
+
+  const promotionOptions = useMemo(() => {
+    const source = promotionPending || promotionPreview;
+    if (!source) return [];
+    const base = getDisplayCoordsFromCoord(source.to);
+    const isSideBottom =
+      (source.isWhite && orientation === 'white') ||
+      (!source.isWhite && orientation === 'black');
+    const direction = isSideBottom ? 1 : -1;
+
+    const file = source.to[0];
+    return PROMOTION_PIECES.map((piece, idx) => {
+      const row = base.row + idx * direction;
+      const col = base.col;
+      if (row < 0 || row > 7 || col < 0 || col > 7) return null;
+      const isDark = (row + col) % 2 === 1;
+      return {
+        file,
+        piece,
+        pieceChar: source.isWhite ? piece.toUpperCase() : piece,
+        row,
+        col,
+        background: isDark ? currentTheme.dark : currentTheme.light
+      };
+    }).filter(Boolean) as Array<{
+      piece: (typeof PROMOTION_PIECES)[number];
+      pieceChar: string;
+      row: number;
+      col: number;
+      background: string;
+    }>;
+  }, [promotionPending, getDisplayCoordsFromCoord, orientation, currentTheme]);
+
   const handleSquareClick = useCallback((coord: string, pieceType: string | null) => {
     if (!onMove) return;
+    if (promotionPending) return;
+    if (promotionPreview) return;
 
     if (!selected) {
       // Select piece if it's the player's turn
@@ -369,7 +447,7 @@ export const ChessBoard = memo(function ChessBoard({
       // Check if promotion is needed (pawn to last rank)
       let finalMove = moveStr;
       if (promotionNeeded && square?.pieceType) {
-        setPromotionPending({ from: selected, to: coord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
+        setPromotionPreview({ from: selected, to: coord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
         return;
       }
       
@@ -450,6 +528,8 @@ export const ChessBoard = memo(function ChessBoard({
       setWasDragged(false);
       return;
     }
+    if (promotionPending) return;
+    if (promotionPreview) return;
 
     if (targetCoord === draggedPiece.coord) {
       // Clear dragged piece state
@@ -691,64 +771,131 @@ export const ChessBoard = memo(function ChessBoard({
             flexShrink: 0
           }}
         >
-          {promotionPending && (
+          {(promotionPending || promotionPreview) && (
             <div
-              onClick={() => setPromotionPending(null)}
+              onClick={() => {
+                setPromotionPending(null);
+                setPromotionPreview(null);
+                setPromotionHover(null);
+              }}
+              onMouseMove={(e) => {
+                if (!promotionPreview) return;
+                const rect = boardRef.current?.getBoundingClientRect();
+                if (!rect) return;
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+                  setPromotionHover(null);
+                  return;
+                }
+                const col = Math.floor((x / rect.width) * 8);
+                const row = Math.floor((y / rect.height) * 8);
+                const hit = promotionOptions.find((opt) => opt.row === row && opt.col === col);
+                setPromotionHover(hit ? hit.piece : null);
+              }}
+              onMouseLeave={() => setPromotionHover(null)}
+              onMouseUp={(e) => {
+                if (!promotionPreview) return;
+                const rect = boardRef.current?.getBoundingClientRect();
+                if (!rect) return;
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+                  setPromotionPreview(null);
+                  setPromotionHover(null);
+                  return;
+                }
+                const col = Math.floor((x / rect.width) * 8);
+                const row = Math.floor((y / rect.height) * 8);
+                const hit = promotionOptions.find((opt) => opt.row === row && opt.col === col);
+                if (!hit) return;
+                const pieceChar = promotionPreview.isWhite ? hit.piece.toUpperCase() : hit.piece;
+                const move = `${promotionPreview.from}${promotionPreview.to}${pieceChar}`;
+                pendingMoveRef.current = { from: promotionPreview.from, to: promotionPreview.to };
+                setPromotionPreview(null);
+                setPromotionHover(null);
+                try {
+                  onMove?.(move);
+                } catch (err) {
+                  console.error('Promotion move failed:', err);
+                }
+              }}
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'rgba(8, 10, 16, 0.6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                background: 'rgba(8, 10, 16, 0.35)',
                 zIndex: 20
               }}
             >
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  padding: 14,
-                  borderRadius: 12,
-                  background: 'rgba(12, 18, 28, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-                }}
-              >
-                {(['q', 'r', 'b', 'n'] as const).map((piece) => {
-                  const pieceChar = promotionPending.isWhite ? piece.toUpperCase() : piece;
-                  return (
-                    <button
-                      key={piece}
-                      onClick={() => {
-                        const move = `${promotionPending.from}${promotionPending.to}${pieceChar}`;
-                        pendingMoveRef.current = { from: promotionPending.from, to: promotionPending.to };
-                        setPromotionPending(null);
-                        try {
-                          onMove?.(move);
-                        } catch (err) {
-                          console.error('Promotion move failed:', err);
-                        }
-                      }}
-                      style={{
-                        width: ghostPieceSize,
-                        height: ghostPieceSize,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 10,
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        background: 'rgba(255,255,255,0.04)',
-                        cursor: 'pointer',
-                      }}
-                      aria-label={`Promote to ${piece}`}
-                    >
-                      <ChessPiece piece={pieceChar} size={Math.max(32, Math.floor(ghostPieceSize * 0.9))} set={pieceSet} />
-                    </button>
-                  );
-                })}
-              </div>
+              {promotionOptions.map((option) => (
+                <button
+                  key={option.piece}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const source = promotionPending || promotionPreview;
+                    if (!source) return;
+                    const move = `${source.from}${source.to}${option.pieceChar}`;
+                    pendingMoveRef.current = { from: source.from, to: source.to };
+                    setPromotionPending(null);
+                    setPromotionPreview(null);
+                    setPromotionHover(null);
+                    try {
+                      onMove?.(move);
+                    } catch (err) {
+                      console.error('Promotion move failed:', err);
+                    }
+                  }}
+                  onMouseEnter={() => setPromotionHover(option.piece)}
+                  onMouseLeave={() => setPromotionHover(null)}
+                  onTouchStart={() => setPromotionHover(option.piece)}
+                  style={{
+                    position: 'absolute',
+                    top: `${option.row * 12.5}%`,
+                    left: `${option.col * 12.5}%`,
+                    width: '12.5%',
+                    height: '12.5%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: promotionHover === option.piece
+                      ? '2px solid rgba(255,255,255,0.65)'
+                      : '1px solid rgba(255,255,255,0.2)',
+                    background: promotionHover === option.piece
+                      ? 'rgba(255,255,255,0.12)'
+                      : option.background,
+                    cursor: 'pointer',
+                    boxShadow: promotionHover === option.piece
+                      ? 'inset 0 0 0 2px rgba(255,255,255,0.25), 0 10px 24px rgba(0,0,0,0.45)'
+                      : 'inset 0 0 0 2px rgba(0,0,0,0.15), 0 6px 16px rgba(0,0,0,0.35)',
+                    padding: 0,
+                    transition: 'transform 120ms ease, box-shadow 120ms ease, border 120ms ease, background 120ms ease',
+                    transform: promotionHover === option.piece ? 'scale(1.04)' : 'scale(1)'
+                  }}
+                  aria-label={`Promote to ${option.piece}`}
+                >
+                  <ChessPiece
+                    piece={option.pieceChar}
+                    size={Math.max(32, Math.floor(squareSize * (promotionHover === option.piece ? 0.98 : 0.9)))}
+                    color={option.pieceChar === option.pieceChar.toUpperCase() ? 'white' : 'black'}
+                    pieceSet={pieceSet}
+                  />
+                </button>
+              ))}
+              {(promotionPending || promotionPreview) && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: `${(promotionOptions[0]?.col ?? 0) * 12.5}%`,
+                    width: '12.5%',
+                    height: '100%',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.12))',
+                    opacity: 0.45,
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
             </div>
           )}
         {displaySquares.map((sq: Square, idx: number) => {

@@ -10,9 +10,10 @@ interface Props {
   rightText?: string;
   isActive?: boolean;
   isMyTurn?: boolean;
+  ratingTone?: 'normal' | 'muted';
 }
 
-export default function IdentityStrip({ user, rating, ratingChange, mode, rightText, isActive, isMyTurn }: Props) {
+export default function IdentityStrip({ user, rating, ratingChange, mode, rightText, isActive, isMyTurn, ratingTone = 'normal' }: Props) {
   // Check if this is DIGI bot and use DIGIBOT.jpg
   const isDigiBot = (user.first_name === 'DIGI' || user.username === 'DIGI' || user.username?.toUpperCase() === 'DIGI');
   const profilePic = isDigiBot ? '/DIGIBOT.jpg' : (user.profile_pic || undefined);
@@ -87,9 +88,9 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
           <FlagIcon code={user.country} size={18} />
           {rating !== undefined && rating !== null && (
             <span style={{ 
-              fontSize: 14, 
-              fontWeight: 600, 
-              color: 'var(--text)',
+              fontSize: ratingTone === 'muted' ? 12 : 14, 
+              fontWeight: ratingTone === 'muted' ? 500 : 600, 
+              color: ratingTone === 'muted' ? 'var(--muted)' : 'var(--text)',
               flexShrink: 0,
               marginLeft: 4,
               display: 'flex',

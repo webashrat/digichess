@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 LOCK_TTL_SECONDS = 5
 EVENT_STREAM_MAXLEN = 10000
 FIRST_MOVE_GRACE_SECONDS = 20
+CHALLENGE_EXPIRY_MINUTES = 10
 
 _RELEASE_LOCK_LUA = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -155,7 +156,8 @@ def _build_state(
         first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
         first_move_color = "white"
     elif move_count == 1 and game.status == Game.STATUS_ACTIVE and game.started_at:
-        first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+        anchor = game.last_move_at or game.started_at
+        first_move_deadline = int((anchor + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
         first_move_color = "black"
 
     return {
@@ -305,11 +307,8 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             else:
                 game.black_time_left += game.black_increment_seconds
 
-            # Start the main clock only after Black's first move (i.e., move_count >= 1 before this move)
-            if move_count >= 1:
-                game.last_move_at = now
-            else:
-                game.last_move_at = None
+            # Track first move time for the black grace period; main clock starts after both moves
+            game.last_move_at = now
             result, reason = _evaluate_result(board)
             finished = False
             if result:

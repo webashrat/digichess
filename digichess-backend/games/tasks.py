@@ -2,6 +2,7 @@ from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from asgiref.sync import async_to_sync
+from datetime import timedelta
 from channels.layers import get_channel_layer
 import time
 import random
@@ -13,7 +14,7 @@ from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
-from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS
+from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
 from .move_optimizer import process_move_optimized, latency_monitor
 
 User = get_user_model()
@@ -218,10 +219,8 @@ def check_first_move_timeouts():
     """
     Abort games if a player fails to make their first move within the grace period.
     - White must move within FIRST_MOVE_GRACE_SECONDS of game creation.
-    - Black must move within FIRST_MOVE_GRACE_SECONDS after White's first move (started_at).
+    - Black must move within FIRST_MOVE_GRACE_SECONDS after White's first move.
     """
-    from datetime import timedelta
-
     now = timezone.now()
     channel_layer = get_channel_layer()
     games = Game.objects.filter(status=Game.STATUS_ACTIVE)
@@ -238,7 +237,8 @@ def check_first_move_timeouts():
         elif move_count == 1:
             if not game.started_at:
                 continue
-            deadline = game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
+            anchor = game.last_move_at or game.started_at
+            deadline = anchor + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)
             if now <= deadline:
                 continue
         else:
@@ -260,6 +260,37 @@ def check_first_move_timeouts():
                         "game_id": game.id,
                         "result": game.result,
                         "reason": "first_move_timeout",
+                        "game": game_data,
+                    },
+                },
+            )
+
+
+@shared_task
+def check_pending_challenge_expiry():
+    """Abort pending challenges that exceed the expiry window."""
+    now = timezone.now()
+    expiry_cutoff = now - timedelta(minutes=CHALLENGE_EXPIRY_MINUTES)
+    channel_layer = get_channel_layer()
+    games = Game.objects.filter(status=Game.STATUS_PENDING, created_at__lt=expiry_cutoff)
+
+    for game in games:
+        game.status = Game.STATUS_ABORTED
+        game.result = Game.RESULT_NONE
+        game.finished_at = now
+        game.save(update_fields=["status", "result", "finished_at"])
+
+        if channel_layer:
+            game_data = GameSerializer(game).data
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "game_finished",
+                        "game_id": game.id,
+                        "result": game.result,
+                        "reason": "challenge_expired",
                         "game": game_data,
                     },
                 },

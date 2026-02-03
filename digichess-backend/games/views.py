@@ -3,6 +3,7 @@ from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db import models
+from datetime import timedelta
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,7 +18,7 @@ from utils.redis_client import get_redis
 
 from .models import Game
 from .serializers import GameSerializer, MoveSerializer
-from .game_core import apply_move, MoveResult
+from .game_core import apply_move, MoveResult, CHALLENGE_EXPIRY_MINUTES
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
 from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation
 
@@ -391,6 +392,34 @@ class AcceptGameView(APIView):
             return Response({"detail": "Game is not pending."}, status=status.HTTP_400_BAD_REQUEST)
         if request.user != game.white and request.user != game.black:
             raise PermissionDenied("You are not part of this game.")
+        if game.created_at:
+            expiry_deadline = game.created_at + timedelta(minutes=CHALLENGE_EXPIRY_MINUTES)
+            if timezone.now() > expiry_deadline:
+                game.status = Game.STATUS_ABORTED
+                game.result = Game.RESULT_NONE
+                game.finished_at = timezone.now()
+                game.save(update_fields=["status", "result", "finished_at"])
+                # Notify game group about expiry
+                try:
+                    channel_layer = get_channel_layer()
+                    if channel_layer:
+                        game_data = GameSerializer(game).data
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "game_finished",
+                                    "game_id": game.id,
+                                    "result": game.result,
+                                    "reason": "challenge_expired",
+                                    "game": game_data,
+                                },
+                            },
+                        )
+                except Exception:
+                    pass
+                return Response({"detail": "Challenge expired."}, status=status.HTTP_400_BAD_REQUEST)
         # Block if user has another active game
         other_active = Game.objects.filter(
             status=Game.STATUS_ACTIVE
@@ -469,6 +498,32 @@ class AbortGameView(APIView):
         # Check if user is part of this game
         if request.user != game.white and request.user != game.black:
             raise PermissionDenied("You are not part of this game.")
+
+        # Allow creator to abort a pending challenge
+        if game.status == Game.STATUS_PENDING:
+            if request.user != game.creator:
+                raise PermissionDenied("Only the creator can abort a pending challenge.")
+            game.status = Game.STATUS_ABORTED
+            game.finished_at = timezone.now()
+            game.result = Game.RESULT_NONE
+            game.save(update_fields=["status", "finished_at", "result"])
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                game_data = GameSerializer(game).data
+                async_to_sync(channel_layer.group_send)(
+                    f"game_{game.id}",
+                    {
+                        "type": "game.event",
+                        "payload": {
+                            "type": "game_finished",
+                            "game_id": game.id,
+                            "result": game.result,
+                            "reason": "challenge_aborted",
+                            "game": game_data,
+                        },
+                    },
+                )
+            return Response(GameSerializer(game).data)
         
         # Only allow abort for active games
         if game.status != Game.STATUS_ACTIVE:
@@ -522,7 +577,26 @@ class RejectGameView(APIView):
         
         game.status = Game.STATUS_ABORTED
         game.finished_at = timezone.now()
-        game.save(update_fields=["status", "finished_at"])
+        game.result = Game.RESULT_NONE
+        game.save(update_fields=["status", "finished_at", "result"])
+        
+        # Broadcast rejection to game group
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            game_data = GameSerializer(game).data
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {
+                    "type": "game.event",
+                    "payload": {
+                        "type": "game_finished",
+                        "game_id": game.id,
+                        "result": game.result,
+                        "reason": "challenge_rejected",
+                        "game": game_data,
+                    },
+                },
+            )
         
         # Send notification to the challenger (opponent) that their challenge was rejected
         if opponent:
@@ -536,7 +610,8 @@ class RejectGameView(APIView):
                     'game_id': game.id,
                     'rejected_by_id': rejector.id,
                     'rejected_by_username': rejector.username or rejector.email
-                }
+                },
+                expires_in_hours=CHALLENGE_EXPIRY_MINUTES / 60
             )
         
         return Response(GameSerializer(game).data)

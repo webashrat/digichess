@@ -114,10 +114,14 @@ export default function NotificationBell() {
             let gameId: number | undefined;
             let action: 'accept' | undefined = undefined;
             let notificationType: string | undefined = undefined;
+            const isOutgoingChallenge = n.notification_type === 'game_challenge'
+              && n.data?.from_user_id
+              && meId
+              && n.data.from_user_id === meId;
             if (n.notification_type === 'game_challenge' && n.data?.game_id) {
               gameId = n.data.game_id;
-              action = 'accept';
-              notificationType = 'game_challenge';
+              action = isOutgoingChallenge ? undefined : 'accept';
+              notificationType = isOutgoingChallenge ? undefined : 'game_challenge';
             } else if (n.notification_type === 'rematch_requested' || n.notification_type === 'rematch') {
               // For rematch, use original_game_id or game_id
               gameId = n.data?.original_game_id || n.data?.game_id;
@@ -242,9 +246,14 @@ export default function NotificationBell() {
             let gameId: number | undefined;
             let action: 'accept' | undefined = undefined;
             let notificationType: string | undefined = n.notification_type;
+            const isOutgoingChallenge = n.notification_type === 'game_challenge'
+              && n.data?.from_user_id
+              && meId
+              && n.data.from_user_id === meId;
             if (n.notification_type === 'game_challenge' && n.data?.game_id) {
               gameId = n.data.game_id;
-              action = 'accept';
+              action = isOutgoingChallenge ? undefined : 'accept';
+              notificationType = isOutgoingChallenge ? undefined : 'game_challenge';
               console.log('[NotificationBell] Game challenge notification:', { gameId, notificationType });
             } else if (n.notification_type === 'rematch_requested' || n.notification_type === 'rematch') {
               gameId = n.data?.original_game_id || n.data?.game_id;
@@ -312,6 +321,10 @@ export default function NotificationBell() {
                     const data = JSON.parse(event.data);
                     if (data.type === 'notification' && data.notification) {
                       const n = data.notification;
+                      const isOutgoingChallenge = n.notification_type === 'game_challenge'
+                        && n.data?.from_user_id
+                        && meId
+                        && n.data.from_user_id === meId;
                       const newNotif: Notification = {
                         id: n.id,
                         type: 'notification',
@@ -319,8 +332,8 @@ export default function NotificationBell() {
                         title: n.title,
                         read: n.read,
                         gameId: n.data?.game_id || n.data?.original_game_id,
-                        action: (n.notification_type === 'game_challenge' || n.notification_type === 'rematch_requested') ? 'accept' : undefined,
-                        notificationType: n.notification_type
+                        action: (n.notification_type === 'game_challenge' || n.notification_type === 'rematch_requested') && !isOutgoingChallenge ? 'accept' : undefined,
+                        notificationType: isOutgoingChallenge ? undefined : n.notification_type
                       };
                       setItems((prev) => {
                         if (prev.some(item => item.id === newNotif.id)) {
@@ -516,10 +529,14 @@ export default function NotificationBell() {
                       let gameId: number | undefined;
                       let action: 'accept' | undefined = undefined;
                       let notificationType: string | undefined = undefined;
+                      const isOutgoingChallenge = n.notification_type === 'game_challenge'
+                        && n.data?.from_user_id
+                        && meId
+                        && n.data.from_user_id === meId;
                       if (n.notification_type === 'game_challenge' && n.data?.game_id) {
                         gameId = n.data.game_id;
-                        action = 'accept';
-                        notificationType = 'game_challenge';
+                        action = isOutgoingChallenge ? undefined : 'accept';
+                        notificationType = isOutgoingChallenge ? undefined : 'game_challenge';
                       } else if (n.notification_type === 'rematch_requested' && (n.data?.game_id || n.data?.original_game_id)) {
                         gameId = n.data?.game_id || n.data?.original_game_id;
                         action = 'accept';

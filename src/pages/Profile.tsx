@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
-import { ModeStats, UserDetail } from '../api/types';
+import { Mode, ModeStats, UserDetail } from '../api/types';
 import IdentityStrip from '../components/IdentityStrip';
 import GameHistory from '../components/GameHistory';
 import ModeStatsCharts from '../components/ModeStatsCharts';
@@ -20,6 +20,12 @@ export default function Profile() {
   const [friendErr, setFriendErr] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [selectedRatingMode, setSelectedRatingMode] = useState<'bullet' | 'blitz' | 'rapid' | 'classical' | null>(null);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeMode, setChallengeMode] = useState<Mode>('blitz');
+  const [challengeColor, setChallengeColor] = useState<'auto' | 'white' | 'black'>('auto');
+  const [challengeRated, setChallengeRated] = useState(true);
+  const [challengeErr, setChallengeErr] = useState('');
+  const [challengeSubmitting, setChallengeSubmitting] = useState(false);
 
   useEffect(() => {
     if (!username) return;
@@ -97,6 +103,33 @@ export default function Profile() {
     }
   };
 
+  const handleChallenge = () => {
+    if (!user || !me || me.id === user.id) return;
+    if (user.is_bot) return;
+    setChallengeErr('');
+    setChallengeSubmitting(true);
+    api
+      .post('/api/games/', {
+        opponent_id: user.id,
+        preferred_color: challengeColor,
+        time_control: challengeMode,
+        rated: challengeRated
+      })
+      .then((res) => {
+        const gameId = res?.data?.id;
+        if (gameId) {
+          window.location.hash = `#/games/${gameId}`;
+        } else {
+          setChallengeErr('Challenge created, but no game id returned.');
+        }
+        setChallengeOpen(false);
+      })
+      .catch((err) => {
+        setChallengeErr(err?.response?.data?.detail || 'Failed to create challenge');
+      })
+      .finally(() => setChallengeSubmitting(false));
+  };
+
   const renderFriendButton = () => {
     if (!user || (me && me.id === user.id)) return null;
     // Hide friend request button for bots
@@ -168,6 +201,23 @@ export default function Profile() {
           <IdentityStrip user={user} rating={user.rating_blitz} />
           {user.stats && (
             <>
+              {me && me.id !== user.id && !user.is_bot && (
+                <button
+                  onClick={() => setChallengeOpen(true)}
+                  className="btn"
+                  style={{ 
+                    fontSize: 13, 
+                    padding: '6px 16px',
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))',
+                    color: '#93c5fd',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    fontWeight: 600,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  ⚔️ Challenge
+                </button>
+              )}
               <button
                 onClick={() => setShowStats(!showStats)}
                 className="btn"
@@ -672,6 +722,103 @@ export default function Profile() {
           mode={selectedRatingMode}
           onClose={() => setSelectedRatingMode(null)}
         />
+      )}
+      {challengeOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(3, 6, 12, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setChallengeOpen(false)}
+        >
+          <div
+            className="card"
+            style={{
+              width: 'min(460px, 90vw)',
+              padding: 18,
+              background: 'linear-gradient(160deg, rgba(15, 22, 36, 0.98), rgba(10, 14, 24, 0.98))',
+              border: '1px solid rgba(148, 163, 184, 0.25)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.55)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Challenge {user.username}</div>
+              <button className="btn btn-ghost" type="button" onClick={() => setChallengeOpen(false)} style={{ padding: '4px 8px' }}>
+                ✕
+              </button>
+            </div>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'grid', gap: 6 }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Time control</label>
+                <select
+                  value={challengeMode}
+                  onChange={(e) => setChallengeMode(e.target.value as Mode)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: '#0b1220',
+                    color: 'var(--text)'
+                  }}
+                >
+                  <option value="bullet">Bullet</option>
+                  <option value="blitz">Blitz</option>
+                  <option value="rapid">Rapid</option>
+                  <option value="classical">Classical</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Preferred color</label>
+                <select
+                  value={challengeColor}
+                  onChange={(e) => setChallengeColor(e.target.value as 'auto' | 'white' | 'black')}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: '#0b1220',
+                    color: 'var(--text)'
+                  }}
+                >
+                  <option value="auto">Auto</option>
+                  <option value="white">White</option>
+                  <option value="black">Black</option>
+                </select>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--muted)' }}>
+                <input
+                  type="checkbox"
+                  checked={challengeRated}
+                  onChange={(e) => setChallengeRated(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                Rated game
+              </label>
+              {challengeErr && (
+                <div style={{ color: 'var(--danger)', fontSize: 12 }}>{challengeErr}</div>
+              )}
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={challengeSubmitting}
+                onClick={handleChallenge}
+                style={{ width: '100%', fontWeight: 700, padding: '10px 16px' }}
+              >
+                {challengeSubmitting ? 'Creating…' : 'Create Challenge'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

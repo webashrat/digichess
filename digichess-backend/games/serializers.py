@@ -2,9 +2,11 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from rest_framework import serializers
 import chess
+from datetime import timedelta
 
 from accounts.serializers import UserSerializer
 from .models import Game
+from .game_core import FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
 from utils.email import send_email_notification
 
 User = get_user_model()
@@ -22,6 +24,7 @@ TIME_DEFAULTS = {
 class GameSerializer(serializers.ModelSerializer):
     white = UserSerializer(read_only=True)
     black = UserSerializer(read_only=True)
+    creator = UserSerializer(read_only=True)
     opponent_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     preferred_color = serializers.ChoiceField(
         choices=["white", "black", "auto"], required=False, allow_null=True, write_only=True
@@ -35,6 +38,9 @@ class GameSerializer(serializers.ModelSerializer):
     rated = serializers.BooleanField(required=False, default=True)
     current_fen = serializers.CharField(read_only=True)
     legal_moves = serializers.SerializerMethodField(read_only=True)
+    first_move_deadline = serializers.SerializerMethodField(read_only=True)
+    first_move_color = serializers.SerializerMethodField(read_only=True)
+    move_count = serializers.SerializerMethodField(read_only=True)
 
     rematch_requested_by = serializers.SerializerMethodField()
     draw_offer_by = serializers.SerializerMethodField()
@@ -43,6 +49,7 @@ class GameSerializer(serializers.ModelSerializer):
         model = Game
         fields = (
             "id",
+            "creator",
             "white",
             "black",
             "opponent_id",
@@ -65,6 +72,9 @@ class GameSerializer(serializers.ModelSerializer):
             "created_at",
             "started_at",
             "finished_at",
+            "first_move_deadline",
+            "first_move_color",
+            "move_count",
         )
         read_only_fields = (
             "status",
@@ -73,6 +83,9 @@ class GameSerializer(serializers.ModelSerializer):
             "created_at",
             "started_at",
             "finished_at",
+            "first_move_deadline",
+            "first_move_color",
+            "move_count",
         )
 
     def get_legal_moves(self, obj):
@@ -81,6 +94,30 @@ class GameSerializer(serializers.ModelSerializer):
             return [board.san(mv) for mv in board.legal_moves]
         except Exception:
             return []
+
+    def get_move_count(self, obj):
+        return len((obj.moves or "").strip().split()) if obj.moves else 0
+
+    def get_first_move_deadline(self, obj):
+        if obj.status != Game.STATUS_ACTIVE:
+            return None
+        move_count = self.get_move_count(obj)
+        if move_count == 0 and obj.started_at:
+            return int((obj.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+        if move_count == 1 and obj.started_at:
+            anchor = obj.last_move_at or obj.started_at
+            return int((anchor + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+        return None
+
+    def get_first_move_color(self, obj):
+        if obj.status != Game.STATUS_ACTIVE:
+            return None
+        move_count = self.get_move_count(obj)
+        if move_count == 0:
+            return "white"
+        if move_count == 1:
+            return "black"
+        return None
     
     def get_rematch_requested_by(self, obj):
         return obj.rematch_requested_by.id if obj.rematch_requested_by else None
@@ -232,7 +269,8 @@ class GameSerializer(serializers.ModelSerializer):
             current_fen=chess.STARTING_FEN,
             **validated_data,
         )
-        # Send notification ONLY to opponent (not the creator)
+        challenge_expiry_hours = CHALLENGE_EXPIRY_MINUTES / 60
+        # Send notification to opponent (incoming challenge)
         try:
             from notifications.views import create_notification
             notification = create_notification(
@@ -249,7 +287,8 @@ class GameSerializer(serializers.ModelSerializer):
                     'black_time': black_time,
                     'white_inc': white_increment,
                     'black_inc': black_increment,
-                }
+                },
+                expires_in_hours=challenge_expiry_hours
             )
             import sys
             print(f"[game_create] Notification created for opponent {opponent.id} (username: {opponent.username}): notification_id={notification.id}, game_id={game.id}", file=sys.stdout)
@@ -258,6 +297,31 @@ class GameSerializer(serializers.ModelSerializer):
             import traceback
             print(f"[game_create] Failed to create notification for opponent {opponent.id}: {e}", file=sys.stderr)
             print(f"[game_create] Traceback: {traceback.format_exc()}", file=sys.stderr)
+
+        # Send notification to creator (outgoing challenge)
+        try:
+            from notifications.views import create_notification
+            create_notification(
+                user=requester,
+                notification_type='game_challenge',
+                title='Challenge Sent',
+                message=f"Challenge sent to {opponent.username or opponent.email}",
+                data={
+                    'game_id': game.id,
+                    'from_user_id': requester.id,
+                    'from_username': requester.username,
+                    'to_user_id': opponent.id,
+                    'to_username': opponent.username or opponent.email,
+                    'time_control': time_control,
+                    'white_time': white_time,
+                    'black_time': black_time,
+                    'white_inc': white_increment,
+                    'black_inc': black_increment,
+                },
+                expires_in_hours=challenge_expiry_hours
+            )
+        except Exception:
+            pass
         
         # Also send email notification
         send_email_notification(

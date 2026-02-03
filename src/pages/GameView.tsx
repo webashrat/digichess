@@ -198,6 +198,14 @@ export default function GameView() {
 
   const moveCount = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length : 0), [game]);
   const movesList = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean) : []), [game?.moves]);
+  const opponent = useMemo(() => {
+    if (!game || !me) return null;
+    return game.white?.id === me.id ? game.black : game.white;
+  }, [game?.white, game?.black, me?.id]);
+  const isCreator = useMemo(() => {
+    if (!game?.creator?.id || !me?.id) return false;
+    return game.creator.id === me.id;
+  }, [game?.creator?.id, me?.id]);
   const isViewingLive = currentMoveIndex === null;
   const movePreview = useMemo(() => {
     const fallbackFen = game?.current_fen || 'start';
@@ -470,15 +478,21 @@ export default function GameView() {
     let deadlineMs: number | null = null;
     let color: 'white' | 'black' | null = null;
 
-    if (moveCount === 0 && myColor === 'white' && game.status === 'active' && game.started_at) {
-      deadlineMs = new Date(game.started_at).getTime() + 20000;
-      color = 'white';
-    } else if (moveCount === 1 && myColor === 'black' && game.status === 'active' && game.started_at) {
-      deadlineMs = new Date(game.started_at).getTime() + 20000;
-      color = 'black';
+    if (game.status === 'active' && game.first_move_deadline && game.first_move_color) {
+      deadlineMs = game.first_move_deadline * 1000;
+      color = game.first_move_color;
+    } else if (game.status === 'active' && game.started_at) {
+      const graceMs = 20000;
+      if (moveCount === 0) {
+        deadlineMs = new Date(game.started_at).getTime() + graceMs;
+        color = 'white';
+      } else if (moveCount === 1) {
+        deadlineMs = new Date(game.started_at).getTime() + graceMs;
+        color = 'black';
+      }
     }
 
-    if (!deadlineMs || !color) {
+    if (!deadlineMs || !color || color !== myColor) {
       setFirstMoveCountdown(null);
       return;
     }
@@ -491,7 +505,17 @@ export default function GameView() {
     update();
     const interval = window.setInterval(update, 250);
     return () => clearInterval(interval);
-  }, [game?.status, game?.created_at, game?.started_at, moveCount, myColor, isPlayer, getServerNow]);
+  }, [
+    game?.status,
+    game?.created_at,
+    game?.started_at,
+    game?.first_move_deadline,
+    game?.first_move_color,
+    moveCount,
+    myColor,
+    isPlayer,
+    getServerNow
+  ]);
 
   useEffect(() => {
     if (!firstMoveCountdown) {
@@ -547,7 +571,10 @@ export default function GameView() {
       threefold_repetition: 'by repetition',
       fifty_moves: 'by 50-move rule',
       insufficient_material: 'by insufficient material',
-      first_move_timeout: 'by first-move timeout'
+      first_move_timeout: 'by first-move timeout',
+      challenge_rejected: 'by challenge rejected',
+      challenge_aborted: 'by challenge aborted',
+      challenge_expired: 'by challenge expired'
     };
     const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
 
@@ -862,6 +889,22 @@ export default function GameView() {
             userWs.onmessage = (event) => {
               try {
                 const data = JSON.parse(event.data);
+                if (data?.type === 'notification' && data?.notification) {
+                  const notif = data.notification;
+                  const gameId = notif?.data?.game_id;
+                  if (notif.notification_type === 'challenge_rejected' && gameId && Number(gameId) === Number(id)) {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                      detail: { message: notif.message || 'Challenge rejected', type: 'info' }
+                    }));
+                    fetchGameDetail(id!).then(setGame).catch(() => {});
+                  }
+                  if (notif.notification_type === 'challenge_expired' && gameId && Number(gameId) === Number(id)) {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                      detail: { message: notif.message || 'Challenge expired', type: 'info' }
+                    }));
+                    fetchGameDetail(id!).then(setGame).catch(() => {});
+                  }
+                }
                 const payload = data?.payload || data;
                 if (payload.type === 'rematch_accepted') {
                   // Redirect to new game when rematch is accepted
@@ -1180,7 +1223,10 @@ export default function GameView() {
                     threefold_repetition: 'by repetition',
                     fifty_moves: 'by 50-move rule',
                     insufficient_material: 'by insufficient material',
-                    first_move_timeout: 'by first-move timeout'
+                    first_move_timeout: 'by first-move timeout',
+                    challenge_rejected: 'by challenge rejected',
+                    challenge_aborted: 'by challenge aborted',
+                    challenge_expired: 'by challenge expired'
                   };
                   const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
 
@@ -1952,12 +1998,12 @@ export default function GameView() {
                 {game.status === 'pending' && (
                   <div style={{ position: 'absolute', zIndex: 10, background: 'rgba(0,0,0,0.8)', padding: 20, borderRadius: 12 }}>
                     <div style={{ color: 'var(--muted)', marginBottom: 12, textAlign: 'center' }}>
-                      Waiting for opponent to accept the challenge…
+                      Waiting for {opponent?.username || 'opponent'} to accept the challenge…
                     </div>
-                    {isPlayer && game.white?.id === me?.id && (
+                    {isPlayer && isCreator && (
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                        <button className="btn btn-danger" type="button" onClick={() => doAction(() => rejectChallenge(id!), 'Challenge cancelled')}>
-                          Cancel
+                        <button className="btn btn-danger" type="button" onClick={() => doAction(() => abortGame(id!), 'Challenge aborted')}>
+                          Abort challenge
                         </button>
                       </div>
                     )}

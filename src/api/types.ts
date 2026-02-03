@@ -33,6 +33,7 @@ export interface UserDetail extends UserLookup {
 
 export interface GameSummary {
   id: number;
+  creator?: UserLookup;
   white: UserLookup;
   black: UserLookup;
   mode: Mode;
@@ -131,6 +132,9 @@ export interface AccountListItem {
   username: string;
   country: string;
   profile_pic: string | null;
+  rating_blitz?: number;
+  is_bot?: boolean;
+  is_online?: boolean;
 }
 
 export interface GameCreatePayload {

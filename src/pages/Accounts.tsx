@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAccounts } from '../api/users';
+import { fetchAccounts, fetchAccountDetail } from '../api/users';
 import { AccountListItem } from '../api/types';
 import { createThread } from '../api/social';
 import FlagIcon from '../components/FlagIcon';
@@ -8,11 +8,17 @@ import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/default
 
 export default function Accounts() {
   const [items, setItems] = useState<AccountListItem[]>([]);
+  const [ratingLookup, setRatingLookup] = useState<Record<string, number>>({});
+  const [rowHeight, setRowHeight] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const rowBg = 'rgba(15, 23, 42, 0.55)';
+  const rowBorder = '1px solid rgba(148, 163, 184, 0.12)';
+  const headerRef = useRef<HTMLTableSectionElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchAccounts({ page, page_size: 20, search })
@@ -43,6 +49,55 @@ export default function Accounts() {
       body.style.height = originalBodyHeight;
     };
   }, [page, search]);
+
+  useEffect(() => {
+    const updateRowHeight = () => {
+      if (!listRef.current) return;
+      const visibleRows = items.length;
+      if (visibleRows === 0 || visibleRows > 6) {
+        setRowHeight(null);
+        return;
+      }
+      const containerHeight = listRef.current.clientHeight;
+      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
+      const tableOffset = 8;
+      const spacing = 10 * Math.max(visibleRows - 1, 0);
+      const available = Math.max(0, containerHeight - headerHeight - tableOffset - spacing);
+      const target = Math.floor(available / visibleRows);
+      const clamped = Math.max(72, Math.min(180, target));
+      setRowHeight(clamped);
+    };
+    updateRowHeight();
+    window.addEventListener('resize', updateRowHeight);
+    return () => window.removeEventListener('resize', updateRowHeight);
+  }, [items.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const missing = items.filter((u) => u.rating_blitz === undefined || u.rating_blitz === null)
+      .filter((u) => ratingLookup[u.username] === undefined);
+    if (missing.length === 0) return;
+    Promise.all(
+      missing.map((u) =>
+        fetchAccountDetail(u.username)
+          .then((detail) => ({ username: u.username, rating: detail.rating_blitz }))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      setRatingLookup((prev) => {
+        const next = { ...prev };
+        results.forEach((res) => {
+          if (!res || res.rating === undefined || res.rating === null) return;
+          next[res.username] = res.rating;
+        });
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, ratingLookup]);
 
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
@@ -84,7 +139,16 @@ export default function Accounts() {
           </p>
         </div>
         <input
-          style={{ maxWidth: 280, fontSize: 15, padding: '12px 16px' }}
+          style={{
+            maxWidth: 280,
+            fontSize: 15,
+            padding: '12px 16px',
+            borderRadius: 12,
+            border: '1px solid rgba(148, 163, 184, 0.25)',
+            background: 'linear-gradient(160deg, rgba(10, 16, 28, 0.8), rgba(9, 13, 24, 0.95))',
+            color: 'var(--text)',
+            boxShadow: '0 8px 18px rgba(0,0,0,0.35)'
+          }}
           placeholder="🔍 Search username..."
           value={search}
           onChange={(e) => {
@@ -96,6 +160,7 @@ export default function Accounts() {
       <div className="card" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div 
           className="games-list-scrollable"
+          ref={listRef}
           style={{ 
             overflowY: 'auto', 
             overflowX: 'hidden',
@@ -105,20 +170,31 @@ export default function Accounts() {
             scrollbarColor: 'rgba(26, 34, 51, 0.6) transparent'
           }}
         >
-        <table className="table" style={{ marginTop: 8, width: '100%' }}>
-          <thead>
+        <table className="table" style={{ marginTop: 8, width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px' }}>
+          <thead ref={headerRef}>
             <tr>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Avatar</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Name</th>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Username</th>
+              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Rating</th>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Country</th>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Chat</th>
             </tr>
           </thead>
           <tbody>
             {items.map((u) => (
-              <tr key={u.id}>
-                <td>
+              <tr
+                key={u.id}
+                style={{ transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 12px 26px rgba(0,0,0,0.35)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderLeft: rowBorder, borderRadius: '12px 0 0 12px', height: rowHeight || undefined, verticalAlign: 'middle' }}>
                   <div
                     style={{
                       width: 36,
@@ -142,12 +218,41 @@ export default function Accounts() {
                     )}
                   </div>
                 </td>
-                <td>{`${u.first_name || ''} ${u.last_name || ''}`.trim() || '—'}</td>
-                <td>
-                  <a style={{ color: 'var(--text)' }} href={`#/profile/${u.username}`}>{u.username}</a>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                  <a style={{ color: 'var(--text)', fontWeight: 600 }} href={`#/profile/${u.username}`}>{u.username}</a>
                 </td>
-                <td><FlagIcon code={u.country} size={18} /></td>
-                <td>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                  {(() => {
+                    const blitzRating = u.rating_blitz ?? ratingLookup[u.username];
+                    return blitzRating !== undefined && blitzRating !== null ? (
+                    <span
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 900,
+                        color: '#baffef',
+                        background: 'linear-gradient(135deg, rgba(72, 255, 214, 0.35), rgba(18, 80, 70, 0.45))',
+                        border: '1px solid rgba(136, 255, 224, 0.6)',
+                        padding: '4px 12px',
+                        borderRadius: 12,
+                        boxShadow: '0 0 0 1px rgba(72, 255, 214, 0.35), 0 10px 22px rgba(0,0,0,0.45)',
+                        textShadow: '0 0 14px rgba(120, 255, 230, 0.85)',
+                        letterSpacing: '0.6px',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      {blitzRating}
+                    </span>
+                    ) : (
+                    <span style={{ color: 'var(--muted)' }}>—</span>
+                    );
+                  })()}
+                </td>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                  <FlagIcon code={u.country} size={18} />
+                </td>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderRight: rowBorder, borderRadius: '0 12px 12px 0', height: rowHeight || undefined, verticalAlign: 'middle' }}>
                   {!u.is_bot && (
                     <button
                       className="btn btn-info"

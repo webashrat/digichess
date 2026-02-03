@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { GameSummary, Mode } from '../api/types';
+import MiniChessBoard from './MiniChessBoard';
 
 interface GameHistoryItem extends GameSummary {
   created_at?: string;
@@ -19,6 +20,8 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [includeBotGames, setIncludeBotGames] = useState(true); // Filter for bot games
+  const [historyPreview, setHistoryPreview] = useState<{ id: number; fen: string; top: number; left: number } | null>(null);
+  const historyListRef = useRef<HTMLDivElement>(null);
   
   // Reset page when filter changes
   useEffect(() => {
@@ -67,6 +70,16 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
     loadGames();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, page]);
+
+  useEffect(() => {
+    const clearPreview = () => setHistoryPreview(null);
+    window.addEventListener('scroll', clearPreview, true);
+    window.addEventListener('resize', clearPreview);
+    return () => {
+      window.removeEventListener('scroll', clearPreview, true);
+      window.removeEventListener('resize', clearPreview);
+    };
+  }, []);
 
   const getResultForUser = (game: GameHistoryItem, userId: number): string => {
     if (!game.result || game.result === '*') return '-';
@@ -177,7 +190,11 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: '1 1 auto', overflowY: 'auto', minHeight: 0 }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: '1 1 auto', overflowY: 'auto', minHeight: 0, position: 'relative' }}
+            ref={historyListRef}
+            onScroll={() => setHistoryPreview(null)}
+          >
             {filteredGames.map((game) => {
               const isWhite = game.white.username === username;
               const opponent = isWhite ? game.black : game.white;
@@ -199,12 +216,41 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
                     borderRadius: 8,
                     textDecoration: 'none',
                     color: 'inherit',
-                    transition: 'background-color 0.2s'
+                    transition: 'background-color 0.2s',
+                    position: 'relative',
+                    overflow: 'visible'
                   }}
                   onMouseEnter={(e) => {
+                    if (!game.current_fen) return;
+                    const rowRect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
+                    const previewSize = 108;
+                    const frameSize = previewSize + 12;
+                    const padding = 8;
+                    const sideGap = 12;
+                    const midY = rowRect.top + rowRect.height / 2;
+                    const top = Math.max(padding, Math.min(midY - frameSize / 2, window.innerHeight - frameSize - padding));
+                    const rawLeft = rowRect.right - frameSize;
+                    const maxLeft = (window.innerWidth || document.documentElement.clientWidth) - frameSize - padding;
+                    const left = Math.max(padding, Math.min(rawLeft, maxLeft));
+                    setHistoryPreview({ id: game.id, fen: game.current_fen, top, left });
                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                   }}
+                  onMouseMove={(e) => {
+                    if (!game.current_fen) return;
+                    const rowRect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
+                    const previewSize = 108;
+                    const frameSize = previewSize + 12;
+                    const padding = 8;
+                    const sideGap = 12;
+                    const midY = rowRect.top + rowRect.height / 2;
+                    const top = Math.max(padding, Math.min(midY - frameSize / 2, window.innerHeight - frameSize - padding));
+                    const rawLeft = rowRect.right - frameSize;
+                    const maxLeft = (window.innerWidth || document.documentElement.clientWidth) - frameSize - padding;
+                    const left = Math.max(padding, Math.min(rawLeft, maxLeft));
+                    setHistoryPreview({ id: game.id, fen: game.current_fen, top, left });
+                  }}
                   onMouseLeave={(e) => {
+                    setHistoryPreview((prev) => (prev?.id === game.id ? null : prev));
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
@@ -274,6 +320,24 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
             </div>
           )}
         </>
+      )}
+      {historyPreview && (
+        <div
+          style={{
+            position: 'fixed',
+            left: historyPreview.left,
+            top: historyPreview.top,
+            zIndex: 1000,
+            pointerEvents: 'none',
+            background: 'linear-gradient(160deg, rgba(12, 18, 32, 0.98), rgba(8, 12, 22, 0.98))',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: 10,
+            padding: 6,
+            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.5)'
+          }}
+        >
+          <MiniChessBoard fen={historyPreview.fen} size={108} />
+        </div>
       )}
     </div>
   );

@@ -155,6 +155,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.check_first_move_timeouts",
         "schedule": 2.0,  # Every 2 seconds - abort games if first move not made in time
     },
+    "check-pending-challenge-expiry": {
+        "task": "games.tasks.check_pending_challenge_expiry",
+        "schedule": 30.0,  # Every 30 seconds - abort stale pending challenges
+    },
     "flush-game-proxies": {
         "task": "games.tasks.flush_dirty_games",
         "schedule": 30.0,  # Every 30 seconds

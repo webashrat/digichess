@@ -2,16 +2,13 @@ import { FormEvent, useEffect, useState } from 'react';
 import { fetchMe, updateMe } from '../api/account';
 import { UserDetail } from '../api/types';
 import { CountrySelect } from '../components/CountrySelect';
-import api from '../api/client';
 import { socialPlatforms, detectPlatform } from '../utils/socialPlatforms';
-import { setHashRoute } from '../utils/hashNavigate';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
 
 export default function AccountEdit() {
   const [me, setMe] = useState<UserDetail | null>(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
-  const [deleteMsg, setDeleteMsg] = useState('');
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,19 +93,6 @@ export default function AccountEdit() {
       updateField('profile_pic', result);
     };
     reader.readAsDataURL(file);
-  };
-
-  const deleteAccount = () => {
-    setDeleteMsg('');
-    api
-      .delete('/api/accounts/me/')
-      .then(() => {
-        localStorage.removeItem('token');
-        window.dispatchEvent(new Event('auth-changed'));
-        setDeleteMsg('Account deleted. Redirecting...');
-        setHashRoute('/');
-      })
-      .catch((err) => setDeleteMsg(err.response?.data?.detail || 'Delete failed'));
   };
 
   if (!me && !error) {
@@ -242,8 +226,6 @@ export default function AccountEdit() {
         {msg && <div style={{ color: 'var(--accent)', fontSize: 13 }}>{msg}</div>}
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         <button className="btn btn-success" type="submit" style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>💾 Save Changes</button>
-        <button className="btn btn-danger" type="button" onClick={deleteAccount}>Delete account</button>
-        {deleteMsg && <div style={{ color: deleteMsg.includes('failed') ? 'var(--danger)' : 'var(--accent)', fontSize: 13 }}>{deleteMsg}</div>}
       </form>
     </div>
   );

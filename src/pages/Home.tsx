@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { GameSummary, LeaderboardRow, Mode } from '../api/types';
 import IdentityStrip from '../components/IdentityStrip';
+import MiniChessBoard from '../components/MiniChessBoard';
 import FlagIcon from '../components/FlagIcon';
 import { AccountListItem } from '../api/types';
 import { fetchMe } from '../api/account';
@@ -30,6 +31,8 @@ export default function Home() {
   const [myGamesTotal, setMyGamesTotal] = useState(0);
   const [myGamesLoading, setMyGamesLoading] = useState(false);
   const [includeBotGames, setIncludeBotGames] = useState(true); // Filter for bot games
+  const [hoveredLiveId, setHoveredLiveId] = useState<number | null>(null);
+  const [recentPreview, setRecentPreview] = useState<{ id: number; fen: string; top: number; left: number } | null>(null);
   
   // Reset page when filter changes
   useEffect(() => {
@@ -144,6 +147,16 @@ export default function Home() {
       loadMyGames();
     }
   }, [me?.username, myGamesPage]);
+
+  useEffect(() => {
+    const clearPreview = () => setRecentPreview(null);
+    window.addEventListener('scroll', clearPreview, true);
+    window.addEventListener('resize', clearPreview);
+    return () => {
+      window.removeEventListener('scroll', clearPreview, true);
+      window.removeEventListener('resize', clearPreview);
+    };
+  }, []);
 
   useEffect(() => {
     if (!me?.username) {
@@ -291,7 +304,16 @@ export default function Home() {
         </div>
       )}
       {/* Hero Section */}
-      <div className="card" style={{ 
+      <div
+        className="card"
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-stop-find-match="true"]')) return;
+          if (!queueing) {
+            findMatch();
+          }
+        }}
+        style={{ 
         background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.1) 0%, rgba(21, 163, 116, 0.05) 100%)',
         border: '1px solid rgba(44, 230, 194, 0.2)',
         display: 'flex', 
@@ -300,7 +322,8 @@ export default function Home() {
         alignItems: 'center', 
         justifyContent: 'space-between', 
         flexShrink: 0,
-        padding: 24
+        padding: 24,
+        cursor: queueing ? 'default' : 'pointer'
       }}>
         <div style={{ flex: '1 1 300px' }}>
           <div style={{ 
@@ -376,6 +399,7 @@ export default function Home() {
               <button
                 key={m}
                 className="btn btn-ghost"
+                data-stop-find-match="true"
                 style={{ 
                   borderColor: isActive ? colors.border : 'var(--border)', 
                   color: isActive ? colors.active : colors.inactive,
@@ -384,7 +408,10 @@ export default function Home() {
                   transition: 'all 0.2s ease',
                   textTransform: 'capitalize'
                 }}
-                onClick={() => setMode(m)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMode(m);
+                }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
                     e.currentTarget.style.borderColor = colors.border;
@@ -409,7 +436,11 @@ export default function Home() {
           <button 
             className="btn btn-primary" 
             type="button" 
-            onClick={findMatch} 
+            data-stop-find-match="true"
+            onClick={(e) => {
+              e.stopPropagation();
+              findMatch();
+            }} 
             disabled={queueing}
             style={{
               fontSize: 15,
@@ -421,7 +452,16 @@ export default function Home() {
             {queueing ? '⏳ Searching...' : '⚡ Find Match'}
           </button>
           {queueing && (
-            <button className="btn btn-warning" type="button" onClick={cancelMatch} style={{ fontSize: 13 }}>
+            <button
+              className="btn btn-warning"
+              type="button"
+              data-stop-find-match="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                cancelMatch();
+              }}
+              style={{ fontSize: 13 }}
+            >
               Cancel
             </button>
           )}
@@ -733,7 +773,9 @@ export default function Home() {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
-            {visibleOnline.slice(0, 4).map((u) => (
+            {visibleOnline.slice(0, 4).map((u) => {
+              const blitzRating = (u as any).rating_blitz ?? (u as any).rating;
+              return (
               <div 
                 key={u.id} 
                 style={{ 
@@ -759,7 +801,29 @@ export default function Home() {
                 }}
                 onClick={() => setHashRoute(`/profile/${u.username}`)}
               >
-                <IdentityStrip user={u as any} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <IdentityStrip user={u as any} rating={undefined} ratingTone="muted" />
+                  {blitzRating !== undefined && blitzRating !== null && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#2ce6c2',
+                        background: 'rgba(44, 230, 194, 0.12)',
+                        border: '1px solid rgba(44, 230, 194, 0.35)',
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        boxShadow: '0 6px 14px rgba(0,0,0,0.35)',
+                        textShadow: '0 0 10px rgba(44, 230, 194, 0.45)',
+                        letterSpacing: '0.2px',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <span style={{ opacity: 0.7, marginRight: 6, fontWeight: 600 }}>Blitz</span>
+                      {blitzRating}
+                    </div>
+                  )}
+                </div>
                 <button
                   className="btn btn-info"
                   type="button"
@@ -774,7 +838,8 @@ export default function Home() {
                   {challengingId === u.id ? 'Sending...' : '⚔️ Challenge'}
                 </button>
               </div>
-            ))}
+            );
+            })}
             {visibleOnline.length === 0 && (
               <div style={{ 
                 color: 'var(--muted)', 
@@ -842,18 +907,41 @@ export default function Home() {
                 border: '1px solid rgba(44, 230, 194, 0.1)',
                 background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.05) 0%, transparent 100%)',
                 transition: 'all 0.2s ease',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'visible'
               }}
               onMouseEnter={(e) => {
+                setHoveredLiveId(g.id);
                 e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.3)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
+                setHoveredLiveId((prev) => (prev === g.id ? null : prev));
                 e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.1)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
               onClick={() => setHashRoute(`/games/${g.id}`)}
               >
+                {hoveredLiveId === g.id && g.current_fen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 4,
+                      pointerEvents: 'none',
+                      background: 'linear-gradient(160deg, rgba(12, 18, 32, 0.98), rgba(8, 12, 22, 0.98))',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: 10,
+                      padding: 8,
+                      boxShadow: '0 12px 28px rgba(0, 0, 0, 0.5)'
+                    }}
+                  >
+                    <MiniChessBoard fen={g.current_fen} size={120} />
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                   <IdentityStrip user={g.white} rating={undefined} mode={g.mode} />
                   <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>VS</span>
@@ -1114,8 +1202,10 @@ export default function Home() {
                   flex: '1 1 auto', 
                   overflowY: 'auto',
                   overflowX: 'hidden',
-                  minHeight: 0
+                  minHeight: 0,
+                  position: 'relative'
                 }}
+                onScroll={() => setRecentPreview(null)}
               >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
                     {filteredGames.map((game) => {
@@ -1124,15 +1214,75 @@ export default function Home() {
                   const result = getResultForUser(game);
                   
                   return (
-                    <div key={game.id} style={{ 
-                      border: '1px solid var(--border)', 
-                      borderRadius: 6, 
-                      padding: '6px 8px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 6
-                    }}>
+                    <div
+                      key={game.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/games/${game.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/games/${game.id}`);
+                        }
+                      }}
+                      style={{ 
+                        border: '1px solid var(--border)', 
+                        borderRadius: 6, 
+                        padding: '6px 8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 6,
+                        cursor: 'pointer',
+                        position: 'relative',
+                        overflow: 'visible'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!game.current_fen) return;
+                        const rowRect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                        const previewSize = 108;
+                        const frameSize = previewSize + 12;
+                        const padding = 8;
+                        const sideGap = 12;
+                        const midY = rowRect.top + rowRect.height / 2;
+                        const top = Math.max(padding, Math.min(midY - frameSize / 2, window.innerHeight - frameSize - padding));
+                        const rightCandidate = rowRect.right + sideGap;
+                        const leftCandidate = rowRect.left - sideGap - frameSize;
+                        let left = rightCandidate;
+                        if (rightCandidate + frameSize > window.innerWidth - padding && leftCandidate >= padding) {
+                          left = leftCandidate;
+                        } else if (rightCandidate + frameSize > window.innerWidth - padding) {
+                          left = Math.max(padding, window.innerWidth - frameSize - padding);
+                        }
+                        const horizontalShift = -36;
+                        left = Math.max(padding, Math.min(left + horizontalShift, window.innerWidth - frameSize - padding));
+                        setRecentPreview({ id: game.id, fen: game.current_fen, top, left });
+                      }}
+                      onMouseMove={(e) => {
+                        if (!game.current_fen) return;
+                        const rowRect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                        const previewSize = 108;
+                        const frameSize = previewSize + 12;
+                        const padding = 8;
+                        const sideGap = 12;
+                        const midY = rowRect.top + rowRect.height / 2;
+                        const top = Math.max(padding, Math.min(midY - frameSize / 2, window.innerHeight - frameSize - padding));
+                        const rightCandidate = rowRect.right + sideGap;
+                        const leftCandidate = rowRect.left - sideGap - frameSize;
+                        let left = rightCandidate;
+                        if (rightCandidate + frameSize > window.innerWidth - padding && leftCandidate >= padding) {
+                          left = leftCandidate;
+                        } else if (rightCandidate + frameSize > window.innerWidth - padding) {
+                          left = Math.max(padding, window.innerWidth - frameSize - padding);
+                        }
+                        const horizontalShift = -36;
+                        left = Math.max(padding, Math.min(left + horizontalShift, window.innerWidth - frameSize - padding));
+                        setRecentPreview({ id: game.id, fen: game.current_fen, top, left });
+                      }}
+                      onMouseLeave={() => {
+                        setRecentPreview((prev) => (prev?.id === game.id ? null : prev));
+                      }}
+                    >
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                         <div style={{ 
                           width: 24, 
@@ -1163,6 +1313,7 @@ export default function Home() {
                                 textOverflow: 'ellipsis',
                                 maxWidth: '120px'
                               }}
+                              onClick={(e) => e.stopPropagation()}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.color = 'var(--accent)';
                               }}
@@ -1181,18 +1332,29 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                      <Link 
-                        to={`/games/${game.id}`} 
-                        className="btn btn-info" 
-                        style={{ fontSize: 10, padding: '4px 8px', flexShrink: 0 }}
-                      >
-                        View
-                      </Link>
                     </div>
                   );
                   })}
                 </div>
               </div>
+              {recentPreview && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    left: recentPreview.left,
+                    top: recentPreview.top,
+                    zIndex: 1000,
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(160deg, rgba(12, 18, 32, 0.98), rgba(8, 12, 22, 0.98))',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: 10,
+                    padding: 6,
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.5)'
+                  }}
+                >
+                  <MiniChessBoard fen={recentPreview.fen} size={108} />
+                </div>
+              )}
               
               {/* Pagination - Outside the games container */}
               {Math.ceil(myGamesTotal / 2) > 1 && (
