@@ -17,6 +17,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
   // Check if this is DIGI bot and use DIGIBOT.jpg
   const isDigiBot = (user.first_name === 'DIGI' || user.username === 'DIGI' || user.username?.toUpperCase() === 'DIGI');
   const profilePic = isDigiBot ? '/DIGIBOT.jpg' : (user.profile_pic || undefined);
+  const isBot = !!user.is_bot || user.country?.toUpperCase() === 'BOT';
   
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -85,7 +86,11 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
           >
             {user.username}
           </a>
-          <FlagIcon code={user.country} size={18} />
+          {isBot ? (
+            <span title="BOT" style={{ fontSize: 16, lineHeight: 1 }}>🤖</span>
+          ) : (
+            <FlagIcon code={user.country} size={18} />
+          )}
           {rating !== undefined && rating !== null && (
             <span style={{ 
               fontSize: ratingTone === 'muted' ? 12 : 14, 

@@ -533,18 +533,31 @@ export default function GameView() {
 
   useEffect(() => {
     if (!game || !me || !isPlayer) return;
-    if (game.status !== 'finished') return;
+    if (game.status !== 'finished' && game.status !== 'aborted') return;
     if (lastToastGameIdRef.current === game.id) return;
 
     const isWhite = game.white?.id === me.id;
     const isBlack = game.black?.id === me.id;
     const result = game.result || '*';
     const reason = (lastFinishReasonRef.current || '').toString();
+    const abortReasons = new Set([
+      'challenge_rejected',
+      'challenge_aborted',
+      'challenge_expired',
+      'first_move_timeout',
+      'game_aborted'
+    ]);
+    const isAborted = game.status === 'aborted' || abortReasons.has(reason);
 
     let type: 'success' | 'error' | 'info' = 'info';
     let label = 'Game ended';
+    let emoji: string | undefined;
 
-    if (result === '1/2-1/2') {
+    if (isAborted) {
+      type = 'info';
+      label = 'Game Aborted';
+      emoji = '🫥';
+    } else if (result === '1/2-1/2') {
       type = 'info';
       label = 'Draw';
     } else if (result === '1-0' && isWhite) {
@@ -579,7 +592,7 @@ export default function GameView() {
     const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
 
     window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: { message: `${label}${suffix}`, type }
+      detail: { message: `${label}${suffix}`, type, emoji }
     }));
 
     lastToastGameIdRef.current = game.id;
@@ -1188,52 +1201,7 @@ export default function GameView() {
                   }
                 }
 
-                // Toast feedback (win/lose/draw with reason)
-                if (me && updatedGame && isPlayer) {
-                  const isWhite = updatedGame.white?.id === me.id;
-                  const isBlack = updatedGame.black?.id === me.id;
-                  const result = payload.result || updatedGame.result;
-                  const reason = (payload.reason || 'unknown').toString();
-
-                  let type: 'success' | 'error' | 'info' = 'info';
-                  let label = 'Game ended';
-
-                  if (result === '1/2-1/2') {
-                    type = 'info';
-                    label = 'Draw';
-                  } else if (result === '1-0' && isWhite) {
-                    type = 'success';
-                    label = 'You won';
-                  } else if (result === '0-1' && isBlack) {
-                    type = 'success';
-                    label = 'You won';
-                  } else if (result === '1-0' && isBlack) {
-                    type = 'error';
-                    label = 'You lost';
-                  } else if (result === '0-1' && isWhite) {
-                    type = 'error';
-                    label = 'You lost';
-                  }
-
-                  const reasonMap: Record<string, string> = {
-                    checkmate: 'by checkmate',
-                    timeout: 'by timeout',
-                    resign: 'by resignation',
-                    stalemate: 'by stalemate',
-                    threefold_repetition: 'by repetition',
-                    fifty_moves: 'by 50-move rule',
-                    insufficient_material: 'by insufficient material',
-                    first_move_timeout: 'by first-move timeout',
-                    challenge_rejected: 'by challenge rejected',
-                    challenge_aborted: 'by challenge aborted',
-                    challenge_expired: 'by challenge expired'
-                  };
-                  const suffix = reasonMap[reason] ? ` ${reasonMap[reason]}` : '';
-
-                  window.dispatchEvent(new CustomEvent('show-toast', {
-                    detail: { message: `${label}${suffix}`, type }
-                  }));
-                }
+                // Toast feedback handled by status watcher to avoid duplicates
               })
               .catch(() => {});
             

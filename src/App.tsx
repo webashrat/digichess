@@ -23,11 +23,11 @@ function App() {
   const routeProbe = `${location.pathname}${location.hash}${window.location.pathname}${window.location.hash}`;
   const isGameRoute = /\/games\/\d+/.test(routeProbe);
   const hideNav = isGameRoute;
-  const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success'; emoji?: string } | null>(null);
 
   useEffect(() => {
     const handleToast = (e: CustomEvent) => {
-      setToast({ message: e.detail.message, type: e.detail.type || 'info' });
+      setToast({ message: e.detail.message, type: e.detail.type || 'info', emoji: e.detail.emoji });
       setTimeout(() => setToast(null), 3000);
     };
     window.addEventListener('show-toast' as any, handleToast as EventListener);
@@ -85,7 +85,7 @@ function App() {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <span style={{ fontSize: isGameRoute ? 22 : 14 }}>
-              {toast.type === 'error' ? '😵‍💫💥' : toast.type === 'success' ? '🏆😄' : '🤝😅'}
+              {toast.emoji || (toast.type === 'error' ? '😵‍💫💥' : toast.type === 'success' ? '🏆😄' : '🤝😅')}
             </span>
             <span>{toast.message}</span>
           </div>
