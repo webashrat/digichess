@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -143,45 +144,9 @@ CHANNEL_LAYERS = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BEAT_SCHEDULE = {
-    "broadcast_clocks": {
-        "task": "games.tasks.broadcast_clock_updates",
-        "schedule": 1.0,
-    },
-    "check-game-timeouts": {
-        "task": "games.tasks.check_game_timeouts",
-        "schedule": 5.0,  # Every 5 seconds - check for game timeouts (continues clock when user disconnects)
-    },
-    "check-first-move-timeouts": {
-        "task": "games.tasks.check_first_move_timeouts",
-        "schedule": 2.0,  # Every 2 seconds - abort games if first move not made in time
-    },
-    "check-pending-challenge-expiry": {
-        "task": "games.tasks.check_pending_challenge_expiry",
-        "schedule": 30.0,  # Every 30 seconds - abort stale pending challenges
-    },
-    "flush-game-proxies": {
-        "task": "games.tasks.flush_dirty_games",
-        "schedule": 30.0,  # Every 30 seconds
-    },
-    "arena_pairings": {
-        "task": "games.tasks.arena_pairing_tick",
-        "schedule": 15.0,
-    },
-    "glicko_decay": {
-        "task": "games.tasks.glicko_decay",
-        "schedule": 86400.0,
-    },
-    "matchmaking_status": {
-        "task": "games.tasks.broadcast_matchmaking_status",
-        "schedule": 5.0,
-    },
     "store_daily_rating_snapshots": {
         "task": "games.tasks.store_daily_rating_snapshots",
-        "schedule": 86400.0,  # Run daily (24 hours = 86400 seconds)
-    },
-    "flush_dirty_games": {
-        "task": "games.tasks.flush_dirty_games",
-        "schedule": 30.0,  # Flush batched writes every 30 seconds (Lichess-style)
+        "schedule": crontab(minute=0, hour=0),  # Run daily at 00:00 UTC
     },
 }
 

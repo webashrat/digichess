@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from datetime import datetime
+from django.utils import timezone
 
 from .models import User
 from .models_rating_history import RatingHistory
@@ -61,12 +62,12 @@ class UserRatingHistoryView(APIView):
             })
         
         # Add current rating as today's entry if not already present
-        today = datetime.now().date()
+        today = timezone.now().astimezone(timezone.utc).date()
         if not qs.filter(date=today).exists():
             history.append({
                 'date': today.isoformat(),
                 'rating': current_rating,
-                'created_at': datetime.now().isoformat()
+                'created_at': timezone.now().isoformat()
             })
         
         return Response({

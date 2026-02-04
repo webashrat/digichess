@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import api from '../api/client';
 import { fetchAccounts } from '../api/users';
 import { AccountListItem } from '../api/types';
@@ -33,6 +33,13 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
   const [userSearchResults, setUserSearchResults] = useState<AccountListItem[]>([]);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [isCompareFocused, setIsCompareFocused] = useState(false);
+
+  const formatDateLabel = (value: string | number) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   useEffect(() => {
     console.log('[RatingHistoryGraph] Component mounted/updated:', { username, mode });
@@ -143,7 +150,7 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
       
       // Store both formatted and original dates
       const ratingHistoryWithDates = sortedHistory.map((entry: any) => ({
-        formattedDate: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        formattedDate: formatDateLabel(entry.date),
         originalDate: entry.date, // Keep original ISO date for comparison
         rating: entry.rating,
         gameId: 0
@@ -153,9 +160,10 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
       let finalRatingHistory = ratingHistoryWithDates;
       if (finalRatingHistory.length === 0) {
         const today = new Date();
+        const todayIso = today.toISOString().split('T')[0];
         finalRatingHistory = [{
-          formattedDate: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          originalDate: today.toISOString().split('T')[0],
+          formattedDate: formatDateLabel(todayIso),
+          originalDate: todayIso,
           rating: currentRating,
           gameId: 0
         }];
@@ -175,7 +183,7 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
       
       // Add max rating indicator to data - only mark the newest max point
       const dataWithMax = finalRatingHistory.map((point) => ({
-        date: point.formattedDate,
+        date: point.originalDate,
         rating: point.rating,
         gameId: point.gameId,
         isMax: newestMaxPoint && point.originalDate === newestMaxPoint.originalDate && point.rating === maxRating,
@@ -249,19 +257,18 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
       );
       
       let compareRatingHistory: (RatingPoint & { formattedDate: string; originalDate: string })[] = sortedHistory.map((entry: any) => ({
-        formattedDate: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        formattedDate: formatDateLabel(entry.date),
         originalDate: entry.date,
-        date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         rating: entry.rating,
         gameId: 0
       }));
       
       if (compareRatingHistory.length === 0) {
         const today = new Date();
+        const todayIso = today.toISOString().split('T')[0];
         compareRatingHistory = [{
-          formattedDate: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          originalDate: today.toISOString().split('T')[0],
-          date: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          formattedDate: formatDateLabel(todayIso),
+          originalDate: todayIso,
           rating: currentRating,
           gameId: 0
         }];
@@ -280,7 +287,7 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
       
       // Mark max point and convert to RatingPoint format
       const compareDataWithMax: RatingPoint[] = compareRatingHistory.map((point) => ({
-        date: point.formattedDate,
+        date: point.originalDate,
         rating: point.rating,
         gameId: point.gameId,
         isMax: compareNewestMax && point.originalDate === compareNewestMax.originalDate && point.rating === compareMaxRating
@@ -369,6 +376,19 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
   const today = new Date().toISOString().split('T')[0];
   const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const showInlineTicks = mergedData.length > 2;
+  const xTickInterval = mergedData.length <= 6 ? 0 : 'preserveStartEnd';
+  const xTickAngle = mergedData.length <= 6 ? 0 : -35;
+  const xTickAnchor = mergedData.length <= 6 ? 'middle' : 'end';
+  const xTickHeight = mergedData.length <= 6 ? 40 : 70;
+  const chartHeight = 240;
+  const axisRowHeight = 32;
+  const axisLabels = useMemo(() => {
+    if (!mergedData.length) return { start: '', end: '' };
+    const start = formatDateLabel(mergedData[0].date);
+    const end = formatDateLabel(mergedData[mergedData.length - 1].date);
+    return { start, end };
+  }, [mergedData]);
 
   console.log('[RatingHistoryGraph] Rendering modal:', { username, mode, dataLength: data.length, loading, error });
 
@@ -599,7 +619,8 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
           </button>
         </div>
         
-        <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0, alignItems: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flex: '1 1 520px' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <label style={{ fontSize: 13, color: 'var(--muted)' }}>From:</label>
             <input
@@ -667,12 +688,37 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
               All Time
             </button>
           </div>
+          </div>
           
           {/* Compare with user */}
-          <div style={{ position: 'relative', marginLeft: 'auto' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <label style={{ fontSize: 13, color: 'var(--muted)' }}>Compare:</label>
+          <div style={{ position: 'relative', marginLeft: 'auto', flex: '0 0 auto' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <span style={{
+                fontSize: 12,
+                color: 'rgba(255, 255, 255, 0.75)',
+                fontWeight: 700,
+                padding: '6px 10px',
+                borderRadius: 999,
+                background: 'rgba(44, 230, 194, 0.12)',
+                border: '1px solid rgba(44, 230, 194, 0.35)',
+                letterSpacing: '0.4px'
+              }}>
+                Compare
+              </span>
               <div style={{ position: 'relative' }}>
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: 14,
+                    opacity: isCompareFocused || userSearch ? 0.9 : 0.6,
+                    color: isCompareFocused ? '#2ce6c2' : 'var(--muted)'
+                  }}
+                >
+                  🔎
+                </span>
                 <input
                   type="text"
                   placeholder="Search user..."
@@ -690,18 +736,28 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
                     }
                   }}
                   onFocus={() => {
+                    setIsCompareFocused(true);
                     if (userSearch.trim().length >= 2) {
                       setShowUserSearch(true);
                     }
                   }}
+                  onBlur={() => setIsCompareFocused(false)}
                   style={{
-                    padding: '6px 10px',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
+                    padding: '7px 12px 7px 30px',
+                    background: isCompareFocused
+                      ? 'linear-gradient(135deg, rgba(44, 230, 194, 0.12), rgba(44, 230, 194, 0.04))'
+                      : 'var(--bg-card)',
+                    border: isCompareFocused
+                      ? '2px solid rgba(44, 230, 194, 0.55)'
+                      : '1px solid var(--border)',
+                    borderRadius: 8,
                     color: 'var(--text)',
                     fontSize: 13,
-                    width: 180
+                    width: 220,
+                    boxShadow: isCompareFocused
+                      ? '0 0 0 3px rgba(44, 230, 194, 0.12), 0 8px 18px rgba(0,0,0,0.3)'
+                      : '0 6px 14px rgba(0,0,0,0.2)',
+                    transition: 'all 0.2s ease'
                   }}
                 />
                 {compareUsername && (
@@ -798,7 +854,7 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
           />
         )}
 
-        <div style={{ flex: '1 1 auto', minHeight: 400, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: '1 1 auto', minHeight: 320, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
               Loading rating history...
@@ -818,23 +874,31 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
               </div>
             </div>
           ) : (
-            <div style={{ width: '100%', height: '100%', minHeight: 400, flex: '1 1 auto', position: 'relative' }}>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={mergedData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+            <div style={{ width: '100%', flex: '1 1 auto', position: 'relative', overflow: 'visible' }}>
+              <div style={{ width: '100%', height: chartHeight }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mergedData} margin={{ top: 20, right: 30, left: 20, bottom: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" opacity={0.3} />
                   <XAxis 
                     dataKey="date" 
-                    stroke="var(--muted)"
+                    stroke="rgba(255, 255, 255, 0.35)"
                     style={{ fontSize: 11 }}
-                    tick={{ fill: 'var(--muted)' }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
+                    tick={showInlineTicks ? { fill: 'rgba(255, 255, 255, 0.7)', fontSize: 11 } : false}
+                    tickLine={{ stroke: 'rgba(255, 255, 255, 0.25)' }}
+                    axisLine={{ stroke: 'rgba(255, 255, 255, 0.45)', strokeWidth: 1.5 }}
+                    tickFormatter={formatDateLabel}
+                    minTickGap={24}
+                    interval={xTickInterval}
+                    angle={xTickAngle}
+                    textAnchor={xTickAnchor}
+                    height={xTickHeight}
+                    tickMargin={12}
+                    padding={{ left: 8, right: 8 }}
                   />
                   <YAxis 
-                    stroke="var(--muted)"
+                    stroke="rgba(255, 255, 255, 0.35)"
                     style={{ fontSize: 11 }}
-                    tick={{ fill: 'var(--muted)' }}
+                    tick={{ fill: 'rgba(255, 255, 255, 0.7)' }}
                     label={{ 
                       value: 'Rating', 
                       angle: -90, 
@@ -851,6 +915,11 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
                       color: 'var(--text)',
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
                     }}
+                    labelFormatter={(value) => {
+                      const parsed = new Date(String(value));
+                      if (Number.isNaN(parsed.getTime())) return String(value);
+                      return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    }}
                     formatter={(value: number, name: string) => {
                       // Only show rating, hide maxRating
                       if (name === 'maxRating') {
@@ -865,6 +934,14 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
                     }}
                     labelStyle={{ color: 'var(--accent)', fontWeight: 600, marginBottom: 4 }}
                   />
+
+                  {mergedData.length === 1 && mergedData[0]?.rating !== undefined && (
+                    <ReferenceLine
+                      y={mergedData[0].rating}
+                      stroke="rgba(46, 204, 113, 0.45)"
+                      strokeDasharray="4 4"
+                    />
+                  )}
                   
                   {/* Main rating line - Green for primary user */}
                   <Line 
@@ -982,8 +1059,29 @@ export default function RatingHistoryGraph({ username, mode, onClose }: RatingHi
                       hide={true}
                     />
                   )}
-                </LineChart>
-              </ResponsiveContainer>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {!showInlineTicks && (axisLabels.start || axisLabels.end) && (
+                <div
+                  style={{
+                    height: axisRowHeight,
+                    marginTop: 6,
+                    paddingTop: 6,
+                    borderTop: '1px solid rgba(255, 255, 255, 0.18)',
+                    display: 'flex',
+                    justifyContent: axisLabels.start === axisLabels.end ? 'center' : 'space-between',
+                    alignItems: 'center',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: '0.2px'
+                  }}
+                >
+                  <span>{axisLabels.start}</span>
+                  {axisLabels.start !== axisLabels.end && <span>{axisLabels.end}</span>}
+                </div>
+              )}
             </div>
           )}
         </div>

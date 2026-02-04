@@ -16,6 +16,7 @@ from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
 from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
 from .move_optimizer import process_move_optimized, latency_monitor
+from accounts.models_rating_history import RatingHistory
 
 User = get_user_model()
 
@@ -29,6 +30,37 @@ def update_ratings_async(game_id: int, result: str):
     fv = FinishGameView()
     fv.update_ratings(game, result)
     return
+
+
+@shared_task
+def store_daily_rating_snapshots():
+    """Store a daily UTC snapshot of each user's ratings."""
+    snapshot_date = timezone.now().astimezone(timezone.utc).date()
+    rating_fields = {
+        "bullet": "rating_bullet",
+        "blitz": "rating_blitz",
+        "rapid": "rating_rapid",
+        "classical": "rating_classical",
+    }
+
+    entries = []
+    users = User.objects.all().only("id", *rating_fields.values())
+    for user in users.iterator(chunk_size=1000):
+        for mode, field in rating_fields.items():
+            rating = getattr(user, field, None)
+            if rating is None:
+                continue
+            entries.append(
+                RatingHistory(
+                    user_id=user.id,
+                    mode=mode,
+                    rating=rating,
+                    date=snapshot_date,
+                )
+            )
+
+    if entries:
+        RatingHistory.objects.bulk_create(entries, ignore_conflicts=True, batch_size=1000)
 
 
 @shared_task
