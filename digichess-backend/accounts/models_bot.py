@@ -15,7 +15,7 @@ class Bot(User):
 
     @classmethod
     def get_bots_by_rating(cls, mode='blitz', min_rating=None, max_rating=None):
-        """Get bots  filtered by rating for specific mode"""
+        """Get bots  filtered by rating for a specific mode"""
         rating_field = f'rating_{mode}'
         queryset = User.objects.filter(is_bot=True, is_active=True)
         
