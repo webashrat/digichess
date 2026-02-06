@@ -6,8 +6,8 @@ interface DigiQuizChartProps {
 }
 
 const COLORS = {
-  correct: '#4caf50',
-  incorrect: '#f44336'
+  correct: '#22c55e',
+  incorrect: '#ef4444'
 };
 
 export default function DigiQuizChart({ correct, wrong }: DigiQuizChartProps) {

@@ -573,7 +573,7 @@ export default function NotificationBell() {
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       <button
         type="button"
-        className="btn btn-ghost"
+        className="icon-btn"
         onClick={() => {
           if (open && viewedNotificationIds.size > 0) {
             // Mark all viewed notifications as read when closing dropdown
@@ -590,27 +590,12 @@ export default function NotificationBell() {
         }}
         aria-label="Notifications"
       >
-        🔔 {items.length > 0 && <span style={{ marginLeft: 4, color: 'var(--accent)' }}>({items.length})</span>}
+        <span className="material-symbols-outlined">notifications</span>
+        {items.length > 0 && <span className="notification-badge">{items.length}</span>}
       </button>
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            top: '110%',
-            width: 'min(320px, calc(100vw - 32px))',
-            maxHeight: '60vh',
-            overflowY: 'auto',
-            background: '#0f1726',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-            padding: 10,
-            zIndex: 10
-          }}
-        >
-          {items.length === 0 && <div style={{ color: 'var(--muted)' }}>No notifications.</div>}
+        <div className="dropdown">
+          {items.length === 0 && <div className="dropdown-empty">No notifications.</div>}
           {items.map((n) => (
             <div
               key={n.id}
@@ -620,61 +605,16 @@ export default function NotificationBell() {
                   setViewedNotificationIds(prev => new Set([...prev, n.id]));
                 }
               }}
-              style={{
-                borderBottom: '1px solid var(--border)',
-                padding: '8px 4px',
-                color: 'var(--text)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-                wordBreak: 'break-word',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'background 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(44, 230, 194, 0.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
+              className="dropdown-item"
             >
-              {/* Delete button - red cross */}
+              {/* Delete button */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDelete(n.id, n.gameId);
                 }}
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'rgba(239, 83, 80, 0.1)',
-                  color: '#ef5350',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  transition: 'all 0.2s ease',
-                  zIndex: 1,
-                  padding: 0,
-                  lineHeight: 1
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 83, 80, 0.2)';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 83, 80, 0.1)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
+                className="dropdown-delete"
                 title="Delete notification"
               >
                 ×
@@ -700,8 +640,8 @@ export default function NotificationBell() {
                 
                 return shouldShow ? (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button className="btn btn-success" type="button" onClick={(e) => { e.stopPropagation(); handleAccept(n.gameId, n.notificationType); }}>Accept</button>
-                    <button className="btn btn-danger" type="button" onClick={(e) => { e.stopPropagation(); handleReject(n.gameId, n.notificationType); }}>Reject</button>
+                    <button className="btn btn-success btn-sm" type="button" onClick={(e) => { e.stopPropagation(); handleAccept(n.gameId, n.notificationType); }}>Accept</button>
+                    <button className="btn btn-danger btn-sm" type="button" onClick={(e) => { e.stopPropagation(); handleReject(n.gameId, n.notificationType); }}>Reject</button>
                   </div>
                 ) : null;
               })()}

@@ -19,6 +19,7 @@ class Notification(models.Model):
         ('challenge_rejected', 'Challenge Rejected'),
         ('tournament_start', 'Tournament Start'),
         ('tournament_result', 'Tournament Result'),
+        ('tournament_cancelled', 'Tournament Cancelled'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -84,27 +84,16 @@ export default function Chat() {
   }, [threads, selectedId, me]);
 
   return (
-    <div
-      className="layout"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)',
-        gap: 12,
-        paddingTop: 16,
-        paddingBottom: 16,
-        height: 'calc(100vh - 100px)',
-        overflow: 'hidden'
-      }}
-    >
-      <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="layout chat-shell">
+      <div className="card chat-panel">
+        <div className="chat-header">
+          <div className="chat-header-title">
             <span style={{ fontSize: 14 }}>💬</span>
             <span>Direct Messages</span>
           </div>
-          {threads.length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{threads.length}</span>}
+          {threads.length > 0 && <span className="text-muted" style={{ fontSize: 11 }}>{threads.length}</span>}
         </div>
-        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="chat-list">
           {threads.map((t) => {
             const others = me ? t.participants.filter((p) => p.id !== me.id) : t.participants;
             const name = others.length ? others.map((p) => p.username).join(', ') : 'Me';
@@ -126,17 +115,7 @@ export default function Chat() {
             return (
               <div
                 key={t.id}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  background: active ? 'rgba(44, 230, 194, 0.12)' : 'rgba(12, 18, 32, 0.6)',
-                  border: `1px solid ${active ? 'rgba(44, 230, 194, 0.5)' : 'var(--border)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  transition: 'all 0.15s ease'
-                }}
+                className={`chat-thread${active ? ' active' : ''}`}
                 onClick={() => setSelectedId(t.id)}
               >
                 <div
@@ -152,10 +131,8 @@ export default function Chat() {
                   }}
                 />
                 <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {name}
-                  </div>
-                  <div style={{ color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className="chat-thread-title">{name}</div>
+                  <div className="chat-thread-preview">
                     {last ? `${lastSender ? `${lastSender}: ` : ''}${last}` : 'Tap to open'}
                   </div>
                 </div>
@@ -172,28 +149,16 @@ export default function Chat() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="card chat-panel">
+        <div className="chat-header">
+          <div className="chat-header-title">
             <span style={{ fontSize: 14 }}>💬</span>
             <span>{title}</span>
           </div>
-          {selectedId && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Active</span>}
+          {selectedId && <span className="text-muted" style={{ fontSize: 11 }}>Active</span>}
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '14px 16px',
-            background: '#0b1220',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(26, 34, 51, 0.6) transparent'
-          }}
-        >
+        <div className="chat-body">
           {messages.length === 0 && (
             <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 24, fontSize: 13 }}>
               No messages yet.
@@ -203,17 +168,7 @@ export default function Chat() {
             const mine = me && m.sender.id === me.id;
             const messageText = m.content || (m.attachment_url ? 'Attachment' : '');
             return (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                  padding: '8px 10px',
-                  borderRadius: 10,
-                  background: mine ? 'rgba(44, 230, 194, 0.08)' : 'transparent'
-                }}
-              >
+              <div key={m.id} className={`chat-message${mine ? ' mine' : ''}`}>
                 <div
                   style={{
                     width: 32,
@@ -227,13 +182,9 @@ export default function Chat() {
                   }}
                 />
                 <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: mine ? '#7ef7d1' : 'var(--text)' }}>
-                      {m.sender.username}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {new Date(m.created_at).toLocaleString()}
-                    </span>
+                  <div className="chat-message-title">
+                    <span className={`chat-message-sender${mine ? ' mine' : ''}`}>{m.sender.username}</span>
+                    <span className="chat-message-time">{new Date(m.created_at).toLocaleString()}</span>
                   </div>
                   {messageText && <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.5 }}>{messageText}</div>}
                   {m.attachment_url && (
@@ -259,7 +210,7 @@ export default function Chat() {
           })}
         </div>
 
-        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(9, 13, 24, 0.85)' }}>
+        <div className="chat-input-row">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -271,21 +222,13 @@ export default function Chat() {
               }
             }}
             disabled={!selectedId}
-            style={{
-              flex: 1,
-              background: '#0f172a',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              borderRadius: 10,
-              padding: '10px 12px',
-              fontSize: 13
-            }}
+            className="chat-input input-sm"
           />
           <button className="btn btn-primary" type="button" onClick={handleSend} disabled={!selectedId} style={{ fontSize: 13, padding: '8px 16px' }}>
             Send
           </button>
         </div>
-        {error && <div style={{ color: 'var(--danger)', fontSize: 12, padding: '8px 16px' }}>{error}</div>}
+        {error && <div className="form-message form-message--error" style={{ margin: '8px 16px' }}>{error}</div>}
       </div>
     </div>
   );

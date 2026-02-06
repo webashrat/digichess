@@ -35,31 +35,39 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="layout" style={{ display: 'flex', justifyContent: 'center' }}>
-      <form className="card" style={{ width: 420, display: 'flex', flexDirection: 'column', gap: 12 }} onSubmit={stage === 'request' ? request : submitReset}>
-        <h2 style={{ margin: 0 }}>{stage === 'request' ? 'Forgot password' : 'Enter OTP & new password'}</h2>
+    <div className="layout centered-shell">
+      <form className="card auth-card" onSubmit={stage === 'request' ? request : submitReset}>
+        <div className="auth-header">
+          <div className="auth-icon">🔐</div>
+          <h2 className="text-gradient">{stage === 'request' ? 'Forgot password' : 'Reset your password'}</h2>
+          <p className="page-subtitle">
+            {stage === 'request' ? 'We will send an OTP to your email.' : 'Enter the OTP and choose a new password.'}
+          </p>
+        </div>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Email</div>
+          <div>Email</div>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         {stage === 'reset' && (
           <>
             <label>
-              <div style={{ color: 'var(--muted)', marginBottom: 4 }}>OTP</div>
+              <div>OTP</div>
               <input value={code} onChange={(e) => setCode(e.target.value)} required />
             </label>
             <label>
-              <div style={{ color: 'var(--muted)', marginBottom: 4 }}>New password</div>
+              <div>New password</div>
               <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
             </label>
           </>
         )}
-        {msg && <div style={{ color: 'var(--accent)', fontSize: 14 }}>{msg}</div>}
-        {err && <div style={{ color: 'var(--danger)', fontSize: 14 }}>{err}</div>}
+        {msg && <div className="form-message form-message--info">{msg}</div>}
+        {err && <div className="form-message form-message--error">{err}</div>}
         <button className="btn btn-primary" type="submit">
           {stage === 'request' ? 'Send OTP' : 'Reset password'}
         </button>
-        <a href="#/login" style={{ color: 'var(--accent)', fontSize: 14 }}>Back to login</a>
+        <a href="#/login" className="link-inline" style={{ fontSize: 14 }}>
+          Back to login
+        </a>
       </form>
     </div>
   );

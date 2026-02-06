@@ -58,7 +58,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
               width: 12,
               height: 12,
               borderRadius: '50%',
-              background: isActive ? '#4caf50' : '#f44336',
+              background: isActive ? 'var(--success)' : 'var(--danger)',
               border: '2px solid var(--bg)',
               boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
             }}
@@ -107,7 +107,7 @@ export default function IdentityStrip({ user, rating, ratingChange, mode, rightT
                 <span style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: ratingChange > 0 ? '#4caf50' : '#f44336',
+                  color: ratingChange > 0 ? 'var(--success)' : 'var(--danger)',
                   marginLeft: 2
                 }}>
                   {ratingChange > 0 ? '+' : ''}{ratingChange}

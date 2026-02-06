@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import { setHashRoute } from '../utils/hashNavigate';
 
@@ -16,12 +16,20 @@ interface Tournament {
 export default function Tournaments() {
   const [rows, setRows] = useState<Tournament[]>([]);
   const [error, setError] = useState('');
+  const [nowTs, setNowTs] = useState(Date.now());
 
-  useEffect(() => {
+  const loadTournaments = useCallback(() => {
     api
       .get('/api/games/tournaments/')
-      .then((r) => setRows(r.data?.results || []))
+      .then((r) => {
+        setRows(r.data?.results || []);
+        setError('');
+      })
       .catch(() => setError('Could not load tournaments'));
+  }, []);
+
+  useEffect(() => {
+    loadTournaments();
     
     // Disable page scrolling for this page
     const html = document.documentElement;
@@ -40,6 +48,20 @@ export default function Tournaments() {
       body.style.overflow = originalBodyOverflow;
       body.style.height = originalBodyHeight;
     };
+  }, [loadTournaments]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadTournaments();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [loadTournaments]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowTs(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -53,25 +75,13 @@ export default function Tournaments() {
       paddingBottom: 16,
       boxSizing: 'border-box'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexShrink: 0, flexWrap: 'wrap', gap: 12 }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ 
-            fontSize: 26, 
-            fontWeight: 800, 
-            marginBottom: 4,
-            background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            🏟️ Tournaments
-          </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
-            Compete in structured chess tournaments
-          </p>
+          <h1 className="page-title">Tournaments</h1>
+          <p className="page-subtitle">Compete in structured chess tournaments</p>
         </div>
-        <a href="#/tournaments/create" className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px', fontWeight: 600 }}>
-          ➕ Create Tournament
+        <a href="#/tournaments/create" className="btn btn-primary" style={{ fontSize: 13, padding: '8px 16px', fontWeight: 600 }}>
+          Create Tournament
         </a>
       </div>
       {error && (
@@ -101,26 +111,40 @@ export default function Tournaments() {
       >
         {rows.map((t) => (
           <div key={t.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }} onClick={() => setHashRoute(`/tournaments/${t.id}`)}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t.type} • {t.time_control}</div>
-              </div>
-              <span className="pill">{t.status}</span>
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: 13 }}>Starts {new Date(t.start_at).toLocaleString()}</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', color: 'var(--muted)', fontSize: 12 }}>
-              {t.type === 'arena' && <span>Arena duration: {t.arena_duration_minutes} min</span>}
-              {t.type === 'swiss' && <span>Swiss rounds: {t.swiss_rounds}</span>}
-            </div>
-            <a 
-              href={`#/tournaments/${t.id}`} 
-              className="btn btn-primary" 
-              style={{ marginTop: 'auto', width: 'fit-content' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              View Tournament
-            </a>
+            {(() => {
+              const startMs = new Date(t.start_at).getTime();
+              const seconds = Math.max(0, Math.floor((startMs - nowTs) / 1000));
+              const statusLabel = t.status === 'active' ? 'Live' : t.status.charAt(0).toUpperCase() + t.status.slice(1);
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t.type} • {t.time_control}</div>
+                    </div>
+                    <span className="pill">{statusLabel}</span>
+                  </div>
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>Starts {new Date(t.start_at).toLocaleString()}</div>
+                  {t.status === 'pending' && seconds > 0 && (
+                    <div style={{ color: 'var(--accent)', fontSize: 12 }}>
+                      Starts in {Math.floor(seconds / 60)}m {seconds % 60}s
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', color: 'var(--muted)', fontSize: 12 }}>
+                    {t.type === 'arena' && <span>Arena duration: {t.arena_duration_minutes} min</span>}
+                    {t.type === 'swiss' && <span>Swiss rounds: {t.swiss_rounds}</span>}
+                  </div>
+                  <a 
+                    href={`#/tournaments/${t.id}`} 
+                    className="btn btn-primary" 
+                    style={{ marginTop: 'auto', width: 'fit-content' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View Tournament
+                  </a>
+                </>
+              );
+            })()}
           </div>
         ))}
         {rows.length === 0 && !error && (

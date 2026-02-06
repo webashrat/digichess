@@ -81,7 +81,7 @@ export function EvaluationGraph({
       const x = padding.left + (idx / Math.max(1, moves.length - 1)) * chartWidth;
       
       const color =
-        tone > 0 ? '#4caf50' : tone < 0 ? '#ef5350' : 'rgba(255, 255, 255, 0.6)';
+        tone > 0 ? '#22c55e' : tone < 0 ? '#ef4444' : 'rgba(255, 255, 255, 0.6)';
       return {
         x,
         y,
@@ -151,10 +151,10 @@ export function EvaluationGraph({
       <svg width={graphWidth} height={height} style={{ display: 'block' }}>
         <defs>
           <linearGradient id="graphGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#4caf50" stopOpacity={0.35} />
-            <stop offset="48%" stopColor="#4caf50" stopOpacity={0.12} />
-            <stop offset="52%" stopColor="#ef5350" stopOpacity={0.12} />
-            <stop offset="100%" stopColor="#ef5350" stopOpacity={0.35} />
+            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
+            <stop offset="48%" stopColor="#22c55e" stopOpacity={0.12} />
+            <stop offset="52%" stopColor="#ef4444" stopOpacity={0.12} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.35} />
           </linearGradient>
           <linearGradient id="graphBg" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="rgba(255, 255, 255, 0.06)" />

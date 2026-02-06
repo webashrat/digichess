@@ -21,21 +21,11 @@ export default function Games() {
 
   return (
     <div className="layout" style={{ paddingTop: 16, paddingBottom: 16 }}>
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ 
-          fontSize: 26, 
-          fontWeight: 800, 
-          marginBottom: 4,
-          background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          🔥 Live Games
-        </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
-          Watch ongoing chess matches in real-time
-        </p>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Live Games</h1>
+          <p className="page-subtitle">Watch ongoing chess matches in real-time</p>
+        </div>
       </div>
       
       {games.length === 0 && (
@@ -64,7 +54,7 @@ export default function Games() {
             cursor: 'pointer'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.3)';
+            e.currentTarget.style.borderColor = 'rgba(19, 91, 236, 0.35)';
             e.currentTarget.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
@@ -78,7 +68,7 @@ export default function Games() {
               <span style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>VS</span>
               <IdentityStrip user={g.black} mode={g.mode} />
               <a 
-                className="btn"
+                className="btn btn-primary"
                 href={`#/games/${g.id}`}
                 onClick={(e) => e.stopPropagation()}
                 style={{
@@ -87,13 +77,13 @@ export default function Games() {
                   fontWeight: 600,
                   background:
                     me && (g.white.id === me.id || g.black.id === me.id)
-                      ? 'linear-gradient(90deg, #4caf50, #388e3c)'
-                      : 'linear-gradient(90deg, #2196f3, #1976d2)',
+                      ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                      : 'linear-gradient(135deg, var(--primary), var(--primary-strong))',
                   color: '#ffffff',
                   border:
                     me && (g.white.id === me.id || g.black.id === me.id)
-                      ? '1px solid #66bb6a'
-                      : '1px solid #64b5f6'
+                      ? '1px solid rgba(34, 197, 94, 0.6)'
+                      : '1px solid rgba(19, 91, 236, 0.6)'
                 }}
               >
                 {me && (g.white.id === me.id || g.black.id === me.id) ? '▶️ Play' : '👀 Watch'}

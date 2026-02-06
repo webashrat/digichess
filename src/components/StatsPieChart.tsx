@@ -7,9 +7,9 @@ interface StatsPieChartProps {
 }
 
 const COLORS = {
-  win: '#4caf50',
-  loss: '#f44336',
-  draw: '#ffc107'
+  win: '#22c55e',
+  loss: '#ef4444',
+  draw: '#f59e0b'
 };
 
 export default function StatsPieChart({ wins, losses, draws }: StatsPieChartProps) {

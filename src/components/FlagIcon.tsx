@@ -41,8 +41,8 @@ export default function FlagIcon({ code, size = 18 }: { code?: string; size?: nu
       loading="lazy"
       style={{
         display: 'block',
-        borderRadius: 3,
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.15)'
+        borderRadius: 4,
+        boxShadow: '0 0 0 1px var(--border)'
       }}
       onError={() => setImgError(true)}
     />

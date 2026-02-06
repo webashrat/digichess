@@ -291,13 +291,13 @@ export default function Home() {
   const visibleOnline = online.filter((u) => (me ? u.id !== me.id : true));
 
   return (
-    <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 20, paddingBottom: 20, width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div className="layout stack" style={{ paddingTop: 20, paddingBottom: 20, width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {activeGameId && (
         <div
           className="card"
           style={{
-            border: '1px solid rgba(245, 196, 81, 0.4)',
-            background: 'linear-gradient(120deg, rgba(245, 196, 81, 0.18) 0%, rgba(44, 230, 194, 0.08) 100%)',
+            border: '1px solid rgba(19, 91, 236, 0.45)',
+            background: 'linear-gradient(120deg, rgba(19, 91, 236, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -306,7 +306,7 @@ export default function Home() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: '#f5c451' }}>♟️ Live game in progress</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--accent)' }}>♟️ Live game in progress</div>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
               You have an active game. Resume from where you left off.
             </div>
@@ -332,8 +332,8 @@ export default function Home() {
           }
         }}
         style={{ 
-        background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.1) 0%, rgba(21, 163, 116, 0.05) 100%)',
-        border: '1px solid rgba(44, 230, 194, 0.2)',
+        background: 'linear-gradient(135deg, rgba(19, 91, 236, 0.18) 0%, rgba(19, 91, 236, 0.04) 100%)',
+        border: '1px solid rgba(19, 91, 236, 0.25)',
         display: 'flex', 
         flexWrap: 'wrap', 
         gap: 16, 
@@ -365,9 +365,9 @@ export default function Home() {
             marginBottom: 4,
             color: (() => {
               const modeColorMap: Record<Mode, string> = {
-                bullet: '#ff6b6b',
-                blitz: '#9b59b6',
-                rapid: '#45b7d1',
+                bullet: '#ef4444',
+                blitz: '#135bec',
+                rapid: '#38bdf8',
                 classical: '#f5c451'
               };
               return modeColorMap[mode];
@@ -385,28 +385,28 @@ export default function Home() {
             // Define colors for each time control
             const modeColors: Record<Mode, { active: string; inactive: string; bg: string; border: string }> = {
               bullet: {
-                active: '#ff6b6b',
-                inactive: '#ff6b6b80',
-                bg: 'rgba(255, 107, 107, 0.15)',
-                border: 'rgba(255, 107, 107, 0.4)'
+                active: '#ef4444',
+                inactive: 'rgba(239, 68, 68, 0.7)',
+                bg: 'rgba(239, 68, 68, 0.12)',
+                border: 'rgba(239, 68, 68, 0.4)'
               },
               blitz: {
-                active: '#9b59b6',
-                inactive: '#9b59b680',
-                bg: 'rgba(155, 89, 182, 0.15)',
-                border: 'rgba(155, 89, 182, 0.4)'
+                active: '#135bec',
+                inactive: 'rgba(19, 91, 236, 0.7)',
+                bg: 'rgba(19, 91, 236, 0.12)',
+                border: 'rgba(19, 91, 236, 0.5)'
               },
               rapid: {
-                active: '#45b7d1',
-                inactive: '#45b7d180',
-                bg: 'rgba(69, 183, 209, 0.15)',
-                border: 'rgba(69, 183, 209, 0.4)'
+                active: '#38bdf8',
+                inactive: 'rgba(56, 189, 248, 0.7)',
+                bg: 'rgba(56, 189, 248, 0.12)',
+                border: 'rgba(56, 189, 248, 0.5)'
               },
               classical: {
                 active: '#f5c451',
-                inactive: '#f5c45180',
-                bg: 'rgba(245, 196, 81, 0.15)',
-                border: 'rgba(245, 196, 81, 0.4)'
+                inactive: 'rgba(245, 196, 81, 0.7)',
+                bg: 'rgba(245, 196, 81, 0.12)',
+                border: 'rgba(245, 196, 81, 0.45)'
               }
             };
             
@@ -464,7 +464,7 @@ export default function Home() {
               fontSize: 15,
               padding: '12px 24px',
               fontWeight: 700,
-              boxShadow: queueing ? 'none' : '0 4px 12px rgba(44, 230, 194, 0.3)'
+              boxShadow: queueing ? 'none' : '0 4px 12px rgba(19, 91, 236, 0.3)'
             }}
           >
             {queueing ? '⏳ Searching...' : '⚡ Find Match'}
@@ -491,9 +491,9 @@ export default function Home() {
               alignItems: 'center',
               gap: 6,
               padding: '8px 12px',
-              background: 'rgba(44, 230, 194, 0.1)',
+              background: 'rgba(19, 91, 236, 0.12)',
               borderRadius: 8,
-              border: '1px solid rgba(44, 230, 194, 0.2)'
+              border: '1px solid rgba(19, 91, 236, 0.3)'
             }}>
               <span>💬</span>
               <span>{mmStatus}</span>
@@ -504,62 +504,14 @@ export default function Home() {
 
       <div className="grid-2" style={{ flex: '1 1 auto', minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: 16, 
-            flexShrink: 0,
-            gap: 12,
-            flexWrap: 'wrap'
-          }}>
-            <h3 style={{ 
-              margin: 0, 
-              fontSize: 18, 
-              fontWeight: 700, 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 10,
-              color: 'var(--text)'
-            }}>
-              <span style={{ fontSize: 20 }}>👥</span>
-              <span>Online Players</span>
-            </h3>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 10,
-              flexWrap: 'wrap'
-            }}>
+          <div className="card-header" style={{ marginBottom: 16 }}>
+            <h3 className="card-title">👥 Online Players</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ position: 'relative' }} data-bots-dropdown>
                 <button
                   onClick={() => setShowBotsDropdown(!showBotsDropdown)}
-                  style={{
-                    fontSize: 13,
-                    padding: '10px 18px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    background: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
-                    color: '#ffffff',
-                    border: '1px solid #ba68c8',
-                    borderRadius: 10,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(155, 89, 182, 0.3)',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #ba68c8, #9b59b6)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(155, 89, 182, 0.4)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #9b59b6, #8e44ad)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(155, 89, 182, 0.3)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
+                  className="btn btn-primary"
+                  style={{ fontSize: 13, padding: '10px 18px', whiteSpace: 'nowrap' }}
                 >
                   <span style={{ fontSize: 16 }}>🤖</span>
                   <span>Play with Bots</span>
@@ -571,12 +523,12 @@ export default function Home() {
                     top: '100%',
                     left: 0,
                     marginTop: 10,
-                    background: 'linear-gradient(160deg, rgba(22, 32, 54, 0.98), rgba(12, 18, 32, 0.98))',
+                    background: 'linear-gradient(160deg, rgba(22, 30, 48, 0.98), rgba(12, 18, 32, 0.98))',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
                     border: '1px solid var(--border)',
                     borderRadius: 14,
-                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(155, 89, 182, 0.1)',
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
                     zIndex: 1000,
                     minWidth: 320,
                     maxWidth: 'min(400px, calc(100vw - 48px))',
@@ -626,22 +578,22 @@ export default function Home() {
                         width: 8px;
                       }
                       .bots-dropdown-scroll::-webkit-scrollbar-track {
-                        background: rgba(26, 34, 51, 0.5);
+                        background: rgba(26, 34, 51, 0.4);
                         border-radius: 4px;
                         margin: 4px 0;
                       }
                       .bots-dropdown-scroll::-webkit-scrollbar-thumb {
-                        background: rgba(155, 89, 182, 0.5);
+                        background: rgba(19, 91, 236, 0.5);
                         border-radius: 4px;
-                        border: 1px solid rgba(155, 89, 182, 0.2);
+                        border: 1px solid rgba(19, 91, 236, 0.2);
                       }
                       .bots-dropdown-scroll::-webkit-scrollbar-thumb:hover {
-                        background: rgba(155, 89, 182, 0.7);
+                        background: rgba(19, 91, 236, 0.7);
                       }
                       /* Firefox scrollbar */
                       .bots-dropdown-scroll {
                         scrollbar-width: thin;
-                        scrollbar-color: rgba(155, 89, 182, 0.5) rgba(26, 34, 51, 0.5);
+                        scrollbar-color: rgba(19, 91, 236, 0.5) rgba(26, 34, 51, 0.5);
                       }
                     `}</style>
                     <div style={{ 
@@ -676,31 +628,8 @@ export default function Home() {
                           <button
                             key={bot.id}
                             onClick={() => handlePlayBot(bot)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 12,
-                              padding: '14px 16px',
-                              background: 'rgba(44, 230, 194, 0.03)',
-                              border: '1px solid var(--border)',
-                              borderRadius: 10,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              textAlign: 'left',
-                              width: '100%'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(155, 89, 182, 0.15)';
-                              e.currentTarget.style.borderColor = 'rgba(155, 89, 182, 0.4)';
-                              e.currentTarget.style.transform = 'translateX(-3px)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(155, 89, 182, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(44, 230, 194, 0.03)';
-                              e.currentTarget.style.borderColor = 'var(--border)';
-                              e.currentTarget.style.transform = 'translateX(0)';
-                              e.currentTarget.style.boxShadow = 'none';
-                            }}
+                            className="list-row"
+                            style={{ textAlign: 'left', width: '100%' }}
                           >
                             <div style={{
                               fontSize: 32,
@@ -711,7 +640,7 @@ export default function Home() {
                               justifyContent: 'center',
                               background: (bot.first_name === 'DIGI' || bot.username === 'DIGI') 
                                 ? 'transparent' 
-                                : 'rgba(44, 230, 194, 0.1)',
+                                : 'rgba(19, 91, 236, 0.1)',
                               borderRadius: 8,
                               flexShrink: 0,
                               overflow: 'hidden',
@@ -758,32 +687,8 @@ export default function Home() {
               </div>
               <a
                 href="#/players?online=1"
-                style={{ 
-                  fontSize: 13, 
-                  padding: '10px 18px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: 'linear-gradient(135deg, #4a90e2, #357abd)',
-                  color: '#ffffff',
-                  border: '1px solid #5ba0f2',
-                  borderRadius: 10,
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #5ba0f2, #4a90e2)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(74, 144, 226, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #4a90e2, #357abd)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.3)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
+                className="btn btn-ghost btn-sm"
+                style={{ whiteSpace: 'nowrap' }}
               >
                 <span>Online Players</span>
                 <span style={{ fontSize: 12 }}>→</span>
@@ -796,63 +701,28 @@ export default function Home() {
               return (
               <div 
                 key={u.id} 
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  background: 'rgba(44, 230, 194, 0.03)',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.3)';
-                  e.currentTarget.style.transform = 'translateX(2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.03)';
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.transform = 'translateX(0)';
-                }}
+                className="list-row"
                 onClick={() => setHashRoute(`/profile/${u.username}`)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   <IdentityStrip user={u as any} rating={undefined} ratingTone="muted" />
                   {blitzRating !== undefined && blitzRating !== null && (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: '#2ce6c2',
-                        background: 'rgba(44, 230, 194, 0.12)',
-                        border: '1px solid rgba(44, 230, 194, 0.35)',
-                        padding: '4px 8px',
-                        borderRadius: 8,
-                        boxShadow: '0 6px 14px rgba(0,0,0,0.35)',
-                        textShadow: '0 0 10px rgba(44, 230, 194, 0.45)',
-                        letterSpacing: '0.2px',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
+                    <div className="chip chip-primary" style={{ fontSize: 12 }}>
                       {blitzRating}
                     </div>
                   )}
                 </div>
                 <button
-                  className="btn btn-info"
+                  className="btn btn-primary btn-xs"
                   type="button"
                   disabled={challengingId === u.id}
-                  style={{ fontSize: 11, padding: '6px 10px', fontWeight: 600 }}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     challengePlayer(u.id);
                   }}
                 >
-                  {challengingId === u.id ? 'Sending...' : '⚔️ Challenge'}
+                  {challengingId === u.id ? 'Sending...' : 'Challenge'}
                 </button>
               </div>
             );
@@ -867,7 +737,7 @@ export default function Home() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 12,
-                background: 'rgba(44, 230, 194, 0.02)',
+                background: 'rgba(19, 91, 236, 0.05)',
                 borderRadius: 12,
                 border: '1px dashed var(--border)'
               }}>
@@ -881,26 +751,11 @@ export default function Home() {
           </div>
         </div>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>🔥</span>
-              <span>Live Games</span>
-            </h3>
-              <a 
-                href="#/games" 
-                className="btn btn-info"
-                style={{ 
-                  fontSize: 13, 
-                  padding: '8px 16px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}
-              >
-                View all →
-              </a>
+          <div className="card-header" style={{ marginBottom: 12 }}>
+            <h3 className="card-title">🔥 Live Games</h3>
+            <a href="#/games" className="btn btn-ghost btn-sm">
+              View all →
+            </a>
           </div>
           {live.length === 0 && (
             <div style={{ 
@@ -919,26 +774,13 @@ export default function Home() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {live.slice(0, 3).map((g) => (
-              <div key={g.id} className="card" style={{ 
-                padding: 12,
-                border: '1px solid rgba(44, 230, 194, 0.1)',
-                background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.05) 0%, transparent 100%)',
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'visible'
-              }}
-              onMouseEnter={(e) => {
-                setHoveredLiveId(g.id);
-                e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.3)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                setHoveredLiveId((prev) => (prev === g.id ? null : prev));
-                e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-              onClick={() => setHashRoute(`/games/${g.id}`)}
+              <div
+                key={g.id}
+                className="card"
+                style={{ padding: 12, cursor: 'pointer', position: 'relative', overflow: 'visible' }}
+                onMouseEnter={() => setHoveredLiveId(g.id)}
+                onMouseLeave={() => setHoveredLiveId((prev) => (prev === g.id ? null : prev))}
+                onClick={() => setHashRoute(`/games/${g.id}`)}
               >
                 {hoveredLiveId === g.id && g.current_fen && (
                   <div
@@ -979,25 +821,11 @@ export default function Home() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <a
-                    className="btn"
-                    style={{
-                      fontSize: 12,
-                      padding: '6px 14px',
-                      fontWeight: 600,
-                      background:
-                        me && (g.white.id === me.id || g.black.id === me.id)
-                          ? 'linear-gradient(90deg, #4caf50, #388e3c)'
-                          : 'linear-gradient(90deg, #2196f3, #1976d2)',
-                      color: '#ffffff',
-                      border:
-                        me && (g.white.id === me.id || g.black.id === me.id)
-                          ? '1px solid #66bb6a'
-                          : '1px solid #64b5f6'
-                    }}
+                    className={`btn ${me && (g.white.id === me.id || g.black.id === me.id) ? 'btn-success' : 'btn-primary'} btn-sm`}
                     href={`#/games/${g.id}`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {me && (g.white.id === me.id || g.black.id === me.id) ? '▶️ Play' : '👀 Watch'}
+                    {me && (g.white.id === me.id || g.black.id === me.id) ? 'Play' : 'Watch'}
                   </a>
                 </div>
               </div>
@@ -1006,87 +834,33 @@ export default function Home() {
         </div>
 
         <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>🏆</span>
-              <span>Leaderboards</span>
-            </h3>
-              <a 
-                href="#/leaderboards" 
-                className="btn btn-info"
-                style={{ 
-                  fontSize: 13, 
-                  padding: '8px 16px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}
-              >
-                Full board →
-              </a>
+          <div className="card-header" style={{ marginBottom: 12 }}>
+            <h3 className="card-title">🏆 Leaderboards</h3>
+            <a href="#/leaderboards" className="btn btn-ghost btn-sm">
+              Full board →
+            </a>
           </div>
-          <table className="table" style={{ fontSize: 14, width: '100%' }}>
+          <table className="table table-hover" style={{ fontSize: 14, width: '100%' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Rank</th>
-                <th style={{ padding: '10px 12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Player</th>
-                <th style={{ padding: '10px 12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Rating</th>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Rating</th>
               </tr>
             </thead>
             <tbody>
               {leaders.slice(0, 4).map((row, idx) => (
-                <tr key={row.username} style={{ 
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-                >
-                  <td style={{ 
-                    padding: '10px 12px', 
-                    fontSize: 14, 
-                    fontWeight: idx < 3 ? 700 : 600,
-                    color: idx === 0 ? '#f5c451' : idx === 1 ? '#c0c0c0' : idx === 2 ? '#cd7f32' : 'var(--text)'
-                  }}>
+                <tr key={row.username}>
+                  <td style={{ fontSize: 14, fontWeight: idx < 3 ? 700 : 600, color: idx === 0 ? '#f5c451' : idx === 1 ? '#c0c0c0' : idx === 2 ? '#cd7f32' : 'var(--text)' }}>
                     {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
                   </td>
-                  <td style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 8, 
-                    padding: '10px 12px',
-                    fontSize: 14
-                  }}>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
                     <FlagIcon code={row.country} size={18} />
-                    <a 
-                      href={`#/profile/${row.username}`} 
-                      style={{ 
-                        color: 'var(--text)', 
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        transition: 'color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = 'var(--accent)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--text)';
-                      }}
-                    >
+                    <a href={`#/profile/${row.username}`} className="link-inline">
                       {row.username}
                     </a>
                   </td>
-                  <td style={{ 
-                    padding: '10px 12px', 
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: 'var(--accent)'
-                  }}>
+                  <td style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>
                     {row.rating}
                   </td>
                 </tr>
@@ -1122,66 +896,26 @@ export default function Home() {
           flexDirection: 'column',
           marginBottom: 0
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>📜</span>
-              <span>My Recent Games</span>
-            </h3>
-            <Link 
-              to={`/profile/${me.username}`} 
-              className="btn btn-info"
-              style={{ 
-                fontSize: 13, 
-                padding: '8px 16px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
+          <div className="card-header" style={{ marginBottom: 12 }}>
+            <h3 className="card-title">📜 My Recent Games</h3>
+            <Link to={`/profile/${me.username}`} className="btn btn-ghost btn-sm">
               View Games →
             </Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Filter:</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px', background: 'rgba(155, 89, 182, 0.15)', borderRadius: 6, border: '1px solid rgba(155, 89, 182, 0.3)' }}>
+            <span className="text-muted" style={{ fontSize: 12, fontWeight: 500 }}>Filter:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button
                 type="button"
+                className={includeBotGames ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs'}
                 onClick={() => setIncludeBotGames(true)}
-                style={{
-                  fontSize: 12,
-                  padding: '6px 12px',
-                  borderRadius: 4,
-                  border: 'none',
-                  background: includeBotGames ? 'linear-gradient(135deg, #9b59b6, #8e44ad)' : 'transparent',
-                  color: includeBotGames ? '#fff' : 'rgba(186, 104, 200, 0.8)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap',
-                  boxShadow: includeBotGames ? '0 2px 8px rgba(155, 89, 182, 0.3)' : 'none'
-                }}
               >
                 With Bots
               </button>
               <button
                 type="button"
+                className={!includeBotGames ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs'}
                 onClick={() => setIncludeBotGames(false)}
-                style={{
-                  fontSize: 12,
-                  padding: '6px 12px',
-                  borderRadius: 4,
-                  border: 'none',
-                  background: !includeBotGames ? 'linear-gradient(135deg, #9b59b6, #8e44ad)' : 'transparent',
-                  color: !includeBotGames ? '#fff' : 'rgba(186, 104, 200, 0.8)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap',
-                  boxShadow: !includeBotGames ? '0 2px 8px rgba(155, 89, 182, 0.3)' : 'none'
-                }}
               >
                 No Bots
               </button>
@@ -1203,7 +937,7 @@ export default function Home() {
             return filteredGames.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 10, color: 'var(--muted)', fontSize: 12 }}>
                 {myGames.length === 0 ? (
-                  <>No games yet. <Link to="/games/create" style={{ color: 'var(--accent)' }}>Start playing!</Link></>
+                  <>No games yet. <Link to="/games/create" className="link-inline">Start playing!</Link></>
                 ) : (
                   'No games match the filter'
                 )}
@@ -1242,18 +976,8 @@ export default function Home() {
                           navigate(`/games/${game.id}`);
                         }
                       }}
-                      style={{ 
-                        border: '1px solid var(--border)', 
-                        borderRadius: 6, 
-                        padding: '6px 8px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 6,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        overflow: 'visible'
-                      }}
+                      className="list-row"
+                      style={{ justifyContent: 'space-between', gap: 6, position: 'relative', overflow: 'visible' }}
                       onMouseEnter={(e) => {
                         if (!game.current_fen) return;
                         const rowRect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -1319,24 +1043,16 @@ export default function Home() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <Link 
                               to={`/profile/${opponent.username}`} 
+                              className="link-inline"
                               style={{ 
-                                color: 'var(--text)', 
-                                textDecoration: 'none', 
                                 fontSize: 12,
                                 fontWeight: 600,
-                                transition: 'color 0.2s ease',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 maxWidth: '120px'
                               }}
                               onClick={(e) => e.stopPropagation()}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = 'var(--accent)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'var(--text)';
-                              }}
                             >
                               {opponent.username}
                             </Link>

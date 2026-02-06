@@ -31,10 +31,12 @@ from .views_tournament import (
     TournamentDetailView,
     TournamentFinishView,
     TournamentListCreateView,
+    TournamentMyGameView,
     TournamentRegisterView,
     TournamentStartView,
     TournamentStandingsView,
     TournamentPairingsView,
+    TournamentUnregisterView,
 )
 from .views_matchmaking import EnqueueView, CancelQueueView, QueueStatusView
 from .views_public_clock import LiveClockView
@@ -71,9 +73,11 @@ urlpatterns = [
     path("tournaments/", TournamentListCreateView.as_view(), name="tournaments"),
     path("tournaments/<int:pk>/", TournamentDetailView.as_view(), name="tournament-detail"),
     path("tournaments/<int:pk>/register/", TournamentRegisterView.as_view(), name="tournament-register"),
+    path("tournaments/<int:pk>/unregister/", TournamentUnregisterView.as_view(), name="tournament-unregister"),
     path("tournaments/<int:pk>/start/", TournamentStartView.as_view(), name="tournament-start"),
     path("tournaments/<int:pk>/finish/", TournamentFinishView.as_view(), name="tournament-finish"),
     path("tournaments/<int:pk>/standings/", TournamentStandingsView.as_view(), name="tournament-standings"),
+    path("tournaments/<int:pk>/my-game/", TournamentMyGameView.as_view(), name="tournament-my-game"),
     path("tournaments/<int:pk>/pairings/", TournamentPairingsView.as_view(), name="tournament-pairings"),
     path("matchmaking/enqueue/", EnqueueView.as_view(), name="mm-enqueue"),
     path("matchmaking/cancel/", CancelQueueView.as_view(), name="mm-cancel"),

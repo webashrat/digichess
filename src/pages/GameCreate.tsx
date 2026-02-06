@@ -217,20 +217,8 @@ export default function GameCreate() {
         className="games-list-scrollable"
         >
         <div style={{ marginBottom: 6 }}>
-          <h1 style={{ 
-            fontSize: 24, 
-            fontWeight: 800, 
-            marginBottom: 4,
-            background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            ➕ Create Game
-          </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
-            Set up a new chess game with your preferred settings
-          </p>
+          <h1 className="page-title" style={{ marginBottom: 4 }}>Create Game</h1>
+          <p className="page-subtitle">Set up a new chess game with your preferred settings</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {modeOptions.map((m) => (

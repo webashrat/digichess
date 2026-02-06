@@ -19,3 +19,5 @@ digichess-backend/celerybeat-schedule
 
 git-lfs-*/
 git-lfs.tar.gz
+
+digichess-backend/config/api-1.json

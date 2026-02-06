@@ -96,44 +96,23 @@ export default function Register() {
   };
 
   return (
-    <div className="layout" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 100px)', padding: 20 }}>
-      <form className="card" style={{ 
-        width: '100%', 
-        maxWidth: 460, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 16,
-        background: 'linear-gradient(160deg, rgba(22, 32, 54, 0.95), rgba(12, 18, 32, 0.98))',
-        border: '1px solid rgba(44, 230, 194, 0.2)',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
-      }} onSubmit={submit}>
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>♟️</div>
-          <h2 style={{ 
-            margin: 0, 
-            fontSize: 28,
-            fontWeight: 800,
-            background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            Join DigiChess
-          </h2>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0 }}>
-            Create your account and start playing chess
-          </p>
+    <div className="layout centered-shell">
+      <form className="card auth-card" onSubmit={submit}>
+        <div className="auth-header">
+          <div className="auth-icon">♟️</div>
+          <h2 className="text-gradient">Join DigiChess</h2>
+          <p className="page-subtitle">Create your account and start playing chess</p>
         </div>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Email</div>
+          <div>Email</div>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Username</div>
+          <div>Username</div>
           <input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Password</div>
+          <div>Password</div>
           <div style={{ position: 'relative' }}>
             <input
               type={showPassword ? 'text' : 'password'}
@@ -142,92 +121,52 @@ export default function Register() {
               placeholder={password === '' ? 'min 8 characters' : ''}
               required
               minLength={8}
-              style={{ paddingRight: '50px', width: '100%', boxSizing: 'border-box' }}
+              style={{ paddingRight: '72px' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              className="btn btn-ghost btn-xs"
               style={{
                 position: 'absolute',
                 right: '8px',
                 top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: 'var(--muted)',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 500
+                transform: 'translateY(-50%)'
               }}
               title={showPassword ? 'Hide password' : 'Show password'}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--text)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--muted)';
-              }}
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Country (optional)</div>
+          <div>Country (optional)</div>
           <CountrySelect value={country} onChange={setCountry} />
         </label>
-        {error && (
-          <div style={{ 
-            color: 'var(--danger)', 
-            fontSize: 14, 
-            padding: '10px', 
-            background: 'rgba(239, 83, 80, 0.1)', 
-            border: '1px solid var(--danger)', 
-            borderRadius: '4px',
-            marginTop: '4px'
-          }}>
-            {error}
-          </div>
+        {error && <div className="form-message form-message--error">{error}</div>}
+        {otpSent && <div className="form-message form-message--info">{otpMsg}</div>}
+        {!otpSent && (
+          <button className="btn btn-primary" type="submit" style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>
+            Register
+          </button>
         )}
-        {otpSent && <div style={{ color: 'var(--accent)', fontSize: 14 }}>{otpMsg}</div>}
-        {!otpSent && <button className="btn btn-purple" type="submit" style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>✨ Register</button>}
         {otpSent && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <div className="stack-sm" style={{ marginTop: 8 }}>
             <label>
-              <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Enter OTP</div>
+              <div>Enter OTP</div>
               <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required />
             </label>
-            <button className="btn btn-success" onClick={handleVerify} style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>✓ Verify OTP</button>
-            <button className="btn btn-warning" type="button" onClick={handleResend} style={{ fontSize: 14, padding: '10px 20px' }}>🔄 Resend OTP</button>
+            <button className="btn btn-success" onClick={handleVerify} style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>
+              Verify OTP
+            </button>
+            <button className="btn btn-warning btn-sm" type="button" onClick={handleResend}>
+              Resend OTP
+            </button>
           </div>
         )}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 6,
-            fontSize: 14,
-            color: 'var(--muted)'
-          }}
-        >
-          <span>Already have an account?</span>
-          <button
-            type="button"
-            onClick={() => setHashRoute('/login')}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              color: 'var(--accent)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              textUnderlineOffset: 3
-            }}
-          >
+        <div className="form-note" style={{ textAlign: 'center' }}>
+          Already have an account?{' '}
+          <button type="button" onClick={() => setHashRoute('/login')} className="link-inline" style={{ background: 'none', border: 'none', padding: 0 }}>
             Log in
           </button>
         </div>

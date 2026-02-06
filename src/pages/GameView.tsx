@@ -72,6 +72,15 @@ function buildUpdateKey(moves?: string, fen?: string, status?: string): string {
   return `${normalized}|${fen || ''}|${status || ''}`;
 }
 
+type AnalysisMove = {
+  move_number: number;
+  move?: string | null;
+  eval?: number | null;
+  mate?: number | null;
+  best_move?: string | null;
+  depth?: number | null;
+};
+
 export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -104,6 +113,7 @@ export default function GameView() {
   const lastFenRef = useRef<string | null>(null);
   const lastFinishReasonRef = useRef<string | null>(null);
   const lastToastGameIdRef = useRef<number | null>(null);
+  const tournamentReturnRef = useRef<number | null>(null);
   const [loadErr, setLoadErr] = useState('');
   const [boardTheme, setBoardTheme] = useState(() => {
     if (typeof localStorage === 'undefined') return 0;
@@ -156,7 +166,9 @@ export default function GameView() {
   const [chatInput, setChatInput] = useState('');
   const [gameResultPopup, setGameResultPopup] = useState<{ type: 'win' | 'loss' | 'draw'; reason: string } | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null); // For move navigation
+  const [analysisTab, setAnalysisTab] = useState<'engine' | 'graph' | 'moves'>('engine');
   const [rematchNow, setRematchNow] = useState<number>(() => Date.now());
+  const [returnSeconds, setReturnSeconds] = useState<number | null>(null);
   const previousMoveCountRef = useRef<number>(0);
   const lastMovesRef = useRef<string>('');
   const lastUpdateKeyRef = useRef<string>('');
@@ -256,11 +268,105 @@ export default function GameView() {
 
   const moveCount = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length : 0), [game]);
   const movesList = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean) : []), [game?.moves]);
-  const analysisMoves = fullAnalysis?.analysis?.moves || [];
+  const analysisMoves: AnalysisMove[] = fullAnalysis?.analysis?.moves || [];
   const analysisTotalMoves = fullAnalysis?.analysis?.summary?.total_moves ?? moveCount;
   const analysisIsComplete =
     !!fullAnalysis && (analysisTotalMoves === 0 || analysisMoves.length >= analysisTotalMoves);
   const analyzedMoves = fullAnalysis?.analysis?.summary?.analyzed_moves || analysisMoves.length || 0;
+  const analysisBusy = analysisStatus === 'queued' || analysisStatus === 'running' || analyzing;
+  const analysisGraphMoves = useMemo(
+    () =>
+      analysisMoves.map((move) => ({
+        move_number: move.move_number,
+        move: move.move || '',
+        eval: move.eval ?? null,
+        mate: move.mate ?? null
+      })),
+    [analysisMoves]
+  );
+  const analysisEval = useMemo(() => {
+    if (!analysisMoves.length) return null;
+    const targetNumber =
+      currentMoveIndex === null
+        ? analysisMoves[analysisMoves.length - 1]?.move_number
+        : currentMoveIndex + 1;
+    const target =
+      analysisMoves.find((move) => move.move_number === targetNumber) ||
+      analysisMoves[analysisMoves.length - 1];
+    if (!target) return null;
+    return { eval: target.eval, mate: target.mate };
+  }, [analysisMoves, currentMoveIndex]);
+  const evalDisplay = useMemo(
+    () => getEvalDisplay(analysisEval?.eval, analysisEval?.mate),
+    [analysisEval?.eval, analysisEval?.mate]
+  );
+  const evalPercent = useMemo(() => {
+    if (!analysisEval) return 50;
+    if (analysisEval.mate !== null && analysisEval.mate !== undefined) {
+      return analysisEval.mate > 0 ? 100 : 0;
+    }
+    if (analysisEval.eval === null || analysisEval.eval === undefined) return 50;
+    const clamped = Math.max(-6, Math.min(6, analysisEval.eval));
+    return ((clamped + 6) / 12) * 100;
+  }, [analysisEval]);
+  const analysisTopLines = useMemo(() => {
+    if (!analysisMoves.length) return [];
+    const startIndex =
+      currentMoveIndex === null
+        ? analysisMoves.length - 1
+        : Math.min(currentMoveIndex, analysisMoves.length - 1);
+    return [0, 1, 2]
+      .map((offset) => analysisMoves[startIndex - offset])
+      .filter(Boolean)
+      .map((move) => {
+        const moveIndex = Math.max(0, move.move_number - 1);
+        const pvMoves = analysisMoves
+          .slice(moveIndex, moveIndex + 4)
+          .map((item) => item.best_move || item.move)
+          .filter(Boolean)
+          .join(' ');
+        return {
+          id: move.move_number,
+          label: `${move.move_number}. ${move.move || '—'}`,
+          score: getEvalDisplay(move.eval, move.mate).label,
+          pv: pvMoves
+        };
+      });
+  }, [analysisMoves, currentMoveIndex]);
+  const depthLabel = analysisMoves.length ? analysisMoves[analysisMoves.length - 1]?.depth : undefined;
+  const keyMoments = useMemo(() => {
+    if (analysisMoves.length < 2) return [];
+    const moments = analysisMoves
+      .slice(1)
+      .map((move, idx) => {
+        const prev = analysisMoves[idx];
+        if (prev.eval === null || prev.eval === undefined) return null;
+        if (move.eval === null || move.eval === undefined) return null;
+        const diff = move.eval - prev.eval;
+        const swing = Math.abs(diff);
+        if (swing < 0.9) return null;
+        if (diff >= 2.5) return { move: move.move_number, label: 'Brilliant', tone: 'success', delta: diff };
+        if (diff >= 1.2) return { move: move.move_number, label: 'Great', tone: 'info', delta: diff };
+        if (diff <= -2.5) return { move: move.move_number, label: 'Blunder', tone: 'danger', delta: diff };
+        if (diff <= -1.2) return { move: move.move_number, label: 'Mistake', tone: 'warning', delta: diff };
+        return { move: move.move_number, label: 'Inaccuracy', tone: 'info', delta: diff };
+      })
+      .filter(Boolean) as Array<{ move: number; label: string; tone: 'success' | 'info' | 'warning' | 'danger'; delta: number }>;
+    return moments.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 4);
+  }, [analysisMoves]);
+  const resultLabel = useMemo(() => {
+    if (!game?.result || game.result === '*') return '—';
+    if (game.result === '1/2-1/2') return '1/2 - 1/2';
+    return game.result.replace('-', ' - ');
+  }, [game?.result]);
+  const gameMeta = useMemo(() => {
+    if (!game) return '';
+    const dateValue = game.started_at || game.created_at || game.finished_at;
+    const dateLabel = dateValue ? new Date(dateValue).toLocaleDateString() : '';
+    const modeLabel = game.mode ? game.mode.toUpperCase() : 'GAME';
+    const ratedLabel = game.rated ? 'Rated' : 'Casual';
+    return `${modeLabel} • ${game.time_control} • ${ratedLabel}${dateLabel ? ` • ${dateLabel}` : ''}`;
+  }, [game]);
   const opponent = useMemo(() => {
     if (!game || !me) return null;
     return game.white?.id === me.id ? game.black : game.white;
@@ -296,6 +402,36 @@ export default function GameView() {
     if (!me || !game) return false;
     return game.white?.id === me.id || game.black?.id === me.id;
   }, [me, game]);
+
+  useEffect(() => {
+    if (!game?.tournament_id || !isPlayer) {
+      setReturnSeconds(null);
+      return;
+    }
+    if (game.status !== 'finished' && game.status !== 'aborted') {
+      setReturnSeconds(null);
+      return;
+    }
+    if (tournamentReturnRef.current === game.id) return;
+    tournamentReturnRef.current = game.id ?? null;
+    const durationSeconds = 5;
+    setReturnSeconds(durationSeconds);
+    window.dispatchEvent(
+      new CustomEvent('show-toast', {
+        detail: { message: 'Returning to tournament…', type: 'info', emoji: '🏟️' }
+      })
+    );
+    const tick = window.setInterval(() => {
+      setReturnSeconds((prev) => (prev && prev > 1 ? prev - 1 : 1));
+    }, 1000);
+    const timeout = window.setTimeout(() => {
+      navigate(`/tournaments/${game.tournament_id}`);
+    }, durationSeconds * 1000);
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(timeout);
+    };
+  }, [game?.status, game?.tournament_id, game?.id, isPlayer, navigate]);
 
   const myColor = useMemo(() => {
     if (!me || !game) return null;
@@ -1595,6 +1731,23 @@ export default function GameView() {
       .catch((err) => setPredErr(err.response?.data?.detail || 'Prediction failed'));
   };
 
+  const handleRequestAnalysis = () => {
+    if (!id) return;
+    setAnalysisError('');
+    setAnalyzing(true);
+    requestFullAnalysis(id)
+      .then((data: any) => {
+        const status = applyAnalysisResponse(data);
+        if (status === 'queued' || status === 'running') {
+          startAnalysisPolling();
+        }
+      })
+      .catch((err) => {
+        setAnalysisError(err?.response?.data?.detail || 'Failed to request analysis');
+        setAnalyzing(false);
+      });
+  };
+
   const handleSendChat = (message: string) => {
     if (!me || !message.trim() || !wsRef.current) {
       console.log('Cannot send chat:', { me: !!me, message: message.trim(), ws: !!wsRef.current });
@@ -1879,7 +2032,7 @@ export default function GameView() {
   };
 
   if (loadErr && !game) {
-  return (
+    return (
       <div className="layout">
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ color: 'var(--danger)', fontSize: 18, marginBottom: 12 }}>{loadErr}</div>
@@ -1890,32 +2043,58 @@ export default function GameView() {
   }
 
   return (
-    <div style={{ 
-      height: '100vh', 
-      width: '100vw',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'radial-gradient(120% 140% at 20% 10%, #101b34 0%, #0a0f1c 45%, #05070f 100%)',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0
-    }}
-    className="game-shell">
-      <div style={{ 
+    <div className="analysis-view game-shell">
+      <header className="app-header">
+        <div className="app-header__inner">
+          <div className="analysis-header-left">
+            <button className="icon-btn" type="button" onClick={() => navigate('/games')} aria-label="Back to games">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div>
+              <h1 className="analysis-title">Post-Game Analysis</h1>
+              <p className="analysis-subtitle">{gameMeta || 'Match details'}</p>
+            </div>
+          </div>
+          <div className="nav-actions">
+            <button className="icon-btn" type="button" aria-label="Settings">
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+            <button className="icon-btn" type="button" aria-label="Share">
+              <span className="material-symbols-outlined">share</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="analysis-summary">
+        <div className="analysis-summary__player">
+          <span className="analysis-summary__dot" />
+          <span>
+            {game?.white?.username || 'White'}
+            {whiteRating ? ` (${whiteRating})` : ''}
+          </span>
+        </div>
+        <div className="analysis-score">{resultLabel}</div>
+        <div className="analysis-summary__player">
+          <span>
+            {game?.black?.username || 'Black'}
+            {blackRating ? ` (${blackRating})` : ''}
+          </span>
+          <span className="analysis-summary__dot analysis-summary__dot--dark" />
+        </div>
+      </div>
+
+      <div className="analysis-main" style={{ 
         maxWidth: 1900,
         width: '100%',
         margin: '0 auto',
         padding: '12px',
-        height: '100%',
+        flex: '1 1 auto',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box'
       }}>
-        {/* Header removed to maximize board height */}
         {/* Main game area - Lichess style layout: Left sidebar | Board | Right sidebar */}
         <div style={{ 
           display: 'grid', 
@@ -2002,6 +2181,11 @@ export default function GameView() {
                         </div>
                       ) : null;
                     })()}
+                    {returnSeconds && game.tournament_id && (game.status === 'finished' || game.status === 'aborted') && (
+                      <div style={{ color: 'var(--accent)', fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                        Returning to tournament in {returnSeconds}s
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div style={{ color: 'var(--muted)', fontSize: 12 }}>Loading…</div>
@@ -2171,7 +2355,7 @@ export default function GameView() {
         </div>
                 )}
                 <button
-                  className="btn btn-ghost"
+                  className="icon-btn"
                   type="button"
                   onClick={() => {
                     setOrientationMode('manual');
@@ -2196,7 +2380,7 @@ export default function GameView() {
                     zIndex: 12
                   }}
                 >
-                  ↻
+                  <span className="material-symbols-outlined">cached</span>
                 </button>
                 {gameResultPopup && (
                   <div
@@ -2255,6 +2439,10 @@ export default function GameView() {
                     </div>
                   </div>
                 )}
+                <div className="analysis-eval-bar">
+                  <div className="analysis-eval-bar__fill" style={{ height: `${evalPercent}%` }} />
+                </div>
+                <div className="analysis-eval-score">{evalDisplay.label}</div>
                 {firstMoveCountdown && (
                   <div
                     style={{
@@ -2288,6 +2476,63 @@ export default function GameView() {
               </div>
 
               {renderClockRow(bottomPlayer, bottomRating, bottomRatingChange, bottomClockColor, 'bottom')}
+              <div className="analysis-controls">
+                <button className="icon-btn" type="button" title="First move" onClick={() => setCurrentMoveIndex(0)} disabled={movesList.length === 0}>
+                  <span className="material-symbols-outlined">first_page</span>
+                </button>
+                <button
+                  className="icon-btn"
+                  type="button"
+                  title="Previous move"
+                  onClick={() => {
+                    if (!movesList.length) return;
+                    if (currentMoveIndex === null) setCurrentMoveIndex(movesList.length - 1);
+                    else if (currentMoveIndex > 0) setCurrentMoveIndex(currentMoveIndex - 1);
+                  }}
+                  disabled={movesList.length === 0}
+                >
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button className="icon-btn primary" type="button" title="Live position" onClick={() => setCurrentMoveIndex(null)} disabled={movesList.length === 0}>
+                  <span className="material-symbols-outlined">play_arrow</span>
+                </button>
+                <button
+                  className="icon-btn"
+                  type="button"
+                  title="Next move"
+                  onClick={() => {
+                    if (!movesList.length || currentMoveIndex === null) return;
+                    if (currentMoveIndex < movesList.length - 1) {
+                      setCurrentMoveIndex(currentMoveIndex + 1);
+                    } else {
+                      setCurrentMoveIndex(null);
+                    }
+                  }}
+                  disabled={movesList.length === 0}
+                >
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+                <button
+                  className="icon-btn"
+                  type="button"
+                  title="Last move"
+                  onClick={() => {
+                    if (movesList.length) setCurrentMoveIndex(movesList.length - 1);
+                  }}
+                  disabled={movesList.length === 0}
+                >
+                  <span className="material-symbols-outlined">last_page</span>
+                </button>
+              </div>
+              <div className="analysis-engine-bar">
+                <div className="analysis-engine-bar__status">
+                  <span className="analysis-engine-bar__dot" />
+                  <span>Stockfish 16 • Depth {depthLabel ?? '--'}</span>
+                </div>
+                <button className="btn btn-ghost" type="button" style={{ fontSize: 11, padding: '6px 12px' }}>
+                  Settings
+                </button>
+              </div>
             </>
             )}
               </div>
@@ -2305,7 +2550,18 @@ export default function GameView() {
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(149, 173, 51, 0.35) transparent'
         }}>
-          {/* Move History with Controls - Lichess Style */}
+          <div className="analysis-tabs">
+            <button className={`analysis-tab ${analysisTab === 'engine' ? 'active' : ''}`} type="button" onClick={() => setAnalysisTab('engine')}>
+              Engine
+            </button>
+            <button className={`analysis-tab ${analysisTab === 'graph' ? 'active' : ''}`} type="button" onClick={() => setAnalysisTab('graph')}>
+              Graph
+            </button>
+            <button className={`analysis-tab ${analysisTab === 'moves' ? 'active' : ''}`} type="button" onClick={() => setAnalysisTab('moves')}>
+              Moves
+            </button>
+          </div>
+          {analysisTab === 'moves' && (
           <div className="card" style={{ flex: '0 0 auto', height: 300, minHeight: 260, maxHeight: 360, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Moves</div>
@@ -2481,9 +2737,10 @@ export default function GameView() {
         )}
       </div>
           </div>
+          )}
 
           {/* Action Buttons - Draw and Resign */}
-          {isPlayer && game?.status === 'active' && !gameResultPopup && (
+          {analysisTab === 'engine' && isPlayer && game?.status === 'active' && !gameResultPopup && (
             <div className="card" style={{ flex: '0 0 auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {resignConfirm ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
@@ -2643,7 +2900,7 @@ export default function GameView() {
           )}
 
           {/* Prediction (for spectators) */}
-          {!isPlayer && game?.status === 'active' && (
+          {analysisTab === 'engine' && !isPlayer && game?.status === 'active' && (
             <div className="card" style={{ flex: '0 0 auto', padding: '8px' }}>
               <h4 style={{ marginTop: 0, marginBottom: 6, fontSize: 11, fontWeight: 600 }}>Predict</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -2680,7 +2937,7 @@ export default function GameView() {
                 )}
 
           {/* Finished Game Actions */}
-          {game?.status === 'finished' && isPlayer && (
+          {analysisTab === 'engine' && game?.status === 'finished' && isPlayer && (
             <div className="card" style={{ flex: '0 0 auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
               {/* Rematch button */}
               {(() => {
@@ -2825,8 +3082,95 @@ export default function GameView() {
                     </div>
           )}
 
+          {analysisTab === 'engine' && game?.status === 'finished' && (
+            <div className="card" style={{ flex: '0 0 auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Deep analysis</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>Stockfish engine review</div>
+                </div>
+                {analysisIsComplete ? (
+                  <span className="chip chip-success">Ready</span>
+                ) : analysisBusy ? (
+                  <span className="chip chip-warning">Analyzing</span>
+                ) : (
+                  <span className="chip">Idle</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" type="button" onClick={handleRequestAnalysis} disabled={analysisBusy}>
+                  {analysisBusy ? 'Analyzing...' : analysisIsComplete ? 'Re-run Analysis' : 'Run Deep Analysis'}
+                </button>
+                {analysisIsComplete && <span className="chip">Moves analyzed: {analyzedMoves}</span>}
+              </div>
+              {analysisError && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{analysisError}</div>}
+            </div>
+          )}
+
+          {analysisTab === 'engine' && (
+            <div className="card" style={{ flex: '0 0 auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Top Lines</div>
+                {analysisIsComplete && (
+                  <span className="chip">Moves analyzed: {analyzedMoves}</span>
+                )}
+              </div>
+              {analysisTopLines.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {analysisTopLines.map((line) => (
+                    <div key={line.id} className="card" style={{ padding: 10, background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(19, 91, 236, 0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{line.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: line.score.startsWith('+') ? '#22c55e' : line.score.startsWith('-') ? '#ef5350' : 'var(--muted)' }}>
+                          {line.score}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace', marginTop: 4 }}>
+                        {line.pv || 'Engine line pending'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '8px 0' }}>
+                  Run deep analysis to see engine lines.
+                </div>
+              )}
+            </div>
+          )}
+
+          {analysisTab === 'engine' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                Key Moments
+              </div>
+              {keyMoments.length > 0 ? (
+                <div className="moment-row no-scrollbar">
+                  {keyMoments.map((moment, idx) => (
+                    <div key={`${moment.move}-${idx}`} className={`moment-card moment-card--${moment.tone}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                          {moment.tone === 'success' ? 'hotel_class' : moment.tone === 'danger' ? 'cancel' : moment.tone === 'warning' ? 'error' : 'thumb_up'}
+                        </span>
+                        <span>{moment.label}</span>
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6 }}>Move {moment.move}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        {moment.delta > 0 ? '+' : ''}{moment.delta.toFixed(1)} eval swing
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card" style={{ padding: 10, fontSize: 12, color: 'var(--muted)' }}>
+                  No big swings yet. Run deep analysis to highlight key moments.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Analysis - Lichess Style */}
-          {fullAnalysis && game?.status !== 'aborted' && (
+          {analysisTab === 'graph' && fullAnalysis && game?.status !== 'aborted' && (
             <div className="card" style={{ flex: '0 0 auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 300, overflow: 'hidden' }}>
               {/* Stockfish analysis button hidden until fast source is ready */}
               
@@ -2862,7 +3206,7 @@ export default function GameView() {
                           <span style={{ fontSize: 10, color: 'var(--muted)' }}>0.0 = equal</span>
                         </div>
                         <EvaluationGraph
-                          moves={analysisMoves}
+                          moves={analysisGraphMoves}
                           height={220}
                           activeMoveIndex={currentMoveIndex}
                           onPointSelect={(moveNumber) => {
@@ -2884,8 +3228,16 @@ export default function GameView() {
               ) : null}
             </div>
           )}
+          {analysisTab === 'graph' && !fullAnalysis && (
+            <div className="card" style={{ flex: '0 0 auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Post-game analysis</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Run deep analysis to see engine lines and evaluation graphs.
+              </div>
+            </div>
+          )}
 
-          {game?.status === 'finished' && analysisIsComplete && (
+          {analysisTab === 'moves' && game?.status === 'finished' && analysisIsComplete && (
             <div className="card" style={{ flex: '0 0 auto', height: 260, minHeight: 220, maxHeight: 320, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Move analysis</div>

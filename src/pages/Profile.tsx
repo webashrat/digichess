@@ -135,8 +135,8 @@ export default function Profile() {
     // Hide friend request button for bots
     if (user.is_bot) return null;
     if (friendState === 'checking') return <span className="pill">Checking…</span>;
-    if (friendState === 'friends') return <span className="pill" style={{ background: '#12345a', color: '#8dd0ff' }}>👥 Friend already</span>;
-    if (friendState === 'outgoing') return <span className="pill" style={{ background: '#12345a', color: '#8dd0ff' }}>📨 Request pending</span>;
+    if (friendState === 'friends') return <span className="pill pill-success">👥 Friend already</span>;
+    if (friendState === 'outgoing') return <span className="pill pill-info">📨 Request pending</span>;
     if (friendState === 'incoming')
       return (
         <div style={{ display: 'flex', gap: 8 }}>
@@ -166,36 +166,20 @@ export default function Profile() {
     return (
       <>
         <div className="layout" style={{ paddingTop: 24, paddingBottom: 24 }}>
-          <div className="card" style={{ 
-            textAlign: 'center', 
-            padding: 48,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 12
-          }}>
+          <div className="card" style={{ textAlign: 'center', padding: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 48 }}>⏳</span>
             <h3 style={{ color: 'var(--text)', fontSize: 20, fontWeight: 600, margin: 0 }}>Loading profile...</h3>
           </div>
         </div>
         {friendErr && (
-          <div className="card" style={{ 
-            color: 'var(--danger)', 
-            padding: 16,
-            background: 'rgba(239, 83, 80, 0.1)',
-            border: '1px solid var(--danger)',
-            borderRadius: 8,
-            fontSize: 15
-          }}>
-            ❌ {friendErr}
-          </div>
+          <div className="form-message form-message--error">❌ {friendErr}</div>
         )}
       </>
     );
   }
 
   return (
-    <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100vh - 100px)', overflow: 'hidden' }}>
+    <div className="layout stack" style={{ height: 'calc(100vh - 100px)', overflow: 'hidden' }}>
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <IdentityStrip user={user} rating={user.rating_blitz} />
@@ -204,47 +188,24 @@ export default function Profile() {
               {me && me.id !== user.id && !user.is_bot && (
                 <button
                   onClick={() => setChallengeOpen(true)}
-                  className="btn"
-                  style={{ 
-                    fontSize: 13, 
-                    padding: '6px 16px',
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))',
-                    color: '#93c5fd',
-                    border: '1px solid rgba(59, 130, 246, 0.4)',
-                    fontWeight: 600,
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="btn btn-primary btn-sm"
                 >
                   ⚔️ Challenge
                 </button>
               )}
               <button
                 onClick={() => setShowStats(!showStats)}
-                className="btn"
-                style={{ 
-                  fontSize: 13, 
-                  padding: '6px 16px',
-                  background: showStats 
-                    ? 'linear-gradient(90deg, var(--accent), var(--accent-strong))' 
-                    : 'rgba(44, 230, 194, 0.1)',
-                  color: showStats ? '#0b0f16' : 'var(--accent)',
-                  border: `1px solid ${showStats ? '#1fd6b4' : 'rgba(44, 230, 194, 0.3)'}`,
-                  fontWeight: 600,
-                  transition: 'all 0.2s ease'
-                }}
+                className={showStats ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
               >
                 {showStats ? 'Hide Stats' : 'Show Stats'}
               </button>
               {showStats && (
-                <div style={{
+                <div className="card" style={{
                   position: 'absolute',
                   top: '100%',
                   left: 0,
                   right: 0,
                   marginTop: 8,
-                  backgroundColor: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
                   padding: 12,
                   zIndex: 100,
                   boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
@@ -254,7 +215,7 @@ export default function Profile() {
                   maxWidth: '95vw'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <h3 style={{ margin: 0 }}>Stats by Mode</h3>
+                    <h3 className="card-title" style={{ margin: 0 }}>Stats by Mode</h3>
                     <button
                       onClick={() => setShowStats(false)}
                       className="btn btn-ghost"
@@ -275,19 +236,19 @@ export default function Profile() {
                       flexDirection: 'column', 
                       alignItems: 'center',
                       padding: '12px',
-                      background: 'linear-gradient(135deg, rgba(239, 83, 80, 0.1), rgba(239, 83, 80, 0.05))',
-                      border: '1px solid rgba(239, 83, 80, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.05))',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
                       borderRadius: 8,
                       minWidth: 180
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#ef5350' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#ef4444' }}>
                         ⚡ Bullet
                       </h4>
                       {user.stats.total.modes?.bullet ? (
                         <ModeStatsCharts 
                           stats={user.stats.total.modes.bullet}
                           modeName="Bullet"
-                          modeColor="#ef5350"
+                          modeColor="#ef4444"
                         />
                       ) : (
                         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20, fontSize: 12 }}>
@@ -302,19 +263,19 @@ export default function Profile() {
                       flexDirection: 'column', 
                       alignItems: 'center',
                       padding: '12px',
-                      background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.1), rgba(44, 230, 194, 0.05))',
-                      border: '1px solid rgba(44, 230, 194, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(19, 91, 236, 0.12), rgba(19, 91, 236, 0.05))',
+                      border: '1px solid rgba(19, 91, 236, 0.3)',
                       borderRadius: 8,
                       minWidth: 180
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#2ce6c2' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#135bec' }}>
                         🔥 Blitz
                       </h4>
                       {user.stats.total.modes?.blitz ? (
                         <ModeStatsCharts 
                           stats={user.stats.total.modes.blitz}
                           modeName="Blitz"
-                          modeColor="#2ce6c2"
+                          modeColor="#135bec"
                         />
                       ) : (
                         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20, fontSize: 12 }}>
@@ -329,19 +290,19 @@ export default function Profile() {
                       flexDirection: 'column', 
                       alignItems: 'center',
                       padding: '12px',
-                      background: 'linear-gradient(135deg, rgba(123, 198, 255, 0.1), rgba(123, 198, 255, 0.05))',
-                      border: '1px solid rgba(123, 198, 255, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.05))',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
                       borderRadius: 8,
                       minWidth: 180
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#7bc6ff' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                         ⏱️ Rapid
                       </h4>
                       {user.stats.total.modes?.rapid ? (
                         <ModeStatsCharts 
                           stats={user.stats.total.modes.rapid}
                           modeName="Rapid"
-                          modeColor="#7bc6ff"
+                          modeColor="#38bdf8"
                         />
                       ) : (
                         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20, fontSize: 12 }}>
@@ -356,19 +317,19 @@ export default function Profile() {
                       flexDirection: 'column', 
                       alignItems: 'center',
                       padding: '12px',
-                      background: 'linear-gradient(135deg, rgba(156, 166, 184, 0.1), rgba(156, 166, 184, 0.05))',
-                      border: '1px solid rgba(156, 166, 184, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0.05))',
+                      border: '1px solid rgba(148, 163, 184, 0.3)',
                       borderRadius: 8,
                       minWidth: 180
                     }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#9ca6b8' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>
                         📚 Classical
                       </h4>
                       {user.stats.total.modes?.classical ? (
                         <ModeStatsCharts 
                           stats={user.stats.total.modes.classical}
                           modeName="Classical"
-                          modeColor="#9ca6b8"
+                          modeColor="#94a3b8"
                         />
                       ) : (
                         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20, fontSize: 12 }}>
@@ -384,7 +345,7 @@ export default function Profile() {
                       alignItems: 'center',
                       padding: '12px',
                       background: 'linear-gradient(135deg, rgba(245, 196, 81, 0.1), rgba(245, 196, 81, 0.05))',
-                      border: '1px solid rgba(245, 196, 81, 0.2)',
+                      border: '1px solid rgba(245, 196, 81, 0.3)',
                       borderRadius: 8,
                       minWidth: 180
                     }}>
@@ -404,25 +365,15 @@ export default function Profile() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {me && me.username === user.username && (
-            <Link to="/me" className="btn btn-warning" style={{ fontSize: 13, padding: '6px 16px' }}>
-              ✏️ Edit Your Account
+            <Link to="/me" className="btn btn-ghost btn-sm">
+              Edit Your Account
             </Link>
           )}
-          <span 
-            className="pill" 
-            style={{
-              background: (me && me.id === user.id) || user.is_online || user.is_bot
-                ? 'linear-gradient(90deg, #4caf50, #388e3c)' 
-                : 'linear-gradient(90deg, #f44336, #d32f2f)',
-              color: '#fff',
-              border: 'none',
-              fontWeight: 600
-            }}
-          >
+          <span className={`pill ${(me && me.id === user.id) || user.is_online || user.is_bot ? 'pill-success' : 'pill-danger'}`}>
             {(me && me.id === user.id) || user.is_online || user.is_bot ? '🟢 Online' : '🔴 Offline'}
           </span>
           {user.is_playing && user.spectate_game_id && (
-            <a className="btn btn-info" href={`#/games/${user.spectate_game_id}`}>👁️ Spectate</a>
+            <a className="btn btn-ghost btn-sm" href={`#/games/${user.spectate_game_id}`}>Spectate</a>
           )}
           {renderFriendButton()}
         </div>
@@ -430,18 +381,8 @@ export default function Profile() {
       <div style={{ display: 'flex', gap: 16, flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: '0 0 300px', overflow: 'hidden' }}>
           <div className="card" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <h3 style={{ 
-              marginTop: 0, 
-              marginBottom: 16, 
-              flexShrink: 0,
-              fontSize: 18,
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <span>📊</span>
-              <span>Ratings</span>
+            <h3 className="card-title" style={{ marginBottom: 16 }}>
+              📊 Ratings
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', overflowY: 'auto', overflowX: 'hidden' }}>
               <div 
@@ -456,8 +397,8 @@ export default function Profile() {
                   alignItems: 'center', 
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  background: 'linear-gradient(135deg, rgba(239, 83, 80, 0.1), rgba(239, 83, 80, 0.05))',
-                  border: '1px solid rgba(239, 83, 80, 0.2)',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.05))',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: 8,
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
@@ -465,13 +406,13 @@ export default function Profile() {
                 }}
                 onMouseEnter={(e) => {
                   if (user.rating_bullet) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 83, 80, 0.2), rgba(239, 83, 80, 0.1))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1))';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (user.rating_bullet) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 83, 80, 0.1), rgba(239, 83, 80, 0.05))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05))';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
@@ -481,7 +422,7 @@ export default function Profile() {
                     width: 32, 
                     height: 32, 
                     borderRadius: 6, 
-                    background: 'linear-gradient(135deg, #ef5350, #d32f2f)',
+                    background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -490,7 +431,7 @@ export default function Profile() {
                   }}>⚡</div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Bullet</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#ef5350' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#ef4444' }}>
                       {user.rating_bullet || '—'}
                     </div>
                   </div>
@@ -505,8 +446,8 @@ export default function Profile() {
                   alignItems: 'center', 
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  background: 'linear-gradient(135deg, rgba(44, 230, 194, 0.1), rgba(44, 230, 194, 0.05))',
-                  border: '1px solid rgba(44, 230, 194, 0.2)',
+                  background: 'linear-gradient(135deg, rgba(19, 91, 236, 0.12), rgba(19, 91, 236, 0.05))',
+                  border: '1px solid rgba(19, 91, 236, 0.3)',
                   borderRadius: 8,
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
@@ -514,13 +455,13 @@ export default function Profile() {
                 }}
                 onMouseEnter={(e) => {
                   if (user.rating_blitz) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(44, 230, 194, 0.2), rgba(44, 230, 194, 0.1))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(19, 91, 236, 0.2), rgba(19, 91, 236, 0.1))';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (user.rating_blitz) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(44, 230, 194, 0.1), rgba(44, 230, 194, 0.05))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(19, 91, 236, 0.12), rgba(19, 91, 236, 0.05))';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
@@ -530,7 +471,7 @@ export default function Profile() {
                     width: 32, 
                     height: 32, 
                     borderRadius: 6, 
-                    background: 'linear-gradient(135deg, #2ce6c2, #15a374)',
+                    background: 'linear-gradient(135deg, #135bec, #0f47c2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -539,7 +480,7 @@ export default function Profile() {
                   }}>🔥</div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Blitz</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#2ce6c2' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#135bec' }}>
                       {user.rating_blitz || '—'}
                     </div>
                   </div>
@@ -554,8 +495,8 @@ export default function Profile() {
                   alignItems: 'center', 
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  background: 'linear-gradient(135deg, rgba(123, 198, 255, 0.1), rgba(123, 198, 255, 0.05))',
-                  border: '1px solid rgba(123, 198, 255, 0.2)',
+                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.05))',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
                   borderRadius: 8,
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
@@ -563,13 +504,13 @@ export default function Profile() {
                 }}
                 onMouseEnter={(e) => {
                   if (user.rating_rapid) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(123, 198, 255, 0.2), rgba(123, 198, 255, 0.1))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.1))';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (user.rating_rapid) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(123, 198, 255, 0.1), rgba(123, 198, 255, 0.05))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.05))';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
@@ -579,7 +520,7 @@ export default function Profile() {
                     width: 32, 
                     height: 32, 
                     borderRadius: 6, 
-                    background: 'linear-gradient(135deg, #7bc6ff, #4a90e2)',
+                    background: 'linear-gradient(135deg, #38bdf8, #0ea5e9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -588,7 +529,7 @@ export default function Profile() {
                   }}>⏱️</div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Rapid</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#7bc6ff' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#38bdf8' }}>
                       {user.rating_rapid || '—'}
                     </div>
                   </div>
@@ -603,8 +544,8 @@ export default function Profile() {
                   alignItems: 'center', 
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  background: 'linear-gradient(135deg, rgba(156, 166, 184, 0.1), rgba(156, 166, 184, 0.05))',
-                  border: '1px solid rgba(156, 166, 184, 0.2)',
+                  background: 'linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0.05))',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
                   borderRadius: 8,
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
@@ -612,13 +553,13 @@ export default function Profile() {
                 }}
                 onMouseEnter={(e) => {
                   if (user.rating_classical) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(156, 166, 184, 0.2), rgba(156, 166, 184, 0.1))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(148, 163, 184, 0.1))';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (user.rating_classical) {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(156, 166, 184, 0.1), rgba(156, 166, 184, 0.05))';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0.05))';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }
                 }}
@@ -628,7 +569,7 @@ export default function Profile() {
                     width: 32, 
                     height: 32, 
                     borderRadius: 6, 
-                    background: 'linear-gradient(135deg, #9ca6b8, #6b7280)',
+                    background: 'linear-gradient(135deg, #94a3b8, #6b7280)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -637,7 +578,7 @@ export default function Profile() {
                   }}>📚</div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Classical</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#9ca6b8' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#94a3b8' }}>
                       {user.rating_classical || '—'}
                     </div>
                   </div>
@@ -689,7 +630,7 @@ export default function Profile() {
             </div>
           </div>
           <div className="card" style={{ flex: '0 0 auto', flexShrink: 0 }}>
-            <h3 style={{ marginTop: 0, marginBottom: 12 }}>About</h3>
+            <h3 className="card-title" style={{ marginBottom: 12 }}>About</h3>
             <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: '1.4', marginBottom: 8 }}>
               {user.bio || 'No bio yet.'}
             </div>

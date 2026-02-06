@@ -21,8 +21,6 @@ export default function Accounts() {
   const navigate = useNavigate();
   const location = useLocation();
   const showOnlineOnly = new URLSearchParams(location.search).get('online') === '1';
-  const rowBg = 'rgba(15, 23, 42, 0.55)';
-  const rowBorder = '1px solid rgba(148, 163, 184, 0.12)';
   const headerRef = useRef<HTMLTableSectionElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -153,54 +151,30 @@ export default function Accounts() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <div className="layout" style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: 12, 
-      height: 'calc(100vh - 100px)', 
-      maxHeight: 'calc(100vh - 100px)',
-      overflow: 'hidden', 
-      paddingTop: 16, 
-      paddingBottom: 16,
-      boxSizing: 'border-box'
-    }}>
-      <div className="card" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        flexShrink: 0,
-        flexWrap: 'wrap',
+    <div
+      className="layout"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
         gap: 12,
-        padding: 16
-      }}>
+        height: 'calc(100vh - 100px)',
+        maxHeight: 'calc(100vh - 100px)',
+        overflow: 'hidden',
+        paddingTop: 16,
+        paddingBottom: 16,
+        boxSizing: 'border-box'
+      }}
+    >
+      <div className="card card-header">
         <div>
-          <h1 style={{ 
-            fontSize: 26, 
-            fontWeight: 800, 
-            marginBottom: 4,
-            background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            👥 {showOnlineOnly ? 'Online Players' : 'Players'}
-          </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
+          <h1 className="page-title">👥 {showOnlineOnly ? 'Online Players' : 'Players'}</h1>
+          <p className="page-subtitle">
             {showOnlineOnly ? 'Challenge players who are online right now' : 'Browse and connect with other players'}
           </p>
         </div>
         <input
-          style={{
-            maxWidth: 240,
-            fontSize: 13,
-            padding: '8px 12px',
-            borderRadius: 10,
-            border: '1px solid rgba(148, 163, 184, 0.25)',
-            background: 'linear-gradient(160deg, rgba(10, 16, 28, 0.8), rgba(9, 13, 24, 0.95))',
-            color: 'var(--text)',
-            boxShadow: '0 8px 18px rgba(0,0,0,0.35)'
-          }}
-          placeholder="🔍 Search username..."
+          className="input-sm"
+          placeholder="Search username..."
           value={search}
           onChange={(e) => {
             setPage(1);
@@ -221,32 +195,24 @@ export default function Accounts() {
             scrollbarColor: 'rgba(26, 34, 51, 0.6) transparent'
           }}
         >
-        <table className="table" style={{ marginTop: 8, width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px' }}>
+        <table className="table table-spaced" style={{ marginTop: 8, width: '100%' }}>
           <thead ref={headerRef}>
             <tr>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Avatar</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Username</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Rating</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Country</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Chat</th>
-              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Challenge</th>
+              <th>Avatar</th>
+              <th>Username</th>
+              <th>Rating</th>
+              <th>Country</th>
+              <th>Chat</th>
+              <th>Challenge</th>
             </tr>
           </thead>
           <tbody>
             {items.map((u) => (
               <tr
                 key={u.id}
-                style={{ transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 12px 26px rgba(0,0,0,0.35)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                className="table-row-card"
               >
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderLeft: rowBorder, borderRadius: '12px 0 0 12px', height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ height: rowHeight || undefined }}>
                   <div
                     style={{
                       width: 36,
@@ -270,30 +236,14 @@ export default function Accounts() {
                     )}
                   </div>
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
-                  <a style={{ color: 'var(--text)', fontWeight: 600 }} href={`#/profile/${u.username}`}>{u.username}</a>
+                <td style={{ height: rowHeight || undefined }}>
+                  <a className="link-inline" href={`#/profile/${u.username}`}>{u.username}</a>
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ height: rowHeight || undefined }}>
                   {(() => {
                     const blitzRating = u.rating_blitz ?? ratingLookup[u.username];
                     return blitzRating !== undefined && blitzRating !== null ? (
-                    <span
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 900,
-                        color: '#baffef',
-                        background: 'linear-gradient(135deg, rgba(72, 255, 214, 0.35), rgba(18, 80, 70, 0.45))',
-                        border: '1px solid rgba(136, 255, 224, 0.6)',
-                        padding: '4px 12px',
-                        borderRadius: 12,
-                        boxShadow: '0 0 0 1px rgba(72, 255, 214, 0.35), 0 10px 22px rgba(0,0,0,0.45)',
-                        textShadow: '0 0 14px rgba(120, 255, 230, 0.85)',
-                        letterSpacing: '0.6px',
-                        whiteSpace: 'nowrap',
-                        display: 'inline-flex',
-                        alignItems: 'center'
-                      }}
-                    >
+                    <span className="chip chip-primary" style={{ fontSize: 13 }}>
                       {blitzRating}
                     </span>
                     ) : (
@@ -301,13 +251,13 @@ export default function Accounts() {
                     );
                   })()}
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ height: rowHeight || undefined }}>
                   <FlagIcon code={u.country} size={18} />
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ height: rowHeight || undefined }}>
                   {!u.is_bot && (
                     <button
-                      className="btn btn-info"
+                      className="btn btn-ghost btn-sm"
                       type="button"
                       onClick={() => {
                         createThread(u.id)
@@ -317,16 +267,15 @@ export default function Accounts() {
                           })
                           .catch(() => setError('Could not start chat'));
                       }}
-                      style={{ fontSize: 13, padding: '6px 12px' }}
                     >
-                      💬 Chat
+                      Chat
                     </button>
                   )}
                   {u.is_bot && (
                     <span style={{ color: 'var(--muted)', fontSize: 13 }}>—</span>
                   )}
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderRight: rowBorder, borderRadius: '0 12px 12px 0', height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ height: rowHeight || undefined }}>
                   <button
                     className="btn btn-primary"
                     type="button"
@@ -334,7 +283,7 @@ export default function Accounts() {
                     onClick={() => challengePlayer(u.id)}
                     style={{ fontSize: 13, padding: '6px 12px' }}
                   >
-                    {challengingId === u.id ? 'Sending...' : '⚔️ Challenge'}
+                    {challengingId === u.id ? 'Sending...' : 'Challenge'}
                   </button>
                 </td>
               </tr>
@@ -349,11 +298,11 @@ export default function Accounts() {
           </tbody>
         </table>
         </div>
-        {error && <div style={{ color: 'var(--danger)', fontSize: 13, flexShrink: 0 }}>{error}</div>}
+        {error && <div className="form-message form-message--error" style={{ flexShrink: 0 }}>{error}</div>}
         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, flexShrink: 0 }}>
-          <button className="btn btn-info" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ opacity: page <= 1 ? 0.5 : 1 }}>← Prev</button>
+          <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ opacity: page <= 1 ? 0.5 : 1 }}>← Prev</button>
           <div style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center' }}>Page {page} / {totalPages}</div>
-          <button className="btn btn-info" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={{ opacity: page >= totalPages ? 0.5 : 1 }}>Next →</button>
+          <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={{ opacity: page >= totalPages ? 0.5 : 1 }}>Next →</button>
         </div>
       </div>
     </div>

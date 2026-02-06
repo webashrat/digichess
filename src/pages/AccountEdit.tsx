@@ -104,19 +104,28 @@ export default function AccountEdit() {
   }
 
   return (
-    <div className="layout" style={{ display: 'flex', justifyContent: 'center', height: 'calc(100vh - 100px)', overflow: 'hidden' }}>
-      <form className="card" style={{ width: 520, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', maxHeight: '100%' }} onSubmit={submit}>
-        <h2 style={{ margin: 0 }}>Account settings</h2>
+    <div className="layout stack-lg">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Account settings</h1>
+          <p className="page-subtitle">Update your profile, socials, and privacy.</p>
+        </div>
+      </div>
+      <form
+        className="card stack"
+        style={{ maxWidth: 640, width: '100%', margin: '0 auto', overflowY: 'auto', maxHeight: 'calc(100vh - 240px)' }}
+        onSubmit={submit}
+      >
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Email</div>
+          <div>Email</div>
           <input type="email" value={me?.email || ''} onChange={(e) => updateField('email', e.target.value)} required />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Username</div>
+          <div>Username</div>
           <input value={me?.username || ''} onChange={(e) => updateField('username', e.target.value)} required />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Profile picture (JPG/PNG)</div>
+          <div>Profile picture (JPG/PNG)</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <div
               style={{
@@ -152,27 +161,27 @@ export default function AccountEdit() {
           </div>
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>First name</div>
+          <div>First name</div>
           <input value={me?.first_name || ''} onChange={(e) => updateField('first_name', e.target.value)} />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Last name</div>
+          <div>Last name</div>
           <input value={me?.last_name || ''} onChange={(e) => updateField('last_name', e.target.value)} />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Country</div>
+          <div>Country</div>
           <CountrySelect value={me?.country} onChange={(v) => updateField('country', v)} />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Nickname</div>
+          <div>Nickname</div>
           <input value={me?.nickname || ''} onChange={(e) => updateField('nickname', e.target.value)} />
         </label>
         <label>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Bio</div>
+          <div>Bio</div>
           <textarea value={me?.bio || ''} onChange={(e) => updateField('bio', e.target.value)} />
         </label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Social links</div>
+          <div className="section-title">Social links</div>
           {(me?.social_links || []).map((link, idx) => (
             <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 8, alignItems: 'center' }}>
               <select
@@ -223,9 +232,11 @@ export default function AccountEdit() {
           />
           <span>Show friends publicly</span>
         </label>
-        {msg && <div style={{ color: 'var(--accent)', fontSize: 13 }}>{msg}</div>}
-        {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-        <button className="btn btn-success" type="submit" style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>💾 Save Changes</button>
+        {msg && <div className="form-message form-message--success">{msg}</div>}
+        {error && <div className="form-message form-message--error">{error}</div>}
+        <button className="btn btn-primary" type="submit" style={{ fontSize: 16, padding: '14px 28px', fontWeight: 700 }}>
+          Save Changes
+        </button>
       </form>
     </div>
   );

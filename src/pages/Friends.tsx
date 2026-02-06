@@ -57,48 +57,20 @@ export default function Friends() {
   };
 
   return (
-    <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16, paddingBottom: 16 }}>
-      <div style={{ marginBottom: 6 }}>
-        <h1 style={{ 
-          fontSize: 26, 
-          fontWeight: 800, 
-          marginBottom: 4,
-          background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          👫 Friends
-        </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
-          Manage your friends and friend requests
-        </p>
+    <div className="layout stack">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">👫 Friends</h1>
+          <p className="page-subtitle">Manage your friends and friend requests</p>
+        </div>
       </div>
       {error && (
-        <div className="card" style={{ 
-          color: 'var(--danger)',
-          padding: 16,
-          background: 'rgba(239, 83, 80, 0.1)',
-          border: '1px solid var(--danger)',
-          borderRadius: 8,
-          fontSize: 15
-        }}>
-          ❌ {error}
-        </div>
+        <div className="form-message form-message--error">❌ {error}</div>
       )}
       <div className="card">
-        <h3 style={{ 
-          marginTop: 0, 
-          marginBottom: 16,
-          fontSize: 18,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
-        }}>
-          <span>📨</span>
-          <span>Friend Requests</span>
-        </h3>
+        <div className="card-header" style={{ marginBottom: 12 }}>
+          <h3 className="card-title">📨 Friend Requests</h3>
+        </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {incoming.map((req) => {
             const fromUser = req.from_user || req;
@@ -133,8 +105,8 @@ export default function Friends() {
                   )}
                 </div>
                 <span>{username}</span>
-                <button className="btn btn-success" type="button" onClick={() => handleRespond(req.id, 'accept')}>Accept</button>
-                <button className="btn btn-danger" type="button" onClick={() => handleRespond(req.id, 'decline')}>Decline</button>
+                <button className="btn btn-success btn-xs" type="button" onClick={() => handleRespond(req.id, 'accept')}>Accept</button>
+                <button className="btn btn-danger btn-xs" type="button" onClick={() => handleRespond(req.id, 'decline')}>Decline</button>
               </div>
             );
           })}
@@ -142,21 +114,12 @@ export default function Friends() {
         </div>
       </div>
       <div className="card">
-        <h3 style={{ 
-          marginTop: 0, 
-          marginBottom: 16,
-          fontSize: 18,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
-        }}>
-          <span>👥</span>
-          <span>Your Friends</span>
-        </h3>
+        <div className="card-header" style={{ marginBottom: 12 }}>
+          <h3 className="card-title">👥 Your Friends</h3>
+        </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {friends.map((f) => (
-              <div key={f.id} className="card" style={{ padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div key={f.id} className="card" style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <a href={`#/profile/${f.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit' }}>
                   <div
                     style={{
@@ -218,12 +181,12 @@ export default function Friends() {
                   </Link>
                   {!f.is_bot && (
                     <button 
-                      className="btn btn-info" 
+                      className="btn btn-ghost" 
                       type="button" 
                       onClick={() => startChat(f.id)}
                       style={{ fontSize: 13, padding: '8px 16px' }}
                     >
-                      💬 Message
+                      Message
                     </button>
                   )}
                 </div>

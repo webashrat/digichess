@@ -89,7 +89,10 @@ class TournamentRegisterSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = self.context["request"].user
         tournament = self.validated_data.get("tournament")
-        participant, _ = TournamentParticipant.objects.get_or_create(tournament=tournament, user=user)
+        participant, created = TournamentParticipant.objects.get_or_create(tournament=tournament, user=user)
+        if not created and participant.withdrawn_at:
+            participant.withdrawn_at = None
+            participant.save(update_fields=["withdrawn_at"])
         return participant
 
 

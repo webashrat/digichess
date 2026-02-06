@@ -114,7 +114,7 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
   if (!username) {
     return (
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ margin: 0 }}>Game History</h3>
+        <h3 className="card-title">Game History</h3>
         <div style={{ padding: 20, color: 'var(--muted)', textAlign: 'center' }}>
           No username provided
         </div>
@@ -124,50 +124,26 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>Recent Games</h3>
-        <div style={{ fontSize: 14, color: 'var(--muted)' }}>
+      <div className="card-header" style={{ marginBottom: 12 }}>
+        <h3 className="card-title">Recent Games</h3>
+        <div className="card-subtitle">
           {loading ? 'Loading...' : `${filteredGames.length} of ${total} game${total !== 1 ? 's' : ''}`}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexShrink: 0, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Filter:</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px', background: 'rgba(155, 89, 182, 0.15)', borderRadius: 6, border: '1px solid rgba(155, 89, 182, 0.3)' }}>
+        <span className="text-muted" style={{ fontSize: 12, fontWeight: 500 }}>Filter:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             type="button"
+            className={includeBotGames ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs'}
             onClick={() => setIncludeBotGames(true)}
-            style={{
-              fontSize: 12,
-              padding: '6px 12px',
-              borderRadius: 4,
-              border: 'none',
-              background: includeBotGames ? 'linear-gradient(135deg, #9b59b6, #8e44ad)' : 'transparent',
-              color: includeBotGames ? '#fff' : 'rgba(186, 104, 200, 0.8)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap',
-              boxShadow: includeBotGames ? '0 2px 8px rgba(155, 89, 182, 0.3)' : 'none'
-            }}
           >
             With Bots
           </button>
           <button
             type="button"
+            className={!includeBotGames ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs'}
             onClick={() => setIncludeBotGames(false)}
-            style={{
-              fontSize: 12,
-              padding: '6px 12px',
-              borderRadius: 4,
-              border: 'none',
-              background: !includeBotGames ? 'linear-gradient(135deg, #9b59b6, #8e44ad)' : 'transparent',
-              color: !includeBotGames ? '#fff' : 'rgba(186, 104, 200, 0.8)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap',
-              boxShadow: !includeBotGames ? '0 2px 8px rgba(155, 89, 182, 0.3)' : 'none'
-            }}
           >
             No Bots
           </button>
@@ -175,7 +151,7 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
       </div>
 
       {error && (
-        <div style={{ color: 'var(--danger)', marginBottom: 16, padding: 12, backgroundColor: 'rgba(239, 83, 80, 0.1)', borderRadius: 8 }}>
+        <div className="form-message form-message--error" style={{ marginBottom: 16 }}>
           {error}
         </div>
       )}
@@ -207,19 +183,8 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
                 <Link
                   key={game.id}
                   to={`/games/${game.id}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: 12,
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    transition: 'background-color 0.2s',
-                    position: 'relative',
-                    overflow: 'visible'
-                  }}
+                  className="list-row"
+                  style={{ position: 'relative', overflow: 'visible' }}
                   onMouseEnter={(e) => {
                     if (!game.current_fen) return;
                     const rowRect = (e.currentTarget as HTMLAnchorElement).getBoundingClientRect();
@@ -233,7 +198,6 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
                     const maxLeft = (window.innerWidth || document.documentElement.clientWidth) - frameSize - padding;
                     const left = Math.max(padding, Math.min(rawLeft, maxLeft));
                     setHistoryPreview({ id: game.id, fen: game.current_fen, top, left });
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                   }}
                   onMouseMove={(e) => {
                     if (!game.current_fen) return;
@@ -249,9 +213,8 @@ export default function GameHistory({ username, currentUserId }: GameHistoryProp
                     const left = Math.max(padding, Math.min(rawLeft, maxLeft));
                     setHistoryPreview({ id: game.id, fen: game.current_fen, top, left });
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={() => {
                     setHistoryPreview((prev) => (prev?.id === game.id ? null : prev));
-                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
                   <div style={{

@@ -141,49 +141,9 @@ export default function NavBar() {
   const showSettings = pathname === '/';
 
   return (
-    <header style={{ 
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000,
-      backgroundColor: 'var(--bg)',
-      borderBottom: '1px solid var(--border)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        gap: 16,
-        paddingTop: '10px', 
-        paddingBottom: '10px',
-        paddingLeft: '24px',
-        paddingRight: '24px',
-        maxWidth: '1400px',
-        margin: '0 auto',
-        width: '100%',
-        position: 'relative'
-      }}>
-        {/* Logo Section */}
-        <Link 
-          to="/" 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 10,
-            textDecoration: 'none',
-            color: 'var(--text)',
-            fontWeight: 700,
-            fontSize: 20,
-            letterSpacing: 0.5,
-            transition: 'opacity 0.2s ease',
-            flexShrink: 0,
-            minWidth: 'fit-content'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-        >
+    <header className="app-header">
+      <div className="app-header__inner">
+        <Link to="/" className="brand">
           <svg 
             width="28" 
             height="28" 
@@ -192,7 +152,6 @@ export default function NavBar() {
             xmlns="http://www.w3.org/2000/svg"
             style={{ flexShrink: 0 }}
           >
-            {/* Chess Knight Logo - Lichess style */}
             <path 
               d="M38.956 0.5c-3.53.418-6.452.902-9.286 2.984C5.534 1.786-.692 18.533.68 29.364 3.493 50.214 31.918 55.785 41.329 41.7c-7.444 7.696-19.276 8.752-28.323 3.084C3.959 39.116-.506 27.392 4.683 17.567 9.873 7.742 18.996 4.535 29.03 6.405c2.43-1.418 5.225-3.22 7.655-3.187l-1.694 4.86 12.752 21.37c-.439 5.654-5.459 6.112-5.459 6.112-.574-1.47-1.634-2.942-4.842-6.036-3.207-3.094-17.465-10.177-15.788-16.207-2.001 6.967 10.311 14.152 14.04 17.663 3.73 3.51 5.426 6.04 5.795 6.756 0 0 9.392-2.504 7.838-8.927L37.4 7.171z" 
               fill="#C0C0C0"
@@ -201,107 +160,35 @@ export default function NavBar() {
               strokeLinejoin="round"
             />
           </svg>
-          <span style={{ 
-            color: '#9CA6B8',
-            fontWeight: 800,
-            letterSpacing: 1,
-            whiteSpace: 'nowrap'
-          }}>
-            DigiChess
-          </span>
+          <span className="brand-title">DigiChess</span>
         </Link>
         
-        {/* Navigation Menu - Centered */}
-        <nav
-          ref={navRef}
-          style={{ 
-          display: 'flex', 
-          gap: 8, 
-          alignItems: 'center', 
-          justifyContent: 'flex-start',
-          flex: 1,
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          padding: '0 14px',
-          maxWidth: '100%',
-          scrollPaddingLeft: 16,
-          scrollPaddingRight: 16
-        }}>
-          <style>{`
-            nav::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
+        <nav ref={navRef} className="nav-links">
           {links.map((l) => {
             const isActive = pathname === l.to;
             return (
-            <Link
-              key={l.to}
-              to={l.to}
-              data-active={isActive ? 'true' : 'false'}
-              aria-current={isActive ? 'page' : undefined}
-              style={{
-                height: 34,
-                padding: '0 12px',
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: 600,
-                lineHeight: 1,
-                background: isActive ? 'rgba(44, 230, 194, 0.18)' : 'transparent',
-                color: isActive ? 'var(--accent)' : 'var(--text)',
-                border: isActive ? '1px solid rgba(44, 230, 194, 0.35)' : '1px solid transparent',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.2s ease',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                scrollMarginLeft: 16,
-                scrollMarginRight: 16
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.07)';
-                  e.currentTarget.style.borderColor = 'rgba(44, 230, 194, 0.18)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }
-              }}
-            >
-              <span style={{ fontSize: 14, lineHeight: 1 }}>{l.icon}</span>
-              <span>{l.label}</span>
-            </Link>
-          )})}
+              <Link
+                key={l.to}
+                to={l.to}
+                data-active={isActive ? 'true' : 'false'}
+                aria-current={isActive ? 'page' : undefined}
+                className={`nav-link${isActive ? ' active' : ''}`}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>{l.icon}</span>
+                <span>{l.label}</span>
+              </Link>
+            );
+          })}
         </nav>
         
-        {/* User Actions Section */}
-        <div className="auth-actions" style={{ 
-          display: 'flex', 
-          gap: 8, 
-          alignItems: 'center',
-          flexShrink: 0,
-          minWidth: 'fit-content'
-        }}>
+        <div className="nav-actions auth-actions">
           {showSettings && (
             <div ref={settingsRef} style={{ position: 'relative' }}>
               <button
                 className="btn btn-ghost"
                 type="button"
                 onClick={() => setSettingsOpen((prev) => !prev)}
-                style={{ 
-                  fontSize: 12, 
-                  padding: '6px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}
+                style={{ fontSize: 12, padding: '6px 12px' }}
                 aria-haspopup="dialog"
                 aria-expanded={settingsOpen}
               >
@@ -317,12 +204,12 @@ export default function NavBar() {
                     top: 'calc(100% + 10px)',
                     right: 0,
                     width: 260,
-                    background: 'linear-gradient(180deg, rgba(12, 18, 32, 0.98), rgba(10, 14, 24, 0.98))',
-                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    background: 'rgba(24, 31, 45, 0.98)',
+                    border: '1px solid var(--border)',
                     borderRadius: 12,
                     padding: 12,
                     boxShadow: '0 18px 40px rgba(0, 0, 0, 0.45)',
-                    backdropFilter: 'blur(10px)',
+                    backdropFilter: 'blur(12px)',
                     zIndex: 1001
                   }}
                 >
@@ -343,7 +230,7 @@ export default function NavBar() {
                             fontSize: 12,
                             borderRadius: 8,
                             border: '1px solid var(--border)',
-                            background: '#0b1220',
+                            background: 'rgba(16, 22, 34, 0.85)',
                             color: 'var(--text)',
                             appearance: 'auto'
                           }}
@@ -382,7 +269,7 @@ export default function NavBar() {
                           fontSize: 12,
                           borderRadius: 8,
                           border: '1px solid var(--border)',
-                          background: '#0b1220',
+                          background: 'rgba(16, 22, 34, 0.85)',
                           color: 'var(--text)',
                           appearance: 'auto'
                         }}
@@ -436,12 +323,6 @@ export default function NavBar() {
                   borderRadius: 8,
                   transition: 'background 0.2s ease'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
               >
                 <div
                   style={{
@@ -477,19 +358,7 @@ export default function NavBar() {
                   {me?.username || 'Account'}
                 </span>
               </Link>
-              <button 
-                className="btn" 
-                type="button" 
-                onClick={logout} 
-                style={{ 
-                  fontSize: 12, 
-                  padding: '6px 12px',
-                  background: 'linear-gradient(90deg, #ef5350, #d32f2f)',
-                  color: '#ffffff',
-                  border: '1px solid #d32f2f',
-                  fontWeight: 600
-                }}
-              >
+              <button className="btn btn-danger" type="button" onClick={logout} style={{ fontSize: 12, padding: '6px 12px' }}>
                 Logout
               </button>
             </>

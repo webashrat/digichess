@@ -53,6 +53,7 @@ export interface GameSummary {
   first_move_deadline?: number | null;
   first_move_color?: 'white' | 'black' | null;
   move_count?: number;
+  tournament_id?: number | null;
 }
 
 export interface GameAnalysis {

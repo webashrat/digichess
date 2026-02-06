@@ -18,6 +18,17 @@ from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS, CHALLEN
 from .move_optimizer import process_move_optimized, latency_monitor
 from accounts.models_rating_history import RatingHistory
 from .analysis_service import run_full_analysis
+from .tournament_service import (
+    create_knockout_round,
+    create_round_robin_round,
+    create_swiss_round,
+    finish_tournament,
+    get_knockout_winners,
+    list_participants,
+    pair_arena_games as pair_arena_games_service,
+    round_complete,
+    start_tournament,
+)
 
 User = get_user_model()
 
@@ -232,8 +243,99 @@ def broadcast_clock_updates():
 @shared_task
 def swiss_pairings(tournament_id: int):
     """Swiss tournament pairings task"""
-    # Placeholder - implement if needed
-    pass
+    try:
+        tournament = Tournament.objects.get(id=tournament_id)
+    except Tournament.DoesNotExist:
+        return
+    if tournament.status != Tournament.STATUS_ACTIVE:
+        return
+    round_number = tournament.current_round or 1
+    create_swiss_round(tournament, round_number)
+
+
+@shared_task
+def check_tournament_start():
+    now = timezone.now()
+    pending = Tournament.objects.filter(status=Tournament.STATUS_PENDING, start_at__lte=now)
+    for tournament in pending:
+        try:
+            start_tournament(tournament, started_at=now)
+        except ValueError:
+            participants = list_participants(tournament)
+            count = len(participants)
+            reason = f"Not enough participants before the start time. Registered: {count}, required: 2."
+            if participants:
+                try:
+                    from notifications.views import create_notification
+
+                    for participant in participants:
+                        create_notification(
+                            user=participant.user,
+                            notification_type="tournament_cancelled",
+                            title="Tournament cancelled",
+                            message=f"{tournament.name} was cancelled. {reason}",
+                            data={
+                                "tournament_id": tournament.id,
+                                "reason": reason,
+                                "registered_count": count,
+                            },
+                        )
+                except Exception:
+                    pass
+            tournament.delete()
+
+
+@shared_task
+def check_tournament_finish():
+    now = timezone.now()
+    active = Tournament.objects.filter(status=Tournament.STATUS_ACTIVE)
+    for tournament in active:
+        if tournament.type == Tournament.TYPE_ARENA:
+            if tournament.finished_at and now >= tournament.finished_at:
+                finish_tournament(tournament, finished_at=now)
+            continue
+
+        if tournament.type == Tournament.TYPE_SWISS:
+            if round_complete(tournament, tournament.current_round):
+                if tournament.current_round >= tournament.swiss_rounds:
+                    finish_tournament(tournament, finished_at=now)
+                else:
+                    tournament.current_round += 1
+                    tournament.save(update_fields=["current_round"])
+                    create_swiss_round(tournament, tournament.current_round)
+            continue
+
+        if tournament.type == Tournament.TYPE_ROUND_ROBIN:
+            participants = list_participants(tournament)
+            total_rounds = len(participants) - 1 if len(participants) % 2 == 0 else len(participants)
+            if total_rounds <= 0:
+                finish_tournament(tournament, finished_at=now)
+                continue
+            if round_complete(tournament, tournament.current_round):
+                if tournament.current_round >= total_rounds:
+                    finish_tournament(tournament, finished_at=now)
+                else:
+                    tournament.current_round += 1
+                    tournament.save(update_fields=["current_round"])
+                    create_round_robin_round(tournament, tournament.current_round)
+            continue
+
+        if tournament.type == Tournament.TYPE_KNOCKOUT:
+            if round_complete(tournament, tournament.current_round):
+                winners = get_knockout_winners(tournament, tournament.current_round)
+                if len(winners) <= 1:
+                    finish_tournament(tournament, finished_at=now)
+                else:
+                    tournament.current_round += 1
+                    tournament.save(update_fields=["current_round"])
+                    create_knockout_round(tournament, tournament.current_round, winners=winners)
+
+
+@shared_task
+def pair_arena_games():
+    active = Tournament.objects.filter(status=Tournament.STATUS_ACTIVE, type=Tournament.TYPE_ARENA)
+    for tournament in active:
+        pair_arena_games_service(tournament)
 
 
 @shared_task

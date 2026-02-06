@@ -222,6 +222,7 @@ class TournamentParticipant(models.Model):
     tournament = models.ForeignKey(Tournament, related_name="participants", on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name="tournament_participations", on_delete=models.CASCADE)
     joined_at = models.DateTimeField(auto_now_add=True)
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ("tournament", "user")

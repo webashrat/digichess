@@ -78,8 +78,9 @@ export default function TournamentCreate() {
     if (formData.type === 'swiss') {
       payload.swiss_rounds = formData.swiss_rounds;
     }
-    if (formData.password) {
-      payload.password = formData.password;
+    const trimmedPassword = formData.password.trim();
+    if (trimmedPassword) {
+      payload.password = trimmedPassword;
     }
 
     api
@@ -146,11 +147,11 @@ export default function TournamentCreate() {
         style={{ width: 600, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '100%' }} 
         onSubmit={submit}
       >
-        <h2 style={{ margin: 0 }}>Create Tournament</h2>
+        <h2 className="page-title" style={{ margin: 0 }}>Create Tournament</h2>
 
         {/* Tournament Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 16, color: 'var(--muted)' }}>Tournament</h3>
+          <h3 className="section-title" style={{ margin: 0 }}>Tournament</h3>
           
           <label>
             <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Name *</div>

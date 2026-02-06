@@ -41,6 +41,7 @@ class GameSerializer(serializers.ModelSerializer):
     first_move_deadline = serializers.SerializerMethodField(read_only=True)
     first_move_color = serializers.SerializerMethodField(read_only=True)
     move_count = serializers.SerializerMethodField(read_only=True)
+    tournament_id = serializers.SerializerMethodField(read_only=True)
 
     rematch_requested_by = serializers.SerializerMethodField()
     draw_offer_by = serializers.SerializerMethodField()
@@ -77,6 +78,7 @@ class GameSerializer(serializers.ModelSerializer):
             "first_move_deadline",
             "first_move_color",
             "move_count",
+            "tournament_id",
         )
         read_only_fields = (
             "status",
@@ -122,6 +124,13 @@ class GameSerializer(serializers.ModelSerializer):
         if move_count == 1:
             return "black"
         return None
+
+    def get_tournament_id(self, obj):
+        try:
+            entry = obj.tournament_entry.first()
+            return entry.tournament_id if entry else None
+        except Exception:
+            return None
     
     def get_rematch_requested_by(self, obj):
         return obj.rematch_requested_by.id if obj.rematch_requested_by else None

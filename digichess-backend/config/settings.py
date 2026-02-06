@@ -161,6 +161,18 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.check_pending_challenge_expiry",
         "schedule": 60.0,  # Every minute
     },
+    "check_tournament_start": {
+        "task": "games.tasks.check_tournament_start",
+        "schedule": 5.0,  # Every 5 seconds
+    },
+    "check_tournament_finish": {
+        "task": "games.tasks.check_tournament_finish",
+        "schedule": 5.0,  # Every 5 seconds
+    },
+    "pair_arena_games": {
+        "task": "games.tasks.pair_arena_games",
+        "schedule": 10.0,  # Every 10 seconds
+    },
 }
 
 # CORS / CSRF

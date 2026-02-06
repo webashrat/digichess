@@ -8,10 +8,10 @@ interface ModeStatsChartsProps {
 }
 
 const COLORS = {
-  win: '#4caf50',
-  loss: '#f44336',
-  correct: '#4caf50',
-  incorrect: '#f44336'
+  win: '#22c55e',
+  loss: '#ef4444',
+  correct: '#22c55e',
+  incorrect: '#ef4444'
 };
 
 export default function ModeStatsCharts({ stats, modeName, modeColor }: ModeStatsChartsProps) {
