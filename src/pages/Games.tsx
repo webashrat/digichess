@@ -20,12 +20,12 @@ export default function Games() {
   }, []);
 
   return (
-    <div className="layout" style={{ paddingTop: 24, paddingBottom: 24 }}>
-      <div style={{ marginBottom: 24 }}>
+    <div className="layout" style={{ paddingTop: 16, paddingBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ 
-          fontSize: 32, 
+          fontSize: 26, 
           fontWeight: 800, 
-          marginBottom: 8,
+          marginBottom: 4,
           background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -33,7 +33,7 @@ export default function Games() {
         }}>
           🔥 Live Games
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
           Watch ongoing chess matches in real-time
         </p>
       </div>

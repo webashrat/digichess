@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from rest_framework.authtoken.models import Token
@@ -9,7 +11,17 @@ from .models import OTPVerification, User
 from utils.email import send_email_notification
 
 
+ONLINE_WINDOW_MINUTES = 5
+
+
+def _is_recently_online(user) -> bool:
+    if not user.last_seen_at:
+        return False
+    return user.last_seen_at >= timezone.now() - timedelta(minutes=ONLINE_WINDOW_MINUTES)
+
+
 class UserSerializer(serializers.ModelSerializer):
+    is_online = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
@@ -45,7 +57,10 @@ class UserSerializer(serializers.ModelSerializer):
             "show_friends_public",
             "last_seen_at",
         )
-        read_only_fields = ("id", "date_joined")
+        read_only_fields = ("id", "date_joined", "is_online", "last_seen_at")
+
+    def get_is_online(self, obj):
+        return _is_recently_online(obj)
 
     def validate_email(self, value):
         email = value.lower()
@@ -93,6 +108,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserLookupSerializer(serializers.ModelSerializer):
+    is_online = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
@@ -106,6 +122,9 @@ class UserLookupSerializer(serializers.ModelSerializer):
             "is_online",
             "rating_blitz",
         )
+
+    def get_is_online(self, obj):
+        return _is_recently_online(obj)
 
 
 class RegisterSerializer(serializers.ModelSerializer):

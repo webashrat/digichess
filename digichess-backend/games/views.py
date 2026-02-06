@@ -20,7 +20,6 @@ from .models import Game
 from .serializers import GameSerializer, MoveSerializer
 from .game_core import apply_move, MoveResult, CHALLENGE_EXPIRY_MINUTES
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
-from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation
 
 
 class GameListCreateView(APIView):
@@ -330,6 +329,14 @@ class FinishGameView(APIView):
             return
         
         r_field, rd_field, vol_field = fields
+        mode_map = {
+            Game.TIME_BULLET: "bullet",
+            Game.TIME_BLITZ: "blitz",
+            Game.TIME_RAPID: "rapid",
+            Game.TIME_CLASSICAL: "classical",
+        }
+        mode_key = mode_map.get(game.time_control)
+        snapshot_date = timezone.localdate(game.finished_at)
         
         # Refresh users from database to get latest ratings
         game.white.refresh_from_db()
@@ -363,6 +370,14 @@ class FinishGameView(APIView):
             setattr(game.white, vol_field, new_w_vol)
             game.white.save(update_fields=[r_field, rd_field, vol_field])
             print(f"[rating] Successfully updated white player ({game.white.username or game.white.id}) ratings: {white_rating} -> {new_w_r}", file=sys.stderr)
+            if mode_key:
+                from accounts.models_rating_history import RatingHistory
+                RatingHistory.objects.update_or_create(
+                    user_id=game.white.id,
+                    mode=mode_key,
+                    date=snapshot_date,
+                    defaults={"rating": new_w_r},
+                )
         except Exception as e:
             print(f"[rating] Error updating white player ratings: {e}", file=sys.stderr)
             import traceback
@@ -375,6 +390,14 @@ class FinishGameView(APIView):
             setattr(game.black, vol_field, new_b_vol)
             game.black.save(update_fields=[r_field, rd_field, vol_field])
             print(f"[rating] Successfully updated black player ({game.black.username or game.black.id}) ratings: {black_rating} -> {new_b_r}", file=sys.stderr)
+            if mode_key:
+                from accounts.models_rating_history import RatingHistory
+                RatingHistory.objects.update_or_create(
+                    user_id=game.black.id,
+                    mode=mode_key,
+                    date=snapshot_date,
+                    defaults={"rating": new_b_r},
+                )
         except Exception as e:
             print(f"[rating] Error updating black player ratings: {e}", file=sys.stderr)
             import traceback
@@ -653,34 +676,8 @@ class GameAnalysisView(APIView):
 
         engine_info = None
         engine_source = None
-        
-        # Try Lichess API first (faster, free, no local setup)
-        try:
-            lichess_result = analyze_position_with_lichess(board, depth=18)
-            if lichess_result:
-                best_move_san = lichess_result.get("best_move")
-                if best_move_san:
-                    # Convert UCI to SAN if needed
-                    try:
-                        move_obj = chess.Move.from_uci(best_move_san)
-                        if move_obj in board.legal_moves:
-                            best_move_san = board.san(move_obj)
-                    except Exception:
-                        pass  # Already SAN or can't convert
-                
-                engine_info = {
-                    "best_move": best_move_san,
-                    "score": lichess_result.get("evaluation"),  # Centipawns
-                    "mate": lichess_result.get("mate"),
-                    "depth": lichess_result.get("depth", 0),
-                    "pv": lichess_result.get("pv", []),
-                    "knodes": lichess_result.get("knodes", 0)
-                }
-                engine_source = "lichess_cloud"
-        except Exception:
-            pass  # Fall through to local Stockfish
-        
-        # Fallback to local Stockfish if Lichess fails
+
+        # Use local Stockfish only (no Lichess API).
         if not engine_info:
             engine_path = get_stockfish_path()
             

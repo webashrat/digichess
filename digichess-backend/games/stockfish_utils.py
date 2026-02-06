@@ -28,12 +28,20 @@ def get_stockfish_path() -> str:
     configured_path = getattr(settings, "STOCKFISH_PATH", os.getenv("STOCKFISH_PATH"))
     if configured_path and Path(configured_path).exists():
         return configured_path
+    if configured_path and not Path(configured_path).exists():
+        logger.warning(f"Configured STOCKFISH_PATH not found: {configured_path}")
     
     # Use Stockfish from repo
     repo_stockfish = Path(__file__).parent.parent.parent / "Stockfish" / "src" / "stockfish"
     if repo_stockfish.exists():
         logger.info(f"Using Stockfish from repo: {repo_stockfish}")
         return str(repo_stockfish.absolute())
+
+    # Try system stockfish in PATH
+    system_stockfish = shutil.which("stockfish")
+    if system_stockfish:
+        logger.info(f"Using Stockfish from PATH: {system_stockfish}")
+        return system_stockfish
     
     # Try to compile from source if binary doesn't exist
     stockfish_src_dir = Path(__file__).parent.parent.parent / "Stockfish" / "src"
@@ -57,8 +65,8 @@ def get_stockfish_path() -> str:
         except Exception as e:
             logger.error(f"Error compiling Stockfish: {e}")
     
-    # Fallback to configured path even if it doesn't exist (will return error later)
-    return configured_path or "/usr/local/bin/stockfish"
+    # Fallback to default system path
+    return "/usr/local/bin/stockfish"
 
 
 def _old_auto_fix_stockfish(engine_path: str) -> bool:

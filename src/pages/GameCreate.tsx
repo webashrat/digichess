@@ -186,8 +186,8 @@ export default function GameCreate() {
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center',
-      paddingTop: 24, 
-      paddingBottom: 24,
+      paddingTop: 16, 
+      paddingBottom: 16,
       height: 'calc(100vh - 100px)',
       maxHeight: 'calc(100vh - 100px)',
       overflow: 'hidden',
@@ -216,11 +216,11 @@ export default function GameCreate() {
         }}
         className="games-list-scrollable"
         >
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 6 }}>
           <h1 style={{ 
-            fontSize: 28, 
+            fontSize: 24, 
             fontWeight: 800, 
-            marginBottom: 8,
+            marginBottom: 4,
             background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -228,7 +228,7 @@ export default function GameCreate() {
           }}>
             ➕ Create Game
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
             Set up a new chess game with your preferred settings
           </p>
         </div>

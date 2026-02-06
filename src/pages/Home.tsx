@@ -45,6 +45,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
     api
       .get('/api/games/public/', { params: { status: 'active', page_size: 6 } })
       .then((r) => setLive(r.data?.results || r.data || []))
@@ -57,20 +58,34 @@ export default function Home() {
         setLeaders(filtered);
       })
       .catch(() => {});
-    api
-      .get('/api/public/accounts/', { params: { page_size: 50 } })
-      .then((r) => {
-        const items = r.data?.results || [];
-        setOnline(items.filter((u: any) => u.is_online && !u.is_bot));
-      })
-      .catch(() => {});
     
-    // Load current user
-    fetchMe()
-      .then((u) => {
-        setMe({ id: u.id, username: u.username });
-      })
-      .catch(() => {});
+    const loadOnline = async () => {
+      let meId: number | null = null;
+      try {
+        const u = await fetchMe();
+        if (!cancelled) {
+          setMe({ id: u.id, username: u.username });
+        }
+        meId = u.id;
+      } catch {
+        if (!cancelled) {
+          setMe(null);
+        }
+      }
+      try {
+        const r = await api.get('/api/public/accounts/', { params: { page_size: 50, online_only: 1 } });
+        if (cancelled) return;
+        const items = r.data?.results || [];
+        const filtered = items.filter((u: any) => u.is_online && !u.is_bot && (!meId || u.id !== meId));
+        setOnline(filtered);
+      } catch {
+        if (!cancelled) {
+          setOnline([]);
+        }
+      }
+    };
+    
+    loadOnline();
     
     // Load bots
     loadBots();
@@ -87,7 +102,10 @@ export default function Home() {
       api.post('/api/accounts/ping/').catch(() => {});
     }
     
-    return () => clearInterval(pingInterval);
+    return () => {
+      cancelled = true;
+      clearInterval(pingInterval);
+    };
   }, [mode]);
   
   const loadBots = async () => {
@@ -739,7 +757,7 @@ export default function Home() {
                 )}
               </div>
               <a
-                href="#/players"
+                href="#/players?online=1"
                 style={{ 
                   fontSize: 13, 
                   padding: '10px 18px',
@@ -767,7 +785,7 @@ export default function Home() {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <span>View all</span>
+                <span>Online Players</span>
                 <span style={{ fontSize: 12 }}>→</span>
               </a>
             </div>

@@ -143,10 +143,23 @@ CHANNEL_LAYERS = {
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+CELERY_TASK_DEFAULT_QUEUE = os.getenv("CELERY_TASK_DEFAULT_QUEUE", "scm_default")
 CELERY_BEAT_SCHEDULE = {
     "store_daily_rating_snapshots": {
         "task": "games.tasks.store_daily_rating_snapshots",
         "schedule": crontab(minute=0, hour=0),  # Run daily at 00:00 UTC
+    },
+    "check_game_timeouts": {
+        "task": "games.tasks.check_game_timeouts",
+        "schedule": 5.0,  # Every 5 seconds
+    },
+    "check_first_move_timeouts": {
+        "task": "games.tasks.check_first_move_timeouts",
+        "schedule": 5.0,  # Every 5 seconds
+    },
+    "check_pending_challenge_expiry": {
+        "task": "games.tasks.check_pending_challenge_expiry",
+        "schedule": 60.0,  # Every minute
     },
 }
 

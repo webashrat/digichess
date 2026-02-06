@@ -84,55 +84,65 @@ export default function Chat() {
   }, [threads, selectedId, me]);
 
   return (
-    <div className="layout" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, paddingTop: 24, paddingBottom: 24 }}>
-      <div className="card" style={{ minHeight: 420 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ 
-            margin: 0, 
-            fontSize: 18, 
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <span>💬</span>
-            <span>Threads</span>
-          </h3>
+    <div
+      className="layout"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)',
+        gap: 12,
+        paddingTop: 16,
+        paddingBottom: 16,
+        height: 'calc(100vh - 100px)',
+        overflow: 'hidden'
+      }}
+    >
+      <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14 }}>💬</span>
+            <span>Direct Messages</span>
+          </div>
+          {threads.length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{threads.length}</span>}
         </div>
-        {threads.map((t) => {
-          const others = me ? t.participants.filter((p) => p.id !== me.id) : t.participants;
-          const name = others.length ? others.map((p) => p.username).join(', ') : 'Me';
-          const avatar =
-            others[0]?.profile_pic ||
-            t.participants.find((p) => !me || p.id !== me?.id)?.profile_pic ||
-            others[0]?.profile_pic ||
-            t.participants[0]?.profile_pic;
-          const last =
-            t.last_message ||
-            (t as any).last_message_content ||
-            (t as any).preview ||
-            '';
-          const lastSender =
-            (t as any).last_sender ||
-            (t as any).last_sender_username ||
-            '';
-          return (
-            <div
-              key={t.id}
-              className="card"
-              style={{
-                padding: 12,
-                marginBottom: 8,
-                borderColor: selectedId === t.id ? 'var(--accent)' : 'var(--border)',
-                cursor: 'pointer'
-              }}
-              onClick={() => setSelectedId(t.id)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {threads.map((t) => {
+            const others = me ? t.participants.filter((p) => p.id !== me.id) : t.participants;
+            const name = others.length ? others.map((p) => p.username).join(', ') : 'Me';
+            const avatar =
+              others[0]?.profile_pic ||
+              t.participants.find((p) => !me || p.id !== me?.id)?.profile_pic ||
+              others[0]?.profile_pic ||
+              t.participants[0]?.profile_pic;
+            const last =
+              t.last_message ||
+              (t as any).last_message_content ||
+              (t as any).preview ||
+              '';
+            const lastSender =
+              (t as any).last_sender ||
+              (t as any).last_sender_username ||
+              '';
+            const active = selectedId === t.id;
+            return (
+              <div
+                key={t.id}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  background: active ? 'rgba(44, 230, 194, 0.12)' : 'rgba(12, 18, 32, 0.6)',
+                  border: `1px solid ${active ? 'rgba(44, 230, 194, 0.5)' : 'var(--border)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  transition: 'all 0.15s ease'
+                }}
+                onClick={() => setSelectedId(t.id)}
+              >
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     borderRadius: '50%',
                     border: '1px solid var(--border)',
                     background: '#1c2433',
@@ -141,134 +151,141 @@ export default function Chat() {
                     backgroundPosition: 'center'
                   }}
                 />
-                <div style={{ fontWeight: 700 }}>{name}</div>
-              </div>
-              <div style={{ color: 'var(--muted)', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
-                {last ? (
-                  <>
-                    {lastSender && <span style={{ color: '#666' }}>{lastSender}</span>}
-                    <span>{last}</span>
-                  </>
-                ) : (
-                  <span style={{ color: '#666' }}>Tap to open</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {threads.length === 0 && (
-          <div style={{ 
-            color: 'var(--muted)', 
-            textAlign: 'center',
-            padding: 32,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <span style={{ fontSize: 32 }}>💬</span>
-            <p style={{ fontSize: 15, margin: 0 }}>No conversations yet</p>
-            <p style={{ fontSize: 13, margin: 0, opacity: 0.7 }}>Start chatting with friends!</p>
-          </div>
-        )}
-      </div>
-      <div className="card" style={{ minHeight: 420, display: 'flex', flexDirection: 'column' }}>
-        <h3 style={{ 
-          marginTop: 0, 
-          marginBottom: 16,
-          fontSize: 20,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
-        }}>
-          <span>💬</span>
-          <span>{title}</span>
-        </h3>
-        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: '#0b1220', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {messages.map((m) => {
-            const mine = me && m.sender.id === me.id;
-            return (
-              <div
-                key={m.id}
-                style={{
-                  alignSelf: mine ? 'flex-end' : 'flex-start',
-                  maxWidth: '70%',
-                  background: mine ? '#1d8bff' : '#1f7a4f',
-                  color: mine ? '#0b0f16' : 'var(--text)',
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  boxShadow: '0 6px 14px rgba(0,0,0,0.25)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      background: '#0b0f16',
-                      backgroundImage: m.sender.profile_pic ? `url(${m.sender.profile_pic})` : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      border: '1px solid var(--border)'
-                    }}
-                  />
-                  <div style={{ fontWeight: 700 }}>{m.sender.username}</div>
-                </div>
-                <div style={{ whiteSpace: 'pre-wrap', marginBottom: m.attachment_url ? 8 : 0 }}>{m.content}</div>
-                {m.attachment_url && (
-                  <div style={{ marginBottom: 4 }}>
-                    {m.attachment_type?.startsWith('image/') ? (
-                      <a href={m.attachment_url} target="_blank" rel="noreferrer">
-                        <img
-                          src={m.attachment_url}
-                          alt="attachment"
-                          style={{ maxWidth: 240, borderRadius: 8, border: '1px solid var(--border)' }}
-                        />
-                      </a>
-                    ) : (
-                      <a href={m.attachment_url} target="_blank" rel="noreferrer" style={{ color: mine ? '#0b0f16' : 'var(--accent)' }}>
-                        📎 Download attachment
-                      </a>
-                    )}
+                <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {name}
                   </div>
-                )}
-                <div style={{ color: mine ? '#0b0f16' : 'var(--muted)', fontSize: 11, marginTop: 6 }}>
-                  {new Date(m.created_at).toLocaleString()}
+                  <div style={{ color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {last ? `${lastSender ? `${lastSender}: ` : ''}${last}` : 'Tap to open'}
+                  </div>
                 </div>
               </div>
             );
           })}
-          {messages.length === 0 && <div style={{ color: 'var(--muted)' }}>No messages yet.</div>}
+          {threads.length === 0 && (
+            <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 28 }}>💬</span>
+              <p style={{ fontSize: 14, margin: 0 }}>No conversations yet</p>
+              <p style={{ fontSize: 12, margin: 0, opacity: 0.7 }}>Start chatting with friends!</p>
+            </div>
+          )}
         </div>
-        <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label className="btn" style={{ margin: 0, background: '#132036', color: '#7ac4ff', border: '1px dashed #21436d' }}>
-            📎 Attach
-            <input
-              type="file"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) setAttachment(file);
-              }}
-            />
-          </label>
-          {attachment && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{attachment.name}</span>}
+      </div>
+
+      <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14 }}>💬</span>
+            <span>{title}</span>
+          </div>
+          {selectedId && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Active</span>}
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '14px 16px',
+            background: '#0b1220',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(26, 34, 51, 0.6) transparent'
+          }}
+        >
+          {messages.length === 0 && (
+            <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 24, fontSize: 13 }}>
+              No messages yet.
+            </div>
+          )}
+          {messages.map((m) => {
+            const mine = me && m.sender.id === me.id;
+            const messageText = m.content || (m.attachment_url ? 'Attachment' : '');
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  background: mine ? 'rgba(44, 230, 194, 0.08)' : 'transparent'
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: '#0b0f16',
+                    backgroundImage: m.sender.profile_pic ? `url(${m.sender.profile_pic})` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    border: '1px solid var(--border)'
+                  }}
+                />
+                <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: mine ? '#7ef7d1' : 'var(--text)' }}>
+                      {m.sender.username}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {new Date(m.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  {messageText && <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.5 }}>{messageText}</div>}
+                  {m.attachment_url && (
+                    <div style={{ marginTop: 4 }}>
+                      {m.attachment_type?.startsWith('image/') ? (
+                        <a href={m.attachment_url} target="_blank" rel="noreferrer">
+                          <img
+                            src={m.attachment_url}
+                            alt="attachment"
+                            style={{ maxWidth: 280, borderRadius: 8, border: '1px solid var(--border)' }}
+                          />
+                        </a>
+                      ) : (
+                        <a href={m.attachment_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+                          📎 Download attachment
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(9, 13, 24, 0.85)' }}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message"
+            placeholder={selectedId ? 'Message your friend...' : 'Select a conversation to start'}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
               }
             }}
+            disabled={!selectedId}
+            style={{
+              flex: 1,
+              background: '#0f172a',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              borderRadius: 10,
+              padding: '10px 12px',
+              fontSize: 13
+            }}
           />
-          <button className="btn btn-info" type="button" onClick={handleSend} disabled={!selectedId} style={{ fontSize: 14, padding: '10px 20px' }}>📤 Send</button>
+          <button className="btn btn-primary" type="button" onClick={handleSend} disabled={!selectedId} style={{ fontSize: 13, padding: '8px 16px' }}>
+            Send
+          </button>
         </div>
-        {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 4 }}>{error}</div>}
+        {error && <div style={{ color: 'var(--danger)', fontSize: 12, padding: '8px 16px' }}>{error}</div>}
       </div>
     </div>
   );
