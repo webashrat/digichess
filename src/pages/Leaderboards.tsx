@@ -43,12 +43,12 @@ export default function Leaderboards() {
   }, [mode]);
 
   return (
-    <div className="layout" style={{ paddingTop: 24, paddingBottom: 24 }}>
-      <div style={{ marginBottom: 24 }}>
+    <div className="layout" style={{ paddingTop: 16, paddingBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ 
-          fontSize: 32, 
+          fontSize: 26, 
           fontWeight: 800, 
-          marginBottom: 8,
+          marginBottom: 4,
           background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -56,7 +56,7 @@ export default function Leaderboards() {
         }}>
           🏆 Leaderboards
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
           Top players ranked by rating
         </p>
       </div>
@@ -66,11 +66,11 @@ export default function Leaderboards() {
         justifyContent: 'space-between', 
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: 16,
-        padding: 20,
-        marginBottom: 16
+        gap: 12,
+        padding: 14,
+        marginBottom: 12
       }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Time Control</h2>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Time Control</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {modes.map((m) => {
             const modeColors: Record<string, { active: string; inactive: string; bg: string; border: string }> = {
@@ -93,7 +93,8 @@ export default function Leaderboards() {
                   background: isActive ? colors.bg : 'transparent',
                   fontWeight: isActive ? 700 : 500,
                   textTransform: 'capitalize',
-                  fontSize: 14
+                  fontSize: 12,
+                  padding: '6px 12px'
                 }}
                 onClick={() => setMode(m)}
               >
@@ -103,7 +104,7 @@ export default function Leaderboards() {
           })}
         </div>
       </div>
-      <div className="card" style={{ padding: 20 }}>
+      <div className="card" style={{ padding: 16 }}>
         <table className="table" style={{ width: '100%' }}>
           <thead>
             <tr>

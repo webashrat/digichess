@@ -9,7 +9,7 @@ import random
 import chess
 
 from utils.redis_client import get_redis
-from .models import Game, Tournament, TournamentParticipant, TournamentGame
+from .models import Game, GameAnalysis, Tournament, TournamentParticipant, TournamentGame
 from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
@@ -17,6 +17,7 @@ from .game_proxy import GameProxy
 from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
 from .move_optimizer import process_move_optimized, latency_monitor
 from accounts.models_rating_history import RatingHistory
+from .analysis_service import run_full_analysis
 
 User = get_user_model()
 
@@ -35,7 +36,7 @@ def update_ratings_async(game_id: int, result: str):
 @shared_task
 def store_daily_rating_snapshots():
     """Store a daily UTC snapshot of each user's ratings."""
-    snapshot_date = timezone.now().astimezone(timezone.utc).date()
+    snapshot_date = timezone.localdate()
     rating_fields = {
         "bullet": "rating_bullet",
         "blitz": "rating_blitz",
@@ -61,6 +62,70 @@ def store_daily_rating_snapshots():
 
     if entries:
         RatingHistory.objects.bulk_create(entries, ignore_conflicts=True, batch_size=1000)
+
+
+@shared_task
+def analyze_game_full_async(game_id: int, prefer_lichess: bool = True, force: bool = False):
+    """Run full game analysis in the background and cache results."""
+    try:
+        game = Game.objects.get(id=game_id)
+    except Game.DoesNotExist:
+        return
+
+    if game.status not in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
+        return
+
+    analysis_record, created = GameAnalysis.objects.get_or_create(
+        game=game,
+        defaults={"status": GameAnalysis.STATUS_QUEUED},
+    )
+
+    if analysis_record.status == GameAnalysis.STATUS_RUNNING and not force:
+        return
+    if analysis_record.status == GameAnalysis.STATUS_COMPLETED and analysis_record.analysis and not force:
+        return
+
+    if analysis_record.status == GameAnalysis.STATUS_COMPLETED and analysis_record.analysis and not force:
+        return
+
+    now = timezone.now()
+    analysis_record.status = GameAnalysis.STATUS_RUNNING
+    analysis_record.started_at = now
+    analysis_record.completed_at = None
+    analysis_record.error = ""
+    analysis_record.source = ""
+    analysis_record.analysis = None
+    analysis_record.save(update_fields=["status", "started_at", "completed_at", "error", "source", "analysis", "updated_at"])
+
+    try:
+        analysis_data, source, _engine_path = run_full_analysis(
+            game,
+            prefer_lichess=False,
+            time_per_move=0.25,
+            depth=14,
+            max_moves=None,
+            allow_lichess_fallback=False,
+        )
+        analysis_record.analysis = analysis_data
+        analysis_record.source = source
+        analysis_record.status = GameAnalysis.STATUS_COMPLETED
+        analysis_record.completed_at = timezone.now()
+        analysis_record.error = ""
+        analysis_record.save(
+            update_fields=[
+                "analysis",
+                "source",
+                "status",
+                "completed_at",
+                "error",
+                "updated_at",
+            ]
+        )
+    except Exception as exc:
+        analysis_record.status = GameAnalysis.STATUS_FAILED
+        analysis_record.error = str(exc)
+        analysis_record.completed_at = timezone.now()
+        analysis_record.save(update_fields=["status", "error", "completed_at", "updated_at"])
 
 
 @shared_task

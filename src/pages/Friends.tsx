@@ -57,12 +57,12 @@ export default function Friends() {
   };
 
   return (
-    <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 24, paddingBottom: 24 }}>
-      <div style={{ marginBottom: 8 }}>
+    <div className="layout" style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16, paddingBottom: 16 }}>
+      <div style={{ marginBottom: 6 }}>
         <h1 style={{ 
-          fontSize: 32, 
+          fontSize: 26, 
           fontWeight: 800, 
-          marginBottom: 8,
+          marginBottom: 4,
           background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -70,7 +70,7 @@ export default function Friends() {
         }}>
           👫 Friends
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
           Manage your friends and friend requests
         </p>
       </div>

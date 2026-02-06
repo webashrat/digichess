@@ -125,6 +125,37 @@ class Game(models.Model):
         return f"{self.white.email} vs {self.black.email} ({self.time_control})"
 
 
+class GameAnalysis(models.Model):
+    STATUS_QUEUED = "queued"
+    STATUS_RUNNING = "running"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_QUEUED, "Queued"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    game = models.OneToOneField(Game, related_name="analysis_cache", on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_QUEUED)
+    source = models.CharField(max_length=40, blank=True)
+    error = models.TextField(blank=True)
+    analysis = models.JSONField(null=True, blank=True)
+    quick_eval = models.JSONField(null=True, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+
+    def __str__(self):
+        return f"Analysis for game {self.game_id} ({self.status})"
+
+
 class Tournament(models.Model):
     TYPE_KNOCKOUT = "knockout"
     TYPE_ROUND_ROBIN = "round_robin"

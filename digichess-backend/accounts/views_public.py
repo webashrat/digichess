@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,6 +37,10 @@ class PublicUsersListView(APIView):
 
     def get(self, request):
         qs = User.objects.filter(is_active=True, is_bot=False)
+        online_only = request.query_params.get("online_only")
+        if online_only and str(online_only).lower() in {"1", "true", "yes", "y"}:
+            online_cutoff = timezone.now() - timedelta(minutes=5)
+            qs = qs.filter(last_seen_at__gte=online_cutoff)
         search = request.query_params.get("search")
         if search:
             qs = qs.filter(username__icontains=search) | qs.filter(email__icontains=search)
@@ -68,17 +74,6 @@ class PublicUsersListView(APIView):
         end = start + page_size
         total = qs.count()
         page_users = list(qs[start:end])
-
-        try:
-            r = get_redis()
-            keys = [f"presence:user:{u.id}" for u in page_users]
-            if keys:
-                statuses = r.mget(keys)
-                for user, status in zip(page_users, statuses):
-                    if status is not None:
-                        user.is_online = True
-        except Exception:
-            pass
 
         data = UserLookupSerializer(page_users, many=True).data
         return Response(

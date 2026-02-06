@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../api/client';
 import { fetchAccounts, fetchAccountDetail } from '../api/users';
 import { AccountListItem } from '../api/types';
+import { fetchMe } from '../api/account';
 import { createThread } from '../api/social';
 import FlagIcon from '../components/FlagIcon';
 import { getDefaultAvatarStyle, getDefaultAvatarContent } from '../utils/defaultAvatar';
@@ -14,20 +16,59 @@ export default function Accounts() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [me, setMe] = useState<{ id: number; username?: string } | null>(null);
+  const [challengingId, setChallengingId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const showOnlineOnly = new URLSearchParams(location.search).get('online') === '1';
   const rowBg = 'rgba(15, 23, 42, 0.55)';
   const rowBorder = '1px solid rgba(148, 163, 184, 0.12)';
   const headerRef = useRef<HTMLTableSectionElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchAccounts({ page, page_size: 20, search })
+    setPage(1);
+  }, [showOnlineOnly]);
+
+  const challengePlayer = async (userId: number) => {
+    if (!localStorage.getItem('token')) {
+      setError('Please login to challenge players');
+      return;
+    }
+    setError('');
+    setChallengingId(userId);
+    try {
+      const { data } = await api.post('/api/games/', {
+        opponent_id: userId,
+        preferred_color: 'auto',
+        time_control: 'blitz',
+        rated: true
+      });
+      const id = data?.id;
+      if (id) {
+        navigate(`/games/${id}`);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || 'Failed to challenge player';
+      setError(errorMsg);
+    } finally {
+      setChallengingId(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts({ page, page_size: 20, search, online_only: showOnlineOnly ? 1 : undefined })
       .then((res) => {
-        // Filter out bots from the results
-        const filteredResults = (res.results || []).filter((item: any) => !item.is_bot);
+        // Filter out bots and the current user from the results
+        const filteredResults = (res.results || []).filter((item: any) => {
+          if (item.is_bot) return false;
+          if (me?.id && item.id === me.id) return false;
+          return true;
+        });
         setItems(filteredResults);
-        // Adjust total count (approximate, since we're filtering)
-        setTotal(Math.max(0, (res.count || 0) - (res.results || []).filter((item: any) => item.is_bot).length));
+        const removedBots = (res.results || []).filter((item: any) => item.is_bot).length;
+        const removedSelf = me?.id ? (res.results || []).filter((item: any) => item.id === me.id).length : 0;
+        setTotal(Math.max(0, (res.count || 0) - removedBots - removedSelf));
       })
       .catch(() => {});
     
@@ -48,7 +89,17 @@ export default function Accounts() {
       body.style.overflow = originalBodyOverflow;
       body.style.height = originalBodyHeight;
     };
-  }, [page, search]);
+  }, [page, search, showOnlineOnly, me?.id]);
+
+  useEffect(() => {
+    fetchMe()
+      .then((u) => {
+        setMe({ id: u.id, username: u.username });
+      })
+      .catch(() => {
+        setMe(null);
+      });
+  }, []);
 
   useEffect(() => {
     const updateRowHeight = () => {
@@ -105,12 +156,12 @@ export default function Accounts() {
     <div className="layout" style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      gap: 16, 
+      gap: 12, 
       height: 'calc(100vh - 100px)', 
       maxHeight: 'calc(100vh - 100px)',
       overflow: 'hidden', 
-      paddingTop: 24, 
-      paddingBottom: 24,
+      paddingTop: 16, 
+      paddingBottom: 16,
       boxSizing: 'border-box'
     }}>
       <div className="card" style={{ 
@@ -119,31 +170,31 @@ export default function Accounts() {
         alignItems: 'center', 
         flexShrink: 0,
         flexWrap: 'wrap',
-        gap: 16,
-        padding: 20
+        gap: 12,
+        padding: 16
       }}>
         <div>
           <h1 style={{ 
-            fontSize: 32, 
+            fontSize: 26, 
             fontWeight: 800, 
-            marginBottom: 8,
+            marginBottom: 4,
             background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}>
-            👥 Players
+            👥 {showOnlineOnly ? 'Online Players' : 'Players'}
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
-            Browse and connect with other players
+          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
+            {showOnlineOnly ? 'Challenge players who are online right now' : 'Browse and connect with other players'}
           </p>
         </div>
         <input
           style={{
-            maxWidth: 280,
-            fontSize: 15,
-            padding: '12px 16px',
-            borderRadius: 12,
+            maxWidth: 240,
+            fontSize: 13,
+            padding: '8px 12px',
+            borderRadius: 10,
             border: '1px solid rgba(148, 163, 184, 0.25)',
             background: 'linear-gradient(160deg, rgba(10, 16, 28, 0.8), rgba(9, 13, 24, 0.95))',
             color: 'var(--text)',
@@ -178,6 +229,7 @@ export default function Accounts() {
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Rating</th>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Country</th>
               <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Chat</th>
+              <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)' }}>Challenge</th>
             </tr>
           </thead>
           <tbody>
@@ -252,7 +304,7 @@ export default function Accounts() {
                 <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
                   <FlagIcon code={u.country} size={18} />
                 </td>
-                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderRight: rowBorder, borderRadius: '0 12px 12px 0', height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, height: rowHeight || undefined, verticalAlign: 'middle' }}>
                   {!u.is_bot && (
                     <button
                       className="btn btn-info"
@@ -274,11 +326,24 @@ export default function Accounts() {
                     <span style={{ color: 'var(--muted)', fontSize: 13 }}>—</span>
                   )}
                 </td>
+                <td style={{ padding: '12px 16px', background: rowBg, borderTop: rowBorder, borderBottom: rowBorder, borderRight: rowBorder, borderRadius: '0 12px 12px 0', height: rowHeight || undefined, verticalAlign: 'middle' }}>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    disabled={challengingId === u.id}
+                    onClick={() => challengePlayer(u.id)}
+                    style={{ fontSize: 13, padding: '6px 12px' }}
+                  >
+                    {challengingId === u.id ? 'Sending...' : '⚔️ Challenge'}
+                  </button>
+                </td>
               </tr>
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ color: 'var(--muted)' }}>No accounts.</td>
+                <td colSpan={6} style={{ color: 'var(--muted)', padding: '24px', textAlign: 'center' }}>
+                  {showOnlineOnly ? '😴 Everyone is offline right now' : '😶 No players found'}
+                </td>
               </tr>
             )}
           </tbody>

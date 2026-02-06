@@ -1,6 +1,7 @@
 node_modules/
 dist/
 lila/
+lichess-lila/
 
 .env
 *.env

@@ -6,6 +6,17 @@ import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 type Square = { piece: string | null; color: 'light' | 'dark'; coord: string; pieceType?: string };
 
 const PROMOTION_PIECES = ['q', 'r', 'b', 'n'] as const;
+const LAST_MOVE_HIGHLIGHT = {
+  light: 'rgba(140, 220, 160, 0.45)',
+  dark: 'rgba(120, 200, 140, 0.5)'
+};
+const MOVE_SUGGESTION = {
+  light: 'rgba(120, 220, 185, 0.25)',
+  dark: 'rgba(120, 220, 185, 0.32)',
+  dotLight: 'rgba(120, 220, 185, 0.55)',
+  dotDark: 'rgba(120, 220, 185, 0.65)',
+  ring: 'rgba(120, 220, 185, 0.7)'
+};
 
 function parseFen(fen?: string): Square[] {
   const normalized =
@@ -131,30 +142,11 @@ export const ChessBoard = memo(function ChessBoard({
   const previousFenRef = useRef<string | undefined>(fen);
   const clearDraggedPieceTimeoutRef = useRef<number | null>(null);
   const pendingMoveRef = useRef<{ from: string; to: string } | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number; coord: string; piece: string; pieceType: string } | null>(null);
+  const activeDragRef = useRef<{ coord: string; piece: string; pieceType: string } | null>(null);
+  const wasDraggedRef = useRef(false);
+  const dropHandledRef = useRef(false);
   
-  // Global mouse move handler for drag tracking
-  useEffect(() => {
-    if (!draggedPiece || !wasDragged) return;
-    
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (draggedPiece && boardRef.current) {
-        const rect = boardRef.current.getBoundingClientRect();
-        // Constrain to board bounds to prevent shadow appearing outside
-        const boardX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-        const boardY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-        setDragOffset({
-          x: boardX,
-          y: boardY
-        });
-      }
-    };
-    
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
-    };
-  }, [draggedPiece, wasDragged]);
-
   useEffect(() => {
     if (!promotionPreview) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -176,6 +168,12 @@ export const ChessBoard = memo(function ChessBoard({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [promotionPreview, onMove]);
+
+  useEffect(() => {
+    if (!draggedPiece) {
+      activeDragRef.current = null;
+    }
+  }, [draggedPiece]);
   
   useEffect(() => {
     try {
@@ -282,16 +280,24 @@ export const ChessBoard = memo(function ChessBoard({
   const last = lastMove ? lastMove.toLowerCase() : '';
   const currentTheme = BOARD_THEMES[theme] || BOARD_THEMES[0];
   
-  // Detect check
-  const isInCheck = useMemo(() => {
-    if (!chessRef.current) return false;
-    return chessRef.current.inCheck();
+  // Detect check using current FEN to avoid stale state
+  const checkBoard = useMemo(() => {
+    try {
+      return new Chess(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    } catch {
+      return null;
+    }
   }, [fen]);
+
+  const isInCheck = useMemo(() => {
+    if (!checkBoard) return false;
+    return checkBoard.inCheck();
+  }, [checkBoard]);
   
   const kingSquare = useMemo(() => {
-    if (!chessRef.current || !isInCheck) return null;
-    const turn = chessRef.current.turn();
-    const board = chessRef.current.board();
+    if (!checkBoard || !isInCheck) return null;
+    const turn = checkBoard.turn();
+    const board = checkBoard.board();
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
         const piece = board[i][j];
@@ -303,7 +309,7 @@ export const ChessBoard = memo(function ChessBoard({
       }
     }
     return null;
-  }, [fen, isInCheck]);
+  }, [checkBoard, isInCheck]);
 
   const getMoveMeta = useCallback(
     (from: string, to: string) => {
@@ -485,9 +491,11 @@ export const ChessBoard = memo(function ChessBoard({
     }
 
     setWasDragged(true);
+    activeDragRef.current = { coord, piece, pieceType };
     setDraggedPiece({ coord, piece, pieceType });
     setSelected(coord);
 
+    wasDraggedRef.current = true;
     if ('touches' in e) {
       e.preventDefault();
       const touch = e.touches[0];
@@ -516,98 +524,184 @@ export const ChessBoard = memo(function ChessBoard({
     }
   }, [onMove, squares]);
 
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, coord: string, piece: string, pieceType: string) => {
+      if (!onMove) return;
+      if (promotionPending) return;
+      if (promotionPreview) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
 
-  const handleDrop = useCallback((e: React.DragEvent | React.TouchEvent, targetCoord: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!draggedPiece || !onMove) {
-      // Clear dragged piece state
-      setDraggedPiece(null);
-      setSelected(null);
+      const square = squares.find(s => s.coord === coord);
+      if (!square || !square.piece) return;
+
+      const isWhitePiece = pieceType === pieceType.toUpperCase();
+      const turn = chessRef.current?.turn();
+      if ((turn === 'w' && !isWhitePiece) || (turn === 'b' && isWhitePiece)) {
+        return; // Not player's piece
+      }
+
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        coord,
+        piece,
+        pieceType
+      };
+      dropHandledRef.current = false;
+      activeDragRef.current = { coord, piece, pieceType };
+      setDraggedPiece({ coord, piece, pieceType });
+      setSelected(coord);
       setWasDragged(false);
-      return;
-    }
-    if (promotionPending) return;
-    if (promotionPreview) return;
+      wasDraggedRef.current = false;
 
-    if (targetCoord === draggedPiece.coord) {
-      // Clear dragged piece state
-      setDraggedPiece(null);
-      setSelected(null);
-      setWasDragged(false);
-      return;
-    }
+      if (boardRef.current) {
+        const rect = boardRef.current.getBoundingClientRect();
+        const boardX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const boardY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        setDragOffset({ x: boardX, y: boardY });
+      }
+    },
+    [onMove, squares, promotionPending, promotionPreview]
+  );
 
-      // Validate move with chess.js before submitting
-      const moveStr = `${draggedPiece.coord}${targetCoord}`;
 
-      // Double-check chess.js board is initialized and in sync
-      if (!chessRef.current) {
-        // Clear dragged piece state
+  const handleDrop = useCallback(
+    (
+      e: React.DragEvent | React.TouchEvent,
+      targetCoord: string,
+      overrideDrag?: { coord: string; piece: string; pieceType: string } | null
+    ) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const activeDrag = overrideDrag || draggedPiece || activeDragRef.current;
+
+      const clearDragState = () => {
         setDraggedPiece(null);
         setSelected(null);
         setWasDragged(false);
+        setDragOffset(null);
+        activeDragRef.current = null;
+        wasDraggedRef.current = false;
+      };
+
+      if (!activeDrag || !onMove) {
+        clearDragState();
         return;
       }
-      
-      // Verify it's the correct turn
+      if (promotionPending) return;
+      if (promotionPreview) return;
+
+      if (targetCoord === activeDrag.coord) {
+        clearDragState();
+        return;
+      }
+
+      const moveStr = `${activeDrag.coord}${targetCoord}`;
+
+      if (!chessRef.current) {
+        clearDragState();
+        return;
+      }
+
       const currentTurn = chessRef.current.turn();
-      const square = squares.find(s => s.coord === draggedPiece.coord);
+      const square = squares.find(s => s.coord === activeDrag.coord);
       if (!square || !square.pieceType) {
-        setDraggedPiece(null);
-        setSelected(null);
-        setWasDragged(false);
+        clearDragState();
         return;
       }
       const isWhitePiece = square.pieceType === square.pieceType.toUpperCase();
-      
-      // Strict turn validation
+
       if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) {
-        // Wrong turn, don't submit
-        console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, from: draggedPiece.coord, to: targetCoord });
-        setDraggedPiece(null);
-        setSelected(null);
-        setWasDragged(false);
+        console.warn('Move rejected: wrong turn', { currentTurn, isWhitePiece, from: activeDrag.coord, to: targetCoord });
+        clearDragState();
         return;
       }
 
-      const { isLegal, promotionNeeded } = getMoveMeta(draggedPiece.coord, targetCoord);
-      if (!isLegal) {
-        console.warn('Move rejected: invalid move', { from: draggedPiece.coord, to: targetCoord });
-        setDraggedPiece(null);
-        setSelected(null);
-        setWasDragged(false);
-        return;
-      }
+      const isPawn = square?.pieceType?.toLowerCase() === 'p';
+      const targetRank = targetCoord[1];
+      const promotionNeeded =
+        isPawn && ((isWhitePiece && targetRank === '8') || (!isWhitePiece && targetRank === '1'));
 
-      // Handle promotion
       let finalMove = moveStr;
       if (promotionNeeded && square?.pieceType) {
+        clearDragState();
+        setPromotionPending({ from: activeDrag.coord, to: targetCoord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
+        return;
+      }
+
+      pendingMoveRef.current = { from: activeDrag.coord, to: targetCoord };
+
+      try {
+        onMove(finalMove);
+      } catch (err) {
+        console.error('Move failed:', err);
+        pendingMoveRef.current = null;
+      }
+
+      clearDragState();
+    },
+    [draggedPiece, onMove, squares, promotionPending, promotionPreview]
+  );
+
+  // Global mouse handlers for drag tracking (pointer-based, no HTML5 drag)
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!boardRef.current || !draggedPiece) return;
+
+      const rect = boardRef.current.getBoundingClientRect();
+      const boardX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const boardY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      setDragOffset({ x: boardX, y: boardY });
+
+      const start = dragStartRef.current;
+      if (!wasDraggedRef.current && start) {
+        const dx = e.clientX - start.x;
+        const dy = e.clientY - start.y;
+        if (Math.hypot(dx, dy) >= 2) {
+          wasDraggedRef.current = true;
+          setWasDragged(true);
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      const activeDrag = activeDragRef.current || draggedPiece || null;
+      if (!activeDrag || !boardRef.current) {
+        dragStartRef.current = null;
+        setWasDragged(false);
+        setDragOffset(null);
+        wasDraggedRef.current = false;
+        return;
+      }
+
+      const rect = boardRef.current.getBoundingClientRect();
+      const within =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      if (!within) {
         setDraggedPiece(null);
         setSelected(null);
         setWasDragged(false);
-        setPromotionPending({ from: draggedPiece.coord, to: targetCoord, isWhite: square.pieceType === square.pieceType.toUpperCase() });
-        return;
+        setDragOffset(null);
+        activeDragRef.current = null;
+        dragStartRef.current = null;
+        wasDraggedRef.current = false;
+        dropHandledRef.current = false;
       }
-      
-      // Call onMove callback
-      try {
-      onMove(finalMove);
-    } catch (err) {
-      console.error('Move failed:', err);
-    }
+    };
 
-    setDraggedPiece(null);
-    setSelected(null);
-    setWasDragged(false);
-  }, [draggedPiece, onMove, squares, orientation, boardRef]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-  }, []);
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [draggedPiece, wasDragged, orientation, handleDrop]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!draggedPiece || !boardRef.current) return;
@@ -903,41 +997,22 @@ export const ChessBoard = memo(function ChessBoard({
           const isValidMove = validMoves.includes(sq.coord);
           const isLastMoveFrom = last && last.startsWith(sq.coord);
           const isLastMoveTo = last && last.endsWith(sq.coord);
-          const isDragging = draggedPiece?.coord === sq.coord;
+          const isDragging = wasDragged && draggedPiece?.coord === sq.coord;
 
           return (
             <div
               key={sq.coord}
-              draggable={!!sq.piece && !!onMove && !isDragging}
-              onDragStart={(e) => {
+              onMouseDown={(e) => {
                 if (sq.piece && sq.pieceType) {
-                  handleDragStart(e, sq.coord, sq.piece, sq.pieceType);
+                  handleMouseDown(e, sq.coord, sq.piece, sq.pieceType);
                 }
               }}
-              onDrag={(e) => {
-                // Update drag offset during mouse drag
-                if (draggedPiece && boardRef.current) {
-                  const rect = boardRef.current.getBoundingClientRect();
-                  setDragOffset({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                  });
-                }
-              }}
-              onDragEnd={(e) => {
-                // Clear drag state immediately
-                setDraggedPiece(null);
-                setSelected(null);
-                setWasDragged(false);
-                setDragOffset(null);
-              }}
-              onDragOver={handleDragOver}
-              onDrop={(e) => {
-                handleDrop(e, sq.coord);
-                // Clear drag state after drop
-                setDraggedPiece(null);
-                setDragOffset(null);
-                setWasDragged(false);
+              onMouseUp={(e) => {
+                const activeDrag = activeDragRef.current || draggedPiece;
+                if (!activeDrag) return;
+                if (promotionPending || promotionPreview) return;
+                dropHandledRef.current = true;
+                handleDrop(e as unknown as React.DragEvent, sq.coord, activeDrag);
               }}
               onTouchStart={(e) => sq.piece && sq.pieceType && handleDragStart(e, sq.coord, sq.piece, sq.pieceType)}
               onTouchMove={handleTouchMove}
@@ -947,8 +1022,8 @@ export const ChessBoard = memo(function ChessBoard({
           style={{
                 background: isValidMove
                   ? sq.color === 'dark'
-                    ? 'rgba(44, 230, 194, 0.5)'
-                    : 'rgba(44, 230, 194, 0.4)'
+                    ? MOVE_SUGGESTION.dark
+                    : MOVE_SUGGESTION.light
                   : kingSquare === sq.coord && isInCheck
                   ? sq.color === 'dark'
                     ? 'rgba(255, 0, 0, 0.6)'
@@ -961,8 +1036,6 @@ export const ChessBoard = memo(function ChessBoard({
                     ? '3px solid #1d8bff'
                     : kingSquare === sq.coord && isInCheck
                     ? '3px solid #ff0000'
-                    : isLastMoveFrom || isLastMoveTo
-                ? '2px solid #f0ad4e'
                 : 'none',
                 outlineOffset: '-2px',
             display: 'flex',
@@ -971,7 +1044,7 @@ export const ChessBoard = memo(function ChessBoard({
                 cursor: onMove && sq.piece ? 'grab' : onMove ? 'pointer' : 'default',
                 transition: 'background 200ms cubic-bezier(0.4, 0, 0.2, 1), outline 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
-                opacity: isDragging ? 0.4 : 1,
+                opacity: 1,
                 aspectRatio: '1 / 1',
                 minWidth: 0,
                 minHeight: 0,
@@ -981,7 +1054,8 @@ export const ChessBoard = memo(function ChessBoard({
               }}
               onClick={(e) => {
                 // Don't trigger click if we just completed a drag
-                if (wasDragged) {
+                if (wasDraggedRef.current || wasDragged) {
+                  wasDraggedRef.current = false;
                   setWasDragged(false);
                   return;
                 }
@@ -990,12 +1064,24 @@ export const ChessBoard = memo(function ChessBoard({
                 handleSquareClick(sq.coord, sq.pieceType ?? null);
               }}
             >
+              {(isLastMoveFrom || isLastMoveTo) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: sq.color === 'dark' ? LAST_MOVE_HIGHLIGHT.dark : LAST_MOVE_HIGHLIGHT.light,
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
               {sq.piece && sq.pieceType && (
                 <div
                   style={{
                     transition: 'transform 150ms cubic-bezier(0.4, 0, 0.2, 1)',
                     transform: 'scale(1)',
-                    cursor: onMove ? 'grab' : 'default'
+                    cursor: onMove ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                    opacity: isDragging ? 0 : 1,
+                    pointerEvents: 'none'
                   }}
                   className="chess-piece"
                 >
@@ -1015,10 +1101,10 @@ export const ChessBoard = memo(function ChessBoard({
                     height: '40%',
                     borderRadius: '50%',
                     background: sq.color === 'dark' 
-                      ? 'rgba(44, 230, 194, 0.85)' 
-                      : 'rgba(44, 230, 194, 0.75)',
+                      ? MOVE_SUGGESTION.dotDark
+                      : MOVE_SUGGESTION.dotLight,
                     pointerEvents: 'none',
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.2)',
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.2)',
                     animation: 'fadeIn 150ms ease-out'
                   }}
                 />
@@ -1029,10 +1115,10 @@ export const ChessBoard = memo(function ChessBoard({
                     position: 'absolute',
                     inset: '6%',
                     borderRadius: '50%',
-                    outline: '4px solid rgba(44, 230, 194, 0.95)',
+                    outline: `4px solid ${MOVE_SUGGESTION.ring}`,
                     outlineOffset: '-4px',
                     pointerEvents: 'none',
-                    boxShadow: '0 3px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.15)',
+                    boxShadow: '0 3px 8px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.15)',
                     animation: 'fadeIn 150ms ease-out'
                   }}
                 />
@@ -1097,7 +1183,7 @@ export const ChessBoard = memo(function ChessBoard({
         </div>
       </div>
       {/* Ghost piece during drag - Lichess style - Only show when actually dragging */}
-      {draggedPiece && dragOffset && wasDragged && boardRef.current && (
+              {draggedPiece && dragOffset && wasDragged && boardRef.current && (
         <div
           style={{
             position: 'fixed',

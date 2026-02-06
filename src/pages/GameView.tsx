@@ -34,33 +34,49 @@ import { MaterialDiff } from '../components/MaterialDiff';
 import { EvaluationGraph } from '../components/EvaluationGraph';
 import api from '../api/client';
 
-function formatTime(seconds?: number, showTenths?: boolean): string {
+function formatTime(seconds?: number): string {
   if (seconds === undefined || seconds === null) return '0:00';
   if (seconds < 0) return '0:00';
-  
-  const totalSeconds = Math.max(0, Math.floor(seconds));
+
+  const safeSeconds = Math.max(0, seconds);
+  const totalSeconds = Math.floor(safeSeconds);
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  
-  // Show tenths when time is low (< 10 seconds)
-  if (showTenths && seconds < 10 && seconds >= 0) {
-    const tenths = Math.floor((seconds - totalSeconds) * 10);
-    if (mins > 0) {
-      return `${mins}:${secs.toString().padStart(2, '0')}.${tenths}`;
-    }
-    return `${secs}.${tenths}`;
+  const secLabel = secs.toString().padStart(2, '0');
+
+  return `${mins}:${secLabel}`;
+}
+
+function getEvalDisplay(evalScore?: number | null, mate?: number | null): { label: string; tone: -1 | 0 | 1 } {
+  if (mate !== null && mate !== undefined) {
+    return { label: `M${Math.abs(mate)}`, tone: mate > 0 ? 1 : -1 };
   }
-  
-  if (mins > 0) {
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  if (evalScore !== null && evalScore !== undefined) {
+    const tone = evalScore > 0 ? 1 : evalScore < 0 ? -1 : 0;
+    const label = `${evalScore > 0 ? '+' : ''}${evalScore.toFixed(1)}`;
+    return { label, tone };
   }
-  return `${secs}s`;
+  return { label: '—', tone: 0 };
+}
+
+function normalizeMoves(moves?: string): string {
+  return (moves || '').trim().replace(/\s+/g, ' ');
+}
+
+function countMoves(moves: string): number {
+  return moves ? moves.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function buildUpdateKey(moves?: string, fen?: string, status?: string): string {
+  const normalized = normalizeMoves(moves);
+  return `${normalized}|${fen || ''}|${status || ''}`;
 }
 
 export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [game, setGame] = useState<GameSummary | null>(null);
+  const gameStatusRef = useRef<string | null>(null);
   const [clock, setClock] = useState<{ white_time_left?: number; black_time_left?: number; turn?: string; lastUpdate?: number }>({});
   const clockTimesRef = useRef<{ white: number; black: number; lastUpdate: number; activeColor?: 'white' | 'black' } | null>(null);
   const [prediction, setPrediction] = useState<'white' | 'black' | 'draw' | ''>('');
@@ -74,6 +90,11 @@ export default function GameView() {
   const [analysis, setAnalysis] = useState<any>(null);
   const [fullAnalysis, setFullAnalysis] = useState<any>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<
+    'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'not_requested'
+  >('idle');
+  const [analysisError, setAnalysisError] = useState('');
+  const analysisPollRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const clockIntervalRef = useRef<number | null>(null);
   const clockTickTimeoutRef = useRef<number | null>(null);
@@ -138,16 +159,47 @@ export default function GameView() {
   const [rematchNow, setRematchNow] = useState<number>(() => Date.now());
   const previousMoveCountRef = useRef<number>(0);
   const lastMovesRef = useRef<string>('');
+  const lastUpdateKeyRef = useRef<string>('');
+  const lastSnapshotSourceRef = useRef<'optimistic' | 'server' | null>(null);
   const botFallbackRef = useRef<{ moves: string; timeoutId: number } | null>(null);
+  const updateLastSnapshot = useCallback(
+    (moves?: string, fen?: string, status?: string, source: 'optimistic' | 'server' = 'server') => {
+      const normalizedMoves = normalizeMoves(moves);
+      lastMovesRef.current = normalizedMoves;
+      lastUpdateKeyRef.current = buildUpdateKey(normalizedMoves, fen, status);
+      lastSnapshotSourceRef.current = source;
+    },
+    []
+  );
+  const isDuplicateSnapshot = useCallback((moves?: string, fen?: string, status?: string) => {
+    if (lastSnapshotSourceRef.current !== 'server') return false;
+    return buildUpdateKey(moves, fen, status) === lastUpdateKeyRef.current;
+  }, []);
   const shouldApplyGameUpdate = useCallback((nextGame: GameSummary | null) => {
     if (!nextGame) return false;
-    const nextMoves = nextGame.moves || '';
+    const nextMoves = normalizeMoves(nextGame.moves);
     const currentMoves = lastMovesRef.current || '';
     if (!currentMoves) return true;
-    const nextCount = nextMoves ? nextMoves.trim().split(/\s+/).filter(Boolean).length : 0;
-    const currentCount = currentMoves ? currentMoves.trim().split(/\s+/).filter(Boolean).length : 0;
-    return nextCount >= currentCount;
-  }, []);
+    const nextCount = countMoves(nextMoves);
+    const currentCount = countMoves(currentMoves);
+    if (nextCount > currentCount) return true;
+    if (nextCount < currentCount) return false;
+    if (nextGame.current_fen && game?.current_fen && nextGame.current_fen !== game.current_fen) return true;
+    if (nextGame.status && game?.status && nextGame.status !== game.status) return true;
+    if (
+      nextGame.first_move_deadline !== undefined &&
+      nextGame.first_move_deadline !== game?.first_move_deadline
+    ) {
+      return true;
+    }
+    if (
+      nextGame.first_move_color !== undefined &&
+      nextGame.first_move_color !== game?.first_move_color
+    ) {
+      return true;
+    }
+    return false;
+  }, [game?.current_fen, game?.status, game?.first_move_deadline, game?.first_move_color]);
 
   const countPiecesInFen = (fen?: string) => {
     const board = (fen || '').split(' ')[0] || '';
@@ -182,22 +234,33 @@ export default function GameView() {
     setBoardOrientation('white');
   }, [game?.id, me?.id]);
 
+  useEffect(() => {
+    gameStatusRef.current = game?.status ?? null;
+  }, [game?.status]);
+
   // Reset move navigation to last move when new moves are added
   useEffect(() => {
-    const currentMoveCount = game?.moves ? game.moves.split(/\s+/).filter(Boolean).length : 0;
+    const normalizedMoves = normalizeMoves(game?.moves);
+    const currentMoveCount = countMoves(normalizedMoves);
     if (currentMoveCount > previousMoveCountRef.current && previousMoveCountRef.current > 0) {
       // New move added - reset to showing last move
       setCurrentMoveIndex(null);
     }
     previousMoveCountRef.current = currentMoveCount;
-    if (game?.moves !== undefined) {
-      lastMovesRef.current = game.moves;
+    if (game) {
+      const source = lastSnapshotSourceRef.current === 'optimistic' ? 'optimistic' : 'server';
+      updateLastSnapshot(game.moves, game.current_fen, game.status, source);
     }
-  }, [game?.moves]);
+  }, [game?.moves, game?.current_fen, game?.status, updateLastSnapshot]);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const moveCount = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean).length : 0), [game]);
   const movesList = useMemo(() => (game?.moves ? game.moves.split(/\s+/).filter(Boolean) : []), [game?.moves]);
+  const analysisMoves = fullAnalysis?.analysis?.moves || [];
+  const analysisTotalMoves = fullAnalysis?.analysis?.summary?.total_moves ?? moveCount;
+  const analysisIsComplete =
+    !!fullAnalysis && (analysisTotalMoves === 0 || analysisMoves.length >= analysisTotalMoves);
+  const analyzedMoves = fullAnalysis?.analysis?.summary?.analyzed_moves || analysisMoves.length || 0;
   const opponent = useMemo(() => {
     if (!game || !me) return null;
     return game.white?.id === me.id ? game.black : game.white;
@@ -249,6 +312,63 @@ export default function GameView() {
     if (game.black?.id === me.id) return whiteIsBot;
     return whiteIsBot || blackIsBot;
   }, [game?.white?.id, game?.black?.id, game?.white?.is_bot, game?.black?.is_bot, me?.id]);
+
+  const stopAnalysisPolling = useCallback(() => {
+    if (analysisPollRef.current !== null) {
+      window.clearInterval(analysisPollRef.current);
+      analysisPollRef.current = null;
+    }
+  }, []);
+
+  const applyAnalysisResponse = useCallback(
+    (data: any) => {
+      const status =
+        data?.status ||
+        (data?.analysis ? 'completed' : 'not_requested');
+      setAnalysisStatus(status);
+      
+      setAnalysisError(data?.error || '');
+
+      if (status === 'completed' && data?.analysis) {
+        setFullAnalysis(data);
+      }
+
+      if (status === 'queued' || status === 'running') {
+        setAnalyzing(true);
+      } else {
+        setAnalyzing(false);
+      }
+
+      if (status === 'completed' || status === 'failed') {
+        stopAnalysisPolling();
+      }
+
+      return status;
+    },
+    [stopAnalysisPolling]
+  );
+
+  const startAnalysisPolling = useCallback(() => {
+    if (!id || analysisPollRef.current !== null) return;
+    analysisPollRef.current = window.setInterval(() => {
+      checkAnalysisStatus(id)
+        .then((data: any) => {
+          const status = applyAnalysisResponse(data);
+          if (status === 'completed' || status === 'failed') {
+            stopAnalysisPolling();
+          }
+        })
+        .catch(() => {});
+    }, 4000);
+  }, [applyAnalysisResponse, id, stopAnalysisPolling]);
+
+  useEffect(() => {
+    if (!game?.id) return;
+    setFullAnalysis(null);
+    setAnalysisError('');
+    setAnalysisStatus('idle');
+    stopAnalysisPolling();
+  }, [game?.id, stopAnalysisPolling]);
 
   // Calculate rating changes (only show when game is finished and rated)
   const whiteRatingChange = useMemo(() => {
@@ -475,13 +595,18 @@ export default function GameView() {
       return;
     }
 
+    if (moveCount >= 2 || game.status !== 'active') {
+      setFirstMoveCountdown(null);
+      return;
+    }
+
     let deadlineMs: number | null = null;
     let color: 'white' | 'black' | null = null;
 
-    if (game.status === 'active' && game.first_move_deadline && game.first_move_color) {
+    if (game.first_move_deadline && game.first_move_color) {
       deadlineMs = game.first_move_deadline * 1000;
       color = game.first_move_color;
-    } else if (game.status === 'active' && game.started_at) {
+    } else if (game.started_at) {
       const graceMs = 20000;
       if (moveCount === 0) {
         deadlineMs = new Date(game.started_at).getTime() + graceMs;
@@ -648,17 +773,12 @@ export default function GameView() {
       }
     }
 
-    const showTenths = (millis: number): boolean => {
-      return millis < 10000; // Show tenths when < 10 seconds
-    };
-
     const scheduleTick = (time: number, extraDelay: number = 0) => {
       if (clockTickTimeoutRef.current) {
         clearTimeout(clockTickTimeoutRef.current);
       }
       // Lichess-style smart scheduling: schedule next update when display will actually change
-      // time % (showTenths ? 100 : 500) ensures we update exactly when the display needs to change
-      const interval = showTenths(time) ? 100 : 500;
+      const interval = 500;
       const delay = (time % interval) + 1 + extraDelay;
       clockTickTimeoutRef.current = window.setTimeout(tick, delay);
     };
@@ -769,6 +889,24 @@ export default function GameView() {
           if (shouldApplyGameUpdate(data)) {
             setGame(data);
           }
+          if (
+            data?.white_time_left !== undefined &&
+            data?.black_time_left !== undefined &&
+            !clockTimesRef.current
+          ) {
+            setClock({
+              white_time_left: data.white_time_left,
+              black_time_left: data.black_time_left,
+              turn: data.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+              lastUpdate: performance.now(),
+            });
+            clockTimesRef.current = {
+              white: (data.white_time_left || 0) * 1000,
+              black: (data.black_time_left || 0) * 1000,
+              activeColor: data.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+              lastUpdate: performance.now(),
+            };
+          }
           refreshInProgressRef.current = false;
           return data;
         })
@@ -778,6 +916,24 @@ export default function GameView() {
               if (!silent) setLoadErr('');
               if (shouldApplyGameUpdate(data)) {
                 setGame(data);
+              }
+              if (
+                data?.white_time_left !== undefined &&
+                data?.black_time_left !== undefined &&
+                !clockTimesRef.current
+              ) {
+                setClock({
+                  white_time_left: data.white_time_left,
+                  black_time_left: data.black_time_left,
+                  turn: data.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+                  lastUpdate: performance.now(),
+                });
+                clockTimesRef.current = {
+                  white: (data.white_time_left || 0) * 1000,
+                  black: (data.black_time_left || 0) * 1000,
+                  activeColor: data.current_fen?.split(' ')[1] === 'w' ? 'white' : 'black',
+                  lastUpdate: performance.now(),
+                };
               }
               // If game is active and we don't have clock data yet, fetch it immediately
               if (data.status === 'active' && (!clock.white_time_left && !clock.black_time_left)) {
@@ -825,10 +981,18 @@ export default function GameView() {
     
     let clockInterval: number | null = null;
     const updateClock = () => {
-      // Only fetch clock for active games
-      const currentGame = game; // Capture current game state
-      if (currentGame?.status === 'active') {
-    fetchClock(id)
+      const status = gameStatusRef.current;
+      if (status === 'finished' || status === 'aborted') {
+        if (clockInterval) {
+          clearInterval(clockInterval);
+          clockInterval = null;
+        }
+        return;
+      }
+      if (status !== 'active') {
+        return;
+      }
+      fetchClock(id)
           .then((c) => {
             // Only update clock if we get valid data, preserve existing values otherwise
             if (c.white_time_left !== undefined && c.black_time_left !== undefined && 
@@ -869,18 +1033,11 @@ export default function GameView() {
               clockInterval = null;
             }
           });
-      } else if (clockInterval) {
-        // Game is not active, stop polling
-        clearInterval(clockInterval);
-        clockInterval = null;
-      }
     };
     
     // Initial clock fetch - wait a bit for game to load
     const initialClockFetch = setTimeout(() => {
-      if (game?.status === 'active') {
-        updateClock();
-      }
+      updateClock();
     }, 100);
     
     // Update clock every 2 seconds (only for active games, 404s are handled gracefully)
@@ -1025,6 +1182,23 @@ export default function GameView() {
             }
             // Immediately update game state from WebSocket payload for faster UI update
             if (payload.fen && payload.moves) {
+              const payloadStatus = payload.status || game?.status || '';
+              const scheduledMoves = botFallbackRef.current?.moves || '';
+              const scheduledCount = botFallbackRef.current ? countMoves(scheduledMoves) : 0;
+              const payloadCount = countMoves(normalizeMoves(payload.moves));
+              const isBotFallbackUpdate = Boolean(botFallbackRef.current && payloadCount > scheduledCount);
+              if (isBotFallbackUpdate && botFallbackRef.current) {
+                clearTimeout(botFallbackRef.current.timeoutId);
+                botFallbackRef.current = null;
+              }
+              const firstMoveChanged =
+                (payload.first_move_deadline !== undefined &&
+                  payload.first_move_deadline !== game?.first_move_deadline) ||
+                (payload.first_move_color !== undefined &&
+                  payload.first_move_color !== game?.first_move_color);
+              const isDuplicate =
+                !firstMoveChanged &&
+                isDuplicateSnapshot(payload.moves, payload.fen, payloadStatus);
               const newTurn = payload.fen?.split(' ')[1] || 'w';
               const turnColor = newTurn === 'w' ? 'white' : 'black';
               
@@ -1036,50 +1210,53 @@ export default function GameView() {
                 return (turnColor === 'white' && isWhite) || (turnColor === 'black' && isBlack);
               })();
               
-              // Update game state immediately - include legal moves if provided in payload (like Lichess)
-              // Preserve all existing state to prevent flickering/disappearing pieces
-              setGame((prevGame) => {
-                if (!prevGame) return prevGame;
-                if (
-                  prevGame.current_fen === payload.fen &&
-                  prevGame.moves === payload.moves &&
-                  (payload.status ? prevGame.status === payload.status : true) &&
-                  (payload.result ? prevGame.result === payload.result : true)
-                ) {
-                  return prevGame;
-                }
-                const updated = {
-                  ...prevGame,
-                  current_fen: payload.fen,
-                  moves: payload.moves,
-                  status: payload.status || prevGame.status,
-                  result: payload.result || prevGame.result,
-                  started_at: payload.started_at || prevGame.started_at,
-                  created_at: payload.created_at || prevGame.created_at,
-                  first_move_deadline: payload.first_move_deadline ?? prevGame.first_move_deadline,
-                  first_move_color: payload.first_move_color ?? prevGame.first_move_color,
-                  move_count: payload.move_count ?? prevGame.move_count,
-                  // Preserve all other game state to prevent UI flicker
-                };
-                
-                // If legal moves are included in WebSocket payload (backend optimization), use them immediately
-                if (payload.legal_moves && Array.isArray(payload.legal_moves)) {
-                  updated.legal_moves = payload.legal_moves;
-                } else if (payload.game_state?.legal_moves?.san && Array.isArray(payload.game_state.legal_moves.san)) {
-                  // Use legal moves from game_state if available
-                  updated.legal_moves = payload.game_state.legal_moves.san;
-                } else if (prevGame.legal_moves) {
-                  // Preserve existing legal moves if not in payload
-                  updated.legal_moves = prevGame.legal_moves;
-                }
-                
-                return updated;
-              });
+              if (!isDuplicate) {
+                updateLastSnapshot(payload.moves, payload.fen, payloadStatus);
+                // Update game state immediately - include legal moves if provided in payload (like Lichess)
+                // Preserve all existing state to prevent flickering/disappearing pieces
+                setGame((prevGame) => {
+                  if (!prevGame) return prevGame;
+                  if (
+                    prevGame.current_fen === payload.fen &&
+                    prevGame.moves === payload.moves &&
+                    (payload.status ? prevGame.status === payload.status : true) &&
+                    (payload.result ? prevGame.result === payload.result : true)
+                  ) {
+                    return prevGame;
+                  }
+                  const updated = {
+                    ...prevGame,
+                    current_fen: payload.fen,
+                    moves: payload.moves,
+                    status: payload.status || prevGame.status,
+                    result: payload.result || prevGame.result,
+                    started_at: payload.started_at || prevGame.started_at,
+                    created_at: payload.created_at || prevGame.created_at,
+                    first_move_deadline: payload.first_move_deadline ?? prevGame.first_move_deadline,
+                    first_move_color: payload.first_move_color ?? prevGame.first_move_color,
+                    move_count: payload.move_count ?? prevGame.move_count,
+                    // Preserve all other game state to prevent UI flicker
+                  };
+                  
+                  // If legal moves are included in WebSocket payload (backend optimization), use them immediately
+                  if (payload.legal_moves && Array.isArray(payload.legal_moves)) {
+                    updated.legal_moves = payload.legal_moves;
+                  } else if (payload.game_state?.legal_moves?.san && Array.isArray(payload.game_state.legal_moves.san)) {
+                    // Use legal moves from game_state if available
+                    updated.legal_moves = payload.game_state.legal_moves.san;
+                  } else if (prevGame.legal_moves) {
+                    // Preserve existing legal moves if not in payload
+                    updated.legal_moves = prevGame.legal_moves;
+                  }
+                  
+                  return updated;
+                });
 
-              if (lastFenRef.current && lastFenRef.current !== payload.fen) {
-                playMoveSound(payload.san, payload.fen);
+                if (lastFenRef.current && lastFenRef.current !== payload.fen) {
+                  playMoveSound(payload.san, payload.fen);
+                }
+                lastFenRef.current = payload.fen;
               }
-              lastFenRef.current = payload.fen;
               
               // Update clock immediately from payload - preserve existing values if new ones aren't available
               setClock((prevClock) => {
@@ -1388,6 +1565,21 @@ export default function GameView() {
       .catch(() => {});
   }, [id, game, isPlayer]);
 
+  useEffect(() => {
+    if (!id || !game) return;
+    if (game.status !== 'finished' && game.status !== 'aborted') return;
+    checkAnalysisStatus(id)
+      .then((data: any) => {
+        const status = applyAnalysisResponse(data);
+        if (status === 'queued' || status === 'running') {
+          startAnalysisPolling();
+        }
+      })
+      .catch(() => {});
+    return () => stopAnalysisPolling();
+  }, [applyAnalysisResponse, game?.status, id, startAnalysisPolling, stopAnalysisPolling]);
+
+
   // Note: Win/loss popup is triggered by WebSocket game_finished event with reason='timeout'
   // This ensures it only shows for time finishes, not resignations or other finishes
 
@@ -1541,6 +1733,7 @@ export default function GameView() {
       const nextMoves = game?.moves ? `${game.moves} ${move.san}` : move.san;
       const nextLegalMoves = chess.moves();
 
+      updateLastSnapshot(nextMoves, nextFen, game?.status, 'optimistic');
       setGame((prevGame) => {
         if (!prevGame) return prevGame;
         return {
@@ -1563,6 +1756,7 @@ export default function GameView() {
       .then((res) => {
         // Server confirmed move - update with server response
         if (shouldApplyGameUpdate(res)) {
+          updateLastSnapshot(res.moves, res.current_fen, res.status);
           setGame(res);
         }
         setMoveInProgress(false);
@@ -1572,7 +1766,7 @@ export default function GameView() {
         }
         // If playing a bot, poll once for bot response only if WS didn't update
         if (res.status === 'active' && isBotOpponent) {
-          const scheduledMoves = res.moves || '';
+          const scheduledMoves = normalizeMoves(res.moves || '');
           if (botFallbackRef.current?.timeoutId) {
             clearTimeout(botFallbackRef.current.timeoutId);
           }
@@ -1580,7 +1774,8 @@ export default function GameView() {
             if (lastMovesRef.current === scheduledMoves) {
               fetchGameDetail(id)
                 .then((updated) => {
-                  if (shouldApplyGameUpdate(updated)) {
+                  if (!isDuplicateSnapshot(updated.moves, updated.current_fen, updated.status) && shouldApplyGameUpdate(updated)) {
+                    updateLastSnapshot(updated.moves, updated.current_fen, updated.status);
                     setGame(updated);
                   }
                   if (updated.status === 'active') {
@@ -1604,9 +1799,84 @@ export default function GameView() {
           fetchGameDetail(id).then(setGame).catch(() => {});
         }
       });
-  }, [id, moveInProgress, isPlayer, game?.status, isMyTurn, game?.current_fen, myColor, isBotOpponent]);
+  }, [id, moveInProgress, isPlayer, game?.status, isMyTurn, game?.current_fen, game?.moves, myColor, isBotOpponent, updateLastSnapshot, isDuplicateSnapshot]);
 
   const handleBoardMove = useCallback((uci: string) => submitMoveUci(uci), [submitMoveUci]);
+
+  const topClockColor: 'white' | 'black' = boardOrientation === 'white' ? 'black' : 'white';
+  const bottomClockColor: 'white' | 'black' = boardOrientation === 'white' ? 'white' : 'black';
+  const topPlayer = boardOrientation === 'white' ? game?.black : game?.white;
+  const bottomPlayer = boardOrientation === 'white' ? game?.white : game?.black;
+  const topRating = boardOrientation === 'white' ? blackRating : whiteRating;
+  const bottomRating = boardOrientation === 'white' ? whiteRating : blackRating;
+  const topRatingChange = boardOrientation === 'white' ? blackRatingChange : whiteRatingChange;
+  const bottomRatingChange = boardOrientation === 'white' ? whiteRatingChange : blackRatingChange;
+
+  const renderClockRow = (
+    user: GameSummary['white'] | undefined,
+    rating: number | null,
+    ratingChange: number | undefined,
+    color: 'white' | 'black',
+    materialPosition: 'top' | 'bottom'
+  ) => {
+    if (!user) return null;
+    const isActiveRow = game?.status === 'active' && clock.turn === color;
+    const timeLeft =
+      color === 'white' ? (clock?.white_time_left ?? 0) : (clock?.black_time_left ?? 0);
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          padding: '6px 10px',
+          borderRadius: 12,
+          background: isActiveRow ? 'rgba(149, 173, 51, 0.14)' : 'rgba(11, 16, 26, 0.7)',
+          border: isActiveRow
+            ? '1px solid rgba(149, 173, 51, 0.6)'
+            : '1px solid rgba(148, 163, 184, 0.2)',
+          boxShadow: 'inset 0 1px 8px rgba(0, 0, 0, 0.35)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <IdentityStrip
+              user={user}
+              rating={rating ?? undefined}
+              ratingChange={ratingChange}
+              isActive={game?.status === 'active'}
+              isMyTurn={game?.status === 'active' && myColor === color && clock.turn === color}
+              ratingTone="muted"
+            />
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: isActiveRow ? 'var(--accent)' : 'var(--text)',
+              minWidth: 88,
+              textAlign: 'right',
+              flexShrink: 0,
+              fontFamily: 'monospace',
+              letterSpacing: '0.8px',
+              padding: '4px 10px',
+              borderRadius: 8,
+              background: isActiveRow ? 'rgba(149, 173, 51, 0.18)' : 'rgba(8, 12, 20, 0.85)',
+              border: isActiveRow
+                ? '1px solid rgba(149, 173, 51, 0.55)'
+                : '1px solid rgba(148, 163, 184, 0.2)',
+              boxShadow: 'inset 0 1px 6px rgba(0,0,0,0.35)'
+            }}
+          >
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <MaterialDiff fen={game?.current_fen} color={color} position={materialPosition} />
+        </div>
+      </div>
+    );
+  };
 
   if (loadErr && !game) {
   return (
@@ -1649,7 +1919,7 @@ export default function GameView() {
         {/* Main game area - Lichess style layout: Left sidebar | Board | Right sidebar */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'minmax(240px, 18vw) minmax(0, 1fr) minmax(280px, 20vw)',
+          gridTemplateColumns: 'minmax(240px, 18vw) minmax(0, 1fr) minmax(320px, 26vw)',
           gap: 16,
           flex: '1 1 0',
           overflow: 'hidden',
@@ -1757,7 +2027,9 @@ export default function GameView() {
                 color: 'var(--text)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 6
+                gap: 6,
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(149, 173, 51, 0.35) transparent'
               }}
             >
               {!me ? (
@@ -1836,116 +2108,15 @@ export default function GameView() {
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 8,
+          gap: 6,
           minHeight: 0,
           overflow: 'hidden',
           height: '100%',
           flex: '1 1 auto'
         }}>
-          {/* Player info bars - Fixed height, arranged based on board orientation */}
           {game && (
             <>
-              {/* Top player info bar - shows the color that's on top of the board */}
-              {boardOrientation === 'white' ? (
-                // White orientation: black pieces on top, so black player info at top
-                <div
-                  className="card"
-                  style={{
-                    padding: '6px 8px',
-                    background: clock.turn === 'black' && game.status === 'active' 
-                      ? 'rgba(44, 230, 194, 0.1)' 
-                      : undefined,
-                    border: clock.turn === 'black' && game.status === 'active' 
-                      ? '2px solid var(--accent)' 
-                      : undefined,
-                    flex: '0 0 auto',
-                    height: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', zIndex: 1 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <IdentityStrip 
-                        user={game.black} 
-                        mode={game.mode} 
-                        rating={blackRating ?? undefined}
-                        ratingChange={blackRatingChange}
-                        isActive={game.status === 'active'}
-                        isMyTurn={clock.turn === 'black' && game.status === 'active' && myColor === 'black'}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: clock.turn === 'black' && game.status === 'active' ? 'var(--accent)' : 'var(--text)',
-                        minWidth: 75,
-                        textAlign: 'right',
-                        flexShrink: 0,
-                        fontFamily: 'monospace',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {formatTime(clock?.black_time_left ?? 0, (clock?.black_time_left ?? 0) < 10)}
-                    </div>
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
-                    <MaterialDiff fen={game.current_fen} color="black" position="top" />
-                  </div>
-                </div>
-              ) : (
-                // Black orientation: white pieces on top, so white player info at top
-                <div
-                  className="card"
-                  style={{
-                    padding: '6px 8px',
-                    background: clock.turn === 'white' && game.status === 'active' 
-                      ? 'rgba(44, 230, 194, 0.1)' 
-                      : undefined,
-                    border: clock.turn === 'white' && game.status === 'active' 
-                      ? '2px solid var(--accent)' 
-                      : undefined,
-                    flex: '0 0 auto',
-                    height: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', zIndex: 1 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <IdentityStrip 
-                        user={game.white} 
-                        mode={game.mode} 
-                        rating={whiteRating ?? undefined}
-                        ratingChange={whiteRatingChange}
-                        isActive={game.status === 'active'}
-                        isMyTurn={clock.turn === 'white' && game.status === 'active' && myColor === 'white'}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: clock.turn === 'white' && game.status === 'active' ? 'var(--accent)' : 'var(--text)',
-                        minWidth: 75,
-                        textAlign: 'right',
-                        flexShrink: 0,
-                        fontFamily: 'monospace',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {formatTime(clock?.white_time_left ?? 0, (clock?.white_time_left ?? 0) < 10)}
-                    </div>
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
-                    <MaterialDiff fen={game.current_fen} color="white" position="top" />
-                  </div>
-                </div>
-              )}
-
+              {renderClockRow(topPlayer, topRating, topRatingChange, topClockColor, 'top')}
               {/* Board - Takes maximum remaining space */}
               <div style={{ 
                 padding: 0,
@@ -1958,10 +2129,10 @@ export default function GameView() {
                 minWidth: 0,
                 overflow: 'visible',
                 position: 'relative',
-                background: 'linear-gradient(135deg, rgba(20, 28, 46, 0.9) 0%, rgba(26, 34, 54, 0.95) 50%, rgba(20, 28, 46, 0.9) 100%)',
-                borderRadius: 16,
-                border: '1px solid rgba(148, 163, 184, 0.18)',
-                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.4), inset 0 1px 12px rgba(0, 0, 0, 0.35)'
+                background: 'transparent',
+                borderRadius: 12,
+                border: 'none',
+                boxShadow: 'none'
               }}>
                 {game.status === 'pending' && (
                   <div style={{ position: 'absolute', zIndex: 10, background: 'rgba(0,0,0,0.8)', padding: 20, borderRadius: 12 }}>
@@ -1994,7 +2165,7 @@ export default function GameView() {
                   onPieceSetChange={setPieceSet}
                   showControls={false}
                 />
-                {moveErr && game?.status === 'active' && (
+                {moveErr && !moveErr.toLowerCase().includes('invalid move') && game?.status === 'active' && (
                   <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6, textAlign: 'center', position: 'absolute', bottom: 8, left: 0, right: 0 }}>
                     {moveErr}
         </div>
@@ -2027,138 +2198,96 @@ export default function GameView() {
                 >
                   ↻
                 </button>
-                {firstMoveCountdown && (
+                {gameResultPopup && (
                   <div
                     style={{
                       position: 'absolute',
                       left: '50%',
                       top: '50%',
                       transform: 'translate(-50%, -50%)',
-                      minWidth: 240,
-                      maxWidth: 360,
-                      padding: '10px 14px',
-                      borderRadius: 12,
+                      zIndex: 20,
+                      pointerEvents: 'none',
+                      animation: 'scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: gameResultPopup.type === 'win'
+                          ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95))'
+                          : gameResultPopup.type === 'draw'
+                          ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.95), rgba(245, 158, 11, 0.95))'
+                          : 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95))',
+                        padding: '14px 22px',
+                        borderRadius: 16,
+                        textAlign: 'center',
+                        boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+                        border: `2px solid ${gameResultPopup.type === 'win' ? 'rgba(34, 197, 94, 1)' : gameResultPopup.type === 'draw' ? 'rgba(250, 204, 21, 1)' : 'rgba(239, 68, 68, 1)'}`,
+                        minWidth: 220,
+                        maxWidth: 420
+                      }}
+                    >
+                      <div style={{ fontSize: 28, marginBottom: 6, lineHeight: 1 }}>
+                        {gameResultPopup.type === 'win' ? '🏆😄' : gameResultPopup.type === 'draw' ? '🤝😅' : '😵‍💫💥'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 800,
+                          color: '#0b0b0b',
+                          textShadow: '0 1px 1px rgba(255,255,255,0.3)',
+                          marginBottom: 4,
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {gameResultPopup.type === 'win' ? 'You won!' : gameResultPopup.type === 'draw' ? 'Draw!' : 'You lost!'}
+                      </div>
+                      {gameResultPopup.reason && (
+                        <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.75)' }}>
+                          {gameResultPopup.type === 'win' && gameResultPopup.reason === 'timeout' && 'Opponent ran out of time'}
+                          {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'timeout' && 'Time ran out'}
+                          {gameResultPopup.type === 'win' && gameResultPopup.reason === 'checkmate' && 'Checkmate'}
+                          {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'checkmate' && 'Checkmated'}
+                          {gameResultPopup.type === 'win' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Opponent resigned'}
+                          {gameResultPopup.type === 'loss' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Resigned'}
+                          {gameResultPopup.type === 'draw' && 'Game drawn'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {firstMoveCountdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      bottom: 0,
+                      transform: 'translateX(-50%)',
+                      padding: '6px 12px',
+                      borderTopLeftRadius: 10,
+                      borderTopRightRadius: 10,
                       textAlign: 'center',
                       fontSize: 12,
                       fontWeight: 600,
-                      color: 'rgba(10, 18, 12, 0.9)',
+                      color: 'rgba(10, 18, 12, 0.95)',
                       letterSpacing: '0.1px',
                       background: firstMoveCountdown.remaining <= 10
-                        ? 'linear-gradient(90deg, rgba(255, 210, 210, 0.45), rgba(255, 120, 120, 0.65))'
-                        : 'linear-gradient(90deg, rgba(175, 245, 205, 0.45), rgba(110, 205, 150, 0.65))',
+                        ? 'linear-gradient(90deg, rgba(255, 210, 210, 0.6), rgba(255, 120, 120, 0.85))'
+                        : 'linear-gradient(90deg, rgba(175, 245, 205, 0.6), rgba(110, 205, 150, 0.85))',
                       border: firstMoveCountdown.remaining <= 10
-                        ? '1px solid rgba(255, 140, 140, 0.35)'
-                        : '1px solid rgba(140, 255, 200, 0.35)',
-                      boxShadow: '0 10px 20px rgba(0,0,0,0.25)',
-                      zIndex: 15
+                        ? '1px solid rgba(255, 140, 140, 0.5)'
+                        : '1px solid rgba(140, 255, 200, 0.5)',
+                      borderBottom: 'none',
+                      boxShadow: '0 -6px 14px rgba(0,0,0,0.25)',
+                      pointerEvents: 'none',
+                      zIndex: 14
                     }}
                   >
                     {firstMoveCountdown.remaining}s to play the first move
                   </div>
                 )}
-                
               </div>
 
-              {/* Bottom player info bar - shows the color that's on bottom of the board */}
-              {boardOrientation === 'white' ? (
-                // White orientation: white pieces on bottom, so white player info at bottom
-                <div
-                  className="card"
-                  style={{
-                    padding: '8px 10px',
-                    background: clock.turn === 'white' && game.status === 'active' 
-                      ? 'rgba(44, 230, 194, 0.1)' 
-                      : undefined,
-                    border: clock.turn === 'white' && game.status === 'active' 
-                      ? '2px solid var(--accent)' 
-                      : undefined,
-                    flex: '0 0 auto',
-                    height: '52px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ position: 'absolute', top: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
-                    <MaterialDiff fen={game.current_fen} color="white" position="bottom" />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', zIndex: 1 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <IdentityStrip 
-                        user={game.white} 
-                        mode={game.mode} 
-                        rating={whiteRating ?? undefined}
-                        ratingChange={whiteRatingChange}
-                        isActive={game.status === 'active'}
-                        isMyTurn={clock.turn === 'white' && game.status === 'active' && myColor === 'white'}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: clock.turn === 'white' && game.status === 'active' ? 'var(--accent)' : 'var(--text)',
-                        minWidth: 75,
-                        textAlign: 'right',
-                        flexShrink: 0,
-                        fontFamily: 'monospace',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {formatTime(clock?.white_time_left ?? 0, (clock?.white_time_left ?? 0) < 10)}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Black orientation: black pieces on bottom, so black player info at bottom
-                <div
-                  className="card"
-                  style={{
-                    padding: '8px 10px',
-                    background: clock.turn === 'black' && game.status === 'active' 
-                      ? 'rgba(44, 230, 194, 0.1)' 
-                      : undefined,
-                    border: clock.turn === 'black' && game.status === 'active' 
-                      ? '2px solid var(--accent)' 
-                      : undefined,
-                    flex: '0 0 auto',
-                    height: '52px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ position: 'absolute', top: 2, left: '50%', transform: 'translateX(-50%)', zIndex: 0 }}>
-                    <MaterialDiff fen={game.current_fen} color="black" position="bottom" />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', zIndex: 1 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <IdentityStrip 
-                        user={game.black} 
-                        mode={game.mode} 
-                        rating={blackRating ?? undefined}
-                        ratingChange={blackRatingChange}
-                        isActive={game.status === 'active'}
-                        isMyTurn={clock.turn === 'black' && game.status === 'active' && myColor === 'black'}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: clock.turn === 'black' && game.status === 'active' ? 'var(--accent)' : 'var(--text)',
-                        minWidth: 75,
-                        textAlign: 'right',
-                        flexShrink: 0,
-                        fontFamily: 'monospace',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {formatTime(clock?.black_time_left ?? 0, (clock?.black_time_left ?? 0) < 10)}
-                    </div>
-                  </div>
-          </div>
-        )}
+              {renderClockRow(bottomPlayer, bottomRating, bottomRatingChange, bottomClockColor, 'bottom')}
             </>
             )}
               </div>
@@ -2168,12 +2297,16 @@ export default function GameView() {
           display: 'flex', 
           flexDirection: 'column', 
           gap: 14,
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          overflowY: 'auto',
           minHeight: 0,
-          height: '100%'
+          height: '100%',
+          paddingRight: 4,
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(149, 173, 51, 0.35) transparent'
         }}>
           {/* Move History with Controls - Lichess Style */}
-          <div className="card" style={{ flex: '1 1 50%', padding: '12px', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ flex: '0 0 auto', height: 300, minHeight: 260, maxHeight: 360, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Moves</div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -2251,8 +2384,8 @@ export default function GameView() {
               style={{ 
                 fontSize: 13, 
                 lineHeight: 1.7, 
-                height: '100%',
                 flex: '1 1 auto',
+                minHeight: 0,
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -2260,7 +2393,7 @@ export default function GameView() {
                 padding: '4px 6px',
                 margin: '0 -6px',
                 scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(44, 230, 194, 0.3) transparent'
+                scrollbarColor: 'rgba(149, 173, 51, 0.35) transparent'
               }}
             >
               {game?.moves && game.moves.trim() ? (
@@ -2693,153 +2826,191 @@ export default function GameView() {
           )}
 
           {/* Analysis - Lichess Style */}
-          {(analysis || game?.status === 'finished') && (
-            <div className="card" style={{ flex: '1 1 auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0, overflow: 'hidden' }}>
-              {game?.status === 'finished' && !fullAnalysis && !analyzing && (
-                <button
-                  className="btn btn-info"
-                  type="button"
-                  onClick={() => {
-                    setAnalyzing(true);
-                    requestFullAnalysis(id!)
-                      .then((data: any) => {
-                        setFullAnalysis(data);
-                        setAnalyzing(false);
-                      })
-                      .catch((err: any) => {
-                        setActionErr(err.response?.data?.detail || 'Failed to analyze game');
-                        setAnalyzing(false);
-                      });
-                  }}
-                  style={{ 
-                    padding: '10px 16px', 
-                    fontSize: 13,
-                    fontWeight: 600,
-                    width: '100%'
-                  }}
-                >
-                  📊 Stockfish Analysis
-                    </button>
-              )}
-              {analyzing && (
-                <div style={{ fontSize: 12, color: 'var(--accent)', textAlign: 'center', padding: '8px' }}>Analyzing...</div>
-              )}
+          {fullAnalysis && game?.status !== 'aborted' && (
+            <div className="card" style={{ flex: '0 0 auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 300, overflow: 'hidden' }}>
+              {/* Stockfish analysis button hidden until fast source is ready */}
               
               {fullAnalysis ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minHeight: 0, overflow: 'hidden', height: '100%' }}>
-                  <div style={{ color: 'var(--muted)', fontSize: 11, flexShrink: 0 }}>
-                    Source: {fullAnalysis.source === 'stockfish' ? 'Stockfish' : 'Lichess'} • 
-                    Moves analyzed: {fullAnalysis.analysis?.summary?.analyzed_moves || fullAnalysis.analysis?.moves?.length || 0}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: '1 1 auto', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Post-game analysis</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>Engine insights powered by DigiChess</div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '4px 8px', borderRadius: 999, background: 'rgba(149, 173, 51, 0.16)', border: '1px solid rgba(149, 173, 51, 0.35)', color: 'var(--text)' }}>
+                        Source: DigiChess
+                      </span>
+                      {analysisIsComplete && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '4px 8px', borderRadius: 999, background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(148, 163, 184, 0.18)', color: 'var(--muted)' }}>
+                          Moves analyzed: {analyzedMoves}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {fullAnalysis.analysis?.moves && fullAnalysis.analysis.moves.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
-                      {/* Evaluation Graph */}
-                      <div style={{ 
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: 6,
-                        padding: '8px',
-                        border: '1px solid var(--border)',
-                        flexShrink: 0
+                  {analysisIsComplete && analysisMoves.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
+                      <div style={{
+                        background: 'linear-gradient(160deg, rgba(10, 15, 25, 0.98), rgba(8, 12, 22, 0.98))',
+                        borderRadius: 12,
+                        padding: '10px',
+                        border: '1px solid rgba(148, 163, 184, 0.18)',
+                        boxShadow: 'inset 0 1px 12px rgba(0, 0, 0, 0.35)'
                       }}>
-                        <EvaluationGraph 
-                          moves={fullAnalysis.analysis.moves} 
-                          height={120}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Evaluation graph</span>
+                          <span style={{ fontSize: 10, color: 'var(--muted)' }}>0.0 = equal</span>
+                        </div>
+                        <EvaluationGraph
+                          moves={analysisMoves}
+                          height={220}
+                          activeMoveIndex={currentMoveIndex}
+                          onPointSelect={(moveNumber) => {
+                            if (!moveNumber) return;
+                            setCurrentMoveIndex(Math.max(0, moveNumber - 1));
+                          }}
                         />
                       </div>
-                      
-                      {/* Move-by-move analysis - Always visible scrollable bar */}
-                      <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        flex: '1 1 auto',
-                        minHeight: 0,
-                        overflow: 'hidden',
-                        borderTop: '1px solid var(--border)',
-                        paddingTop: 6
-                      }}>
-                        <div style={{ 
-                          fontSize: 10, 
-                          color: 'var(--muted)', 
-                          marginBottom: 4,
-                          fontWeight: 600,
-                          flexShrink: 0
-                        }}>
-                          Move-by-Move Analysis ({fullAnalysis.analysis.moves.length} moves)
-                        </div>
-                        <div 
-                          className="analysis-scrollable"
-                          style={{ 
-                            flex: '1 1 auto',
-                            minHeight: 0,
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                            paddingRight: 4,
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: 'rgba(44, 230, 194, 0.3) transparent'
-                          }}
-                        >
-                          {fullAnalysis.analysis.moves.map((move: any, idx: number) => {
-                            // Format evaluation
-                            let evalDisplay = '';
-                            let evalColor = 'var(--text)';
-                            
-                            if (move.mate !== null && move.mate !== undefined) {
-                              evalDisplay = `M${Math.abs(move.mate)}`;
-                              evalColor = move.mate > 0 ? '#4caf50' : '#ef5350';
-                            } else if (move.eval !== null && move.eval !== undefined) {
-                              evalDisplay = `${move.eval > 0 ? '+' : ''}${move.eval.toFixed(1)}`;
-                              evalColor = move.eval > 0 ? '#4caf50' : move.eval < 0 ? '#ef5350' : 'var(--muted)';
-                            }
-                            
-                            return (
-                              <div 
-                                key={idx} 
-                                style={{ 
-                                  display: 'flex', 
-                                  justifyContent: 'space-between', 
-                                  alignItems: 'center',
-                                  padding: '3px 6px',
-                                  fontSize: 10,
-                                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                                  borderRadius: 3,
-                                  background: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
-                                  transition: 'background 0.15s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'rgba(44, 230, 194, 0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
-                                }}
-                              >
-                                <span style={{ color: 'var(--text)', fontFamily: 'monospace' }}>
-                                  {move.move_number}. {move.move}
-                                </span>
-                                {evalDisplay && (
-                                  <span style={{ 
-                                    color: evalColor,
-                                    fontWeight: 600,
-                                    fontFamily: 'monospace',
-                                    fontSize: 9,
-                                    padding: '2px 6px',
-                                    borderRadius: 3,
-                                    background: evalColor === '#4caf50' ? 'rgba(76, 175, 80, 0.15)' : evalColor === '#ef5350' ? 'rgba(239, 83, 80, 0.15)' : 'rgba(128, 128, 128, 0.15)'
-                                  }}>
-                                    {evalDisplay}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', textAlign: 'center' }}>
+                        Click a point to jump to that position on the board.
                       </div>
-              </div>
-            )}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '10px 0' }}>
+                      Full analysis pending. We will show it once all moves are analyzed.
+                    </div>
+                  )}
                 </div>
               ) : null}
+            </div>
+          )}
+
+          {game?.status === 'finished' && analysisIsComplete && (
+            <div className="card" style={{ flex: '0 0 auto', height: 260, minHeight: 220, maxHeight: 320, padding: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Move analysis</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)' }}>Eval per move</div>
+              </div>
+              <div
+                className="analysis-scrollable"
+                style={{
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  color: 'var(--text)',
+                  padding: '4px 6px',
+                  margin: '0 -6px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(149, 173, 51, 0.35) transparent'
+                }}
+              >
+                {analysisMoves.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {analysisMoves
+                      .reduce((acc: Array<{ moveNum: number; white?: any; black?: any }>, move: any, idx: number) => {
+                        const moveNumber = move?.move_number ?? idx + 1;
+                        const fullMove = Math.max(1, Math.floor((moveNumber - 1) / 2) + 1);
+                        const isWhiteMove = moveNumber % 2 === 1;
+                        const pairIndex = fullMove - 1;
+                        if (!acc[pairIndex]) acc[pairIndex] = { moveNum: fullMove };
+                        if (isWhiteMove) acc[pairIndex].white = move;
+                        else acc[pairIndex].black = move;
+                        return acc;
+                      }, [])
+                      .filter(Boolean)
+                      .map((pair: { moveNum: number; white?: any; black?: any }, pairIdx: number) => {
+                        const whiteIndex = pair.white?.move_number ? pair.white.move_number - 1 : pair.moveNum * 2 - 2;
+                        const blackIndex = pair.black?.move_number ? pair.black.move_number - 1 : pair.moveNum * 2 - 1;
+                        const lastAnalyzedIndex = analysisMoves.length
+                          ? (analysisMoves[analysisMoves.length - 1]?.move_number ?? analysisMoves.length) - 1
+                          : -1;
+                        const isCurrentWhite = currentMoveIndex === whiteIndex;
+                        const isCurrentBlack = currentMoveIndex === blackIndex;
+                        const isLastMove =
+                          currentMoveIndex === null &&
+                          (whiteIndex === lastAnalyzedIndex || blackIndex === lastAnalyzedIndex);
+                        const rowActive = isCurrentWhite || isCurrentBlack || isLastMove;
+                        const whiteEval = pair.white ? getEvalDisplay(pair.white.eval, pair.white.mate) : null;
+                        const blackEval = pair.black ? getEvalDisplay(pair.black.eval, pair.black.mate) : null;
+                        const whiteEvalColor =
+                          whiteEval && whiteEval.tone > 0 ? '#4caf50' : whiteEval && whiteEval.tone < 0 ? '#ef5350' : 'var(--muted)';
+                        const blackEvalColor =
+                          blackEval && blackEval.tone > 0 ? '#4caf50' : blackEval && blackEval.tone < 0 ? '#ef5350' : 'var(--muted)';
+                        return (
+                          <div
+                            key={`${pair.moveNum}-${pairIdx}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              padding: '2px 4px',
+                              borderRadius: 4,
+                              background: rowActive ? 'rgba(76, 175, 80, 0.2)' : undefined,
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => {
+                              if (pair.black?.move_number) {
+                                setCurrentMoveIndex(Math.max(0, pair.black.move_number - 1));
+                              } else if (pair.white?.move_number) {
+                                setCurrentMoveIndex(Math.max(0, pair.white.move_number - 1));
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!rowActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!rowActive) e.currentTarget.style.background = '';
+                            }}
+                          >
+                            <span style={{ minWidth: 34, color: 'var(--muted)', fontWeight: 600 }}>{pair.moveNum}.</span>
+                            <span
+                              style={{
+                                minWidth: 84,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: isCurrentWhite ? '#4caf50' : 'var(--text)',
+                                fontWeight: isCurrentWhite ? 600 : 400
+                              }}
+                            >
+                              {pair.white?.move || '—'}
+                              {whiteEval && (
+                                <span style={{ fontSize: 11, fontWeight: 600, color: whiteEvalColor, fontFamily: 'monospace' }}>
+                                  {whiteEval.label}
+                                </span>
+                              )}
+                            </span>
+                            <span
+                              style={{
+                                minWidth: 84,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: isCurrentBlack ? '#4caf50' : 'var(--text)',
+                                fontWeight: isCurrentBlack ? 600 : 400
+                              }}
+                            >
+                              {pair.black?.move || '—'}
+                              {blackEval && (
+                                <span style={{ fontSize: 11, fontWeight: 600, color: blackEvalColor, fontFamily: 'monospace' }}>
+                                  {blackEval.label}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 0' }}>
+                    Run post-game analysis to see evaluations.
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
@@ -2847,65 +3018,6 @@ export default function GameView() {
         </div>
       </div>
       
-      {/* Game result toast (centered on board) */}
-      {gameResultPopup && (
-        <div
-          style={{
-            position: 'fixed',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 20000,
-            pointerEvents: 'none',
-            animation: 'scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          }}
-        >
-          <div
-            style={{
-              background: gameResultPopup.type === 'win'
-                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(16, 185, 129, 0.95))'
-                : gameResultPopup.type === 'draw'
-                ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.95), rgba(245, 158, 11, 0.95))'
-                : 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95))',
-              padding: '14px 22px',
-              borderRadius: 16,
-              textAlign: 'center',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
-              border: `2px solid ${gameResultPopup.type === 'win' ? 'rgba(34, 197, 94, 1)' : gameResultPopup.type === 'draw' ? 'rgba(250, 204, 21, 1)' : 'rgba(239, 68, 68, 1)'}`,
-              minWidth: 220,
-              maxWidth: 420
-            }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 6, lineHeight: 1 }}>
-              {gameResultPopup.type === 'win' ? '🏆😄' : gameResultPopup.type === 'draw' ? '🤝😅' : '😵‍💫💥'}
-            </div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: '#0b0b0b',
-                textShadow: '0 1px 1px rgba(255,255,255,0.3)',
-                marginBottom: 4,
-                letterSpacing: '0.5px'
-              }}
-            >
-              {gameResultPopup.type === 'win' ? 'You won!' : gameResultPopup.type === 'draw' ? 'Draw!' : 'You lost!'}
-            </div>
-            {gameResultPopup.reason && (
-              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.75)' }}>
-                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'timeout' && 'Opponent ran out of time'}
-                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'timeout' && 'Time ran out'}
-                {gameResultPopup.type === 'win' && gameResultPopup.reason === 'checkmate' && 'Checkmate'}
-                {gameResultPopup.type === 'loss' && gameResultPopup.reason === 'checkmate' && 'Checkmated'}
-                {gameResultPopup.type === 'win' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Opponent resigned'}
-                {gameResultPopup.type === 'loss' && (gameResultPopup.reason === 'resignation' || gameResultPopup.reason === 'resign') && 'Resigned'}
-                {gameResultPopup.type === 'draw' && 'Game drawn'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes slideIn {
           from {

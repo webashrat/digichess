@@ -49,16 +49,16 @@ export default function Tournaments() {
       overflow: 'hidden', 
       display: 'flex', 
       flexDirection: 'column', 
-      paddingTop: 24, 
-      paddingBottom: 24,
+      paddingTop: 16, 
+      paddingBottom: 16,
       boxSizing: 'border-box'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexShrink: 0, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexShrink: 0, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ 
-            fontSize: 32, 
+            fontSize: 26, 
             fontWeight: 800, 
-            marginBottom: 8,
+            marginBottom: 4,
             background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -66,11 +66,11 @@ export default function Tournaments() {
           }}>
             🏟️ Tournaments
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 16, margin: 0 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
             Compete in structured chess tournaments
           </p>
         </div>
-        <a href="#/tournaments/create" className="btn btn-gold" style={{ fontSize: 15, padding: '12px 24px', fontWeight: 600 }}>
+        <a href="#/tournaments/create" className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px', fontWeight: 600 }}>
           ➕ Create Tournament
         </a>
       </div>
@@ -78,11 +78,11 @@ export default function Tournaments() {
         <div className="card" style={{ 
           color: 'var(--danger)', 
           flexShrink: 0,
-          padding: 16,
+          padding: 12,
           background: 'rgba(239, 83, 80, 0.1)',
           border: '1px solid var(--danger)',
           borderRadius: 8,
-          fontSize: 15
+          fontSize: 14
         }}>
           ❌ {error}
         </div>

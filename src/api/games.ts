@@ -105,8 +105,11 @@ export const fetchAnalysis = async (id: string | number) => {
   return data;
 };
 
-export const requestFullAnalysis = async (id: string | number) => {
-  const { data } = await api.post(`/api/games/${id}/analysis/full/`);
+export const requestFullAnalysis = async (
+  id: string | number,
+  options?: { force?: boolean; prefer_lichess?: boolean }
+) => {
+  const { data } = await api.post(`/api/games/${id}/analysis/full/`, options || {});
   return data;
 };
 
