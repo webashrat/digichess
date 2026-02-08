@@ -1,0 +1,2752 @@
+<!-- Chess Platform Dashboard -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Platform Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#161b26",
+                        "accent-green": "#2e7d32",
+                        "accent-green-bright": "#4ade80",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem", 
+                        "lg": "0.5rem", 
+                        "xl": "0.75rem", 
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white overflow-x-hidden pb-24 selection:bg-primary selection:text-white">
+<!-- Top Header -->
+<header class="sticky top-0 z-30 flex items-center justify-between bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 border-b dark:border-gray-800 border-gray-200">
+<div class="flex items-center gap-3">
+<div class="relative">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-primary" data-alt="User avatar profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD_yYKt3Ghs-pCIiJCPvSIUlwhNHnMtyBR5B5KrfZYwhg54q9Mk6lgwh0TxqfDqY-iJ4ysQ2Janiy6K1Ucf_MzYeh4qp2f4Hr0Gx0uEX79xWjI4Zh21hopg2rTzTRaZwNbwoytqpnPqiQD3peq9IggsmyWZA8p7PrJGMzHcJ4HgborrmFmxOKiFb_xFdOfP2q8z31Tf_nxWx3nqXyZA7b2MIVYvfZOtObM1XdoI_9ILAyg5xuMtT1PYDiNCKVuBQ2GAHgxgK9EhLVzV");'></div>
+<div class="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
+</div>
+<div>
+<h1 class="text-sm font-bold leading-tight">GrandMaster_J</h1>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">2450</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+</button>
+</div>
+</header>
+<!-- Quick Stats Row -->
+<div class="flex gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-orange-400 text-[20px]">local_fire_department</span>
+<p class="text-white text-lg font-bold leading-tight">2450</p>
+<p class="text-gray-400 text-xs font-normal">Bullet</p>
+</div>
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-yellow-400 text-[20px]">flash_on</span>
+<p class="text-white text-lg font-bold leading-tight">1890</p>
+<p class="text-gray-400 text-xs font-normal">Blitz</p>
+</div>
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-green-400 text-[20px]">timer</span>
+<p class="text-white text-lg font-bold leading-tight">2100</p>
+<p class="text-gray-400 text-xs font-normal">Rapid</p>
+</div>
+</div>
+<!-- Play Section -->
+<section class="px-4 py-2">
+<h2 class="text-xl font-bold mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">swords</span>
+            Play Chess
+        </h2>
+<div class="grid grid-cols-2 gap-3">
+<!-- Bullet -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">rocket_launch</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-orange-400">local_fire_department</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">1+0</span>
+<span class="text-sm text-gray-400 font-medium">Bullet</span>
+</div>
+</button>
+<!-- Blitz -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">bolt</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-yellow-400">flash_on</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">3+2</span>
+<span class="text-sm text-gray-400 font-medium">Blitz</span>
+</div>
+</button>
+<!-- Rapid -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">schedule</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-green-400">timer</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">10+0</span>
+<span class="text-sm text-gray-400 font-medium">Rapid</span>
+</div>
+</button>
+<!-- Classical -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">hourglass_top</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-blue-400">hourglass_empty</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">30+0</span>
+<span class="text-sm text-gray-400 font-medium">Classical</span>
+</div>
+</button>
+</div>
+<button class="mt-4 w-full py-3 rounded-xl border border-dashed border-gray-600 hover:border-gray-400 hover:bg-gray-800/30 text-gray-400 text-sm font-semibold flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+            Create Custom Game
+        </button>
+</section>
+<!-- Live Now Section -->
+<section class="mt-6 pl-4 border-t border-gray-800 pt-6 bg-gradient-to-b from-transparent to-black/20">
+<div class="flex items-center justify-between pr-4 mb-3">
+<h2 class="text-xl font-bold flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</span>
+                Live GM Games
+            </h2>
+<a class="text-primary text-sm font-bold hover:underline" href="#">View All</a>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 pr-4 snap-x no-scrollbar">
+<!-- Game Card 1 -->
+<div class="snap-center shrink-0 w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+<div class="relative aspect-square w-full bg-gray-800">
+<!-- Chessboard Placeholder -->
+<div class="w-full h-full bg-cover bg-center" data-alt="Chessboard top down view with pieces in mid-game position" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbrInG_WqYnN3Tu59WZynxed1CjaqxMK6zVVywWE3qtOQ_27Lo_oAo6AiVV9QYYaX_2omqb_UNlS3kBjsXnUC3KEpQ5fmB7kGaE3YBzppNzJaVL8G-eU_5W6zJIVdbutuFnUBrYJuloDse0DtL5C6ttP2h39KnFGSsp2QkPBp3ZQOeRy6_nXVtfXIjjJmdklCJWpiIVErRGPZi6_t2HhZulEbUWqShgZZr1zO-tgXl4QTrkEMNWEqqGueie_Gc9r-YDZXylMx2xaKM')"></div>
+<!-- Evaluation Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-gray-700 flex flex-col">
+<div class="bg-white h-[45%] w-full"></div>
+<div class="bg-black h-[55%] w-full"></div>
+</div>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-white"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Magnus</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2830</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-black border border-gray-600"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Hikaru</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2790</span>
+</div>
+</div>
+</div>
+<!-- Game Card 2 -->
+<div class="snap-center shrink-0 w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+<div class="relative aspect-square w-full bg-gray-800">
+<div class="w-full h-full bg-cover bg-center grayscale-[20%]" data-alt="Close up of chess pieces on a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCpfGsSsx1NC7gueJkKFS-wvKppT78IdYK4aorAE4M_dRqyfDJeQD2aqJSsX8GoYTmx21rAq8uYjtIY3N10hboZlTEKV1cILT1jrT8gNV-CkQ80bo4eNytxOEP7mQbOE1XdUgRDSQ38aPsjShJ9T4DQQDVRP4OSul_6ICzu_7pBmNs-nkl1aQzVqBD72wG9Q0xshC8Ok6Uk_B2Zbqu_hZfafPxhNS7oj2Ku2at5RGaI3XryrC9kVuXtCEcZyufJJJDTqSVoJnYsi5ri')"></div>
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-gray-700 flex flex-col">
+<div class="bg-white h-[60%] w-full"></div>
+<div class="bg-black h-[40%] w-full"></div>
+</div>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-white"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Nepo</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2770</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-black border border-gray-600"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Ding</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2780</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tournaments -->
+<section class="mt-4 px-4 pb-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">trophy</span>
+                Tournaments
+            </h2>
+</div>
+<!-- Tabs -->
+<div class="flex bg-surface-dark p-1 rounded-lg mb-4 border border-gray-800">
+<button class="flex-1 py-1.5 text-sm font-bold rounded text-white bg-primary shadow-sm">Arena</button>
+<button class="flex-1 py-1.5 text-sm font-bold rounded text-gray-400 hover:text-white transition-colors">Swiss</button>
+</div>
+<!-- List -->
+<div class="flex flex-col gap-3">
+<!-- Item 1 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-orange-900/30 flex items-center justify-center text-orange-400">
+<span class="material-symbols-outlined">local_fire_department</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Hourly Bullet Arena</h3>
+<p class="text-xs text-gray-400">1+0 • <span class="text-green-400">Starting in 2m</span></p>
+</div>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                    Join
+                </button>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-yellow-900/30 flex items-center justify-center text-yellow-400">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Titled Tuesday Blitz</h3>
+<p class="text-xs text-gray-400">3+1 • 542 Players</p>
+</div>
+</div>
+<button class="bg-surface-dark border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold">
+                    Watch
+                </button>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-green-900/30 flex items-center justify-center text-green-400">
+<span class="material-symbols-outlined">timer</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Daily Rapid Shield</h3>
+<p class="text-xs text-gray-400">10+0 • Round 2/7</p>
+</div>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                    Join
+                </button>
+</div>
+</div>
+</section>
+<!-- Social Floating Bar (Simulated Drawer Handle) -->
+<div class="fixed bottom-[72px] left-4 right-4 z-40">
+<button class="w-full bg-[#1e232e] border border-gray-700 shadow-xl rounded-xl p-3 flex items-center justify-between backdrop-blur-md bg-opacity-95">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXJstS7wISteIgjKv7pEoqejYJy4eeB5fvSJ4EkEd8MYHH0VKrjKHXNzz7ndu3HEDrZQ_X0JNsrV4vCHICm-BgrwU8kXK8s4MAo5OZm3nY7HRQ7DrLuV6kG8MSNNlS3aUY2mvHswSiQr_eCpeEA8_cdBlynXtNpCEOs88siSiRHp5C9ovSIUUc5IaeBxV3mohf6BOreCRNOkjCpFLba8PNXudI8agA4Sz-ZRKcoHBvJHsyqmb12NhcRPRzj603YNhWu3KB2hLpZx4B"/>
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBh8f4iU7TioOvSYK3Hvb5_XB94BpbPaafAEPgth2rUgF8bNSvlwrSnVdylTgSs0f4JcZarAiLQm6QaYxTZo8RfINSSr7C8pphPO4JoGXK1PO5osJl73sxIJxKYta6u_f-2cnQG8BubinZoyuwJS2F2_UhwGcQyu41jmMTFR2lwRsD0ajHI6uaEqGIEhkcCbiOJtpaQOhTW9NZqcvOQZuggs1YYY3L99gLZ0rogmzdb_19DaNtv7svIwKHbhmG1muOGPUY1Tsrc5-80"/>
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6RhCywMgHaFGA7v8Sfb2UI0iTKuKjaykGuO2bFdOO1NOrSQZ2GK5-0w6xb94jCd4CXVdgenbQQUOExLklz_Uje_461Yhl3-tpCzZMOFEMHjp-dtv0iSBNJRy_PtwMTkTXms-Ow1GeSCCE1pJUbmQCPFMSUUQExiOysjEJ7vyLpTk3uAs2mmH32b9fRqrN3mdX8F4rT-VelQWu33QjpHM0mwNnh19QpHB8gA9lHEtfFonFTcB7aiNXUZXNiSprz21bgBX-RMSuiMl0"/>
+</div>
+<span class="text-sm font-medium text-gray-300"><span class="text-accent-green-bright font-bold">3 Friends</span> Online</span>
+</div>
+<span class="material-symbols-outlined text-gray-400">expand_less</span>
+</button>
+</div>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-[#111318] border-t border-gray-800 pb-safe z-50">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center gap-1 text-primary w-full" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">extension</span>
+<span class="text-[10px] font-medium">Puzzles</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+<!-- Safe area padding for bottom nav -->
+<style>
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</body></html>
+
+<!-- Live Game & Analysis View -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Live Chess Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1e2430",
+                        "board-light": "#cbd5e1", // slate-300
+                        "board-dark": "#475569", // slate-600
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom board pattern using css gradients */
+        .chess-board-bg {
+            background-image: 
+                conic-gradient(
+                    var(--tw-colors-board-light) 90deg, 
+                    var(--tw-colors-board-dark) 90deg 180deg, 
+                    var(--tw-colors-board-light) 180deg 270deg, 
+                    var(--tw-colors-board-dark) 270deg
+                );
+            background-size: 25% 25%; /* 2 squares by 2 squares (100% / 4) */
+        }
+        
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display h-screen w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 pb-2 z-10 shrink-0">
+<button class="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold tracking-tight">Live Game</h2>
+<button class="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</header>
+<!-- Main Game Area -->
+<main class="flex-1 flex flex-col relative min-h-0">
+<!-- Opponent Header -->
+<div class="px-4 py-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="relative shrink-0">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-surface-dark dark:border-gray-700" data-alt="Portrait of opponent player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEYDgigRf04w5ANjDnBPuTstErWuijMeGJL09_m4mbnkSXgaIMWQjDUyc7yW19R508r5Q_AvGJy6ASGMGVcY84QGpokfBmTcXBaDvc0L7NEQ_iRE_X0lZWcx6YnsE9y6FbINhiGc4n_dQdJNcsditGs_oj9bGrL5mbclE86FVjXn4Uk6FHRKGJ0o6ExSAWVCYaLEh-FzapNEPXPeNEItM9UCFcXmHwJ_hPrNxkuLnMW2p-hecz08PrdDA1V8WdtY2ge1UrtMy1BJTt"/>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-0.5">
+<!-- Flag Icon using Material Symbols as fallback or placeholder for country flag -->
+<span class="material-symbols-outlined text-[14px] text-gray-400">flag</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2">
+<p class="font-bold text-sm truncate">GrandMasterCheck</p>
+<span class="bg-yellow-600/20 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded">GM</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono">2800 • USA</p>
+</div>
+</div>
+<!-- Opponent Clock -->
+<div class="flex flex-col items-end gap-1">
+<div class="bg-surface-dark/10 dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 min-w-[80px] text-center">
+<span class="text-xl font-bold font-mono text-gray-700 dark:text-gray-300">04:52</span>
+</div>
+</div>
+</div>
+<!-- Board & Eval Container -->
+<div class="flex-1 flex items-center justify-center px-2 py-1 gap-2 md:gap-4 min-h-0">
+<!-- Evaluation Bar -->
+<div class="h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
+<div class="bg-white transition-all duration-700 ease-in-out w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style="height: 55%;"></div>
+<!-- Eval Score Tooltip (Optional, visualized here as floating) -->
+<div class="absolute top-[52%] -right-8 bg-gray-800 text-[10px] px-1 rounded text-white font-bold z-10 translate-y-[-50%] opacity-0 md:opacity-100 transition-opacity">
+                    +0.5
+                </div>
+</div>
+<!-- Chess Board -->
+<div class="aspect-square h-full max-h-[calc(100vw-4rem)] w-auto relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark">
+<!-- Board Background Pattern -->
+<div class="absolute inset-0 chess-board-bg w-full h-full"></div>
+<!-- Coordinates (Optional decoration) -->
+<div class="absolute bottom-0.5 right-1 text-[10px] font-bold text-board-dark dark:text-board-light opacity-50">h</div>
+<div class="absolute top-1 left-0.5 text-[10px] font-bold text-board-dark dark:text-board-light opacity-50">8</div>
+<!-- Pieces Layer (Grid Overlay) -->
+<div class="absolute inset-0 grid grid-cols-8 grid-rows-8 w-full h-full">
+<!-- Example Pieces positioned in grid -->
+<!-- Row 1 (Black Backrank) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_queen</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_king</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<!-- Row 2 (Black Pawns) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="col-span-1"></div> <!-- Empty square d7 -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<!-- Row 3 -->
+<div class="col-span-3"></div>
+<div class="flex items-center justify-center bg-yellow-400/30 ring-inset ring-2 ring-yellow-400/50"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div> <!-- d5 pawn moved -->
+<div class="col-span-4"></div>
+<!-- Row 4 -->
+<div class="col-span-3"></div>
+<div class="flex items-center justify-center bg-primary/30 ring-inset ring-2 ring-primary/60"></div> <!-- Last move highlight source -->
+<div class="flex items-center justify-center bg-primary/30 ring-inset ring-2 ring-primary/60"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div> <!-- e4 pawn (White) -->
+<div class="col-span-3"></div>
+<!-- Row 5-6 (Empty mostly) -->
+<div class="col-span-8"></div>
+<div class="col-span-8"></div>
+<!-- Row 7 (White Pawns) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="col-span-1"></div> <!-- e2 empty -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<!-- Row 8 (White Backrank) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_queen</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_king</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+</div>
+</div>
+</div>
+<!-- User Header (Bottom) -->
+<div class="px-4 py-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="relative shrink-0">
+<img class="w-12 h-12 rounded-full object-cover border-2 border-primary ring-2 ring-primary/20" data-alt="Portrait of current user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANrNZEo7qmx6DHwW4VM39Nd_BulELZyJz8AsIWRqwIt9Cg0HnX0Wz1WEY6N3zWe_ETkVDWgfuVfz5L687dHVY3eHBr9YZ0po6nxjdJ69jrZPEcDzuRz3IAw2eHH51ZKAJNhlxzStFeaMZ9cDVhyav6p5skHGCYdOKSIIX5JQ6hkDslbU_oAY6RLnLL4psabzMStyeEwFg8i373BQQtFS8n67Sc99hmK974Sx28MvtsrV0xv90aiGwzXlLX4j8zTFvQ6IZ3KwpaJQ-E"/>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-0.5">
+<span class="material-symbols-outlined text-[14px] text-gray-400">flag</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2">
+<p class="font-bold text-base truncate text-white">ChessHero</p>
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded">IM</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono">2750 • UK</p>
+</div>
+</div>
+<!-- User Clock (Active) -->
+<div class="flex flex-col items-end gap-1">
+<div class="bg-primary dark:bg-primary border border-blue-400 rounded-lg px-3 py-2 min-w-[90px] text-center shadow-[0_0_15px_rgba(19,91,236,0.4)]">
+<span class="text-2xl font-bold font-mono text-white">05:10</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Drawer / Tabs -->
+<section class="bg-surface-dark rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.3)] flex flex-col h-[35vh] max-h-[350px] shrink-0 border-t border-gray-800 z-10">
+<!-- Tab Headers -->
+<div class="flex items-center border-b border-gray-800">
+<button class="flex-1 py-3 text-sm font-semibold text-primary border-b-2 border-primary bg-primary/5 transition-colors">Moves</button>
+<button class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Chat <span class="ml-1 text-[10px] bg-red-500 text-white px-1.5 rounded-full">1</span></button>
+<button class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Accuracy</button>
+</div>
+<!-- Content Area: Move List -->
+<div class="flex-1 overflow-y-auto no-scrollbar p-0 relative">
+<div class="grid grid-cols-[auto_1fr_1fr] auto-rows-min w-full text-sm">
+<!-- Header Row -->
+<div class="sticky top-0 bg-surface-dark z-10 col-span-3 grid grid-cols-[3rem_1fr_1fr] border-b border-gray-800 text-xs text-gray-500 font-medium py-1.5">
+<div class="text-center">#</div>
+<div class="pl-2">White</div>
+<div class="pl-2">Black</div>
+</div>
+<!-- Moves -->
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 hover:bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">1.</div>
+<div class="pl-2 font-mono font-medium text-white">e4</div>
+<div class="pl-2 font-mono font-medium text-white">e5</div>
+</div>
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">2.</div>
+<div class="pl-2 font-mono font-medium text-white">Nf3</div>
+<div class="pl-2 font-mono font-medium text-white">Nc6</div>
+</div>
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 hover:bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">3.</div>
+<div class="pl-2 font-mono font-medium text-white">Bb5</div>
+<div class="pl-2 font-mono font-medium text-white">a6</div>
+</div>
+<!-- Current Move Highlight -->
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 bg-primary/20 border-l-2 border-primary">
+<div class="text-gray-500 font-mono text-center">4.</div>
+<div class="pl-2 font-mono font-bold text-white">Ba4</div>
+<div class="pl-2 font-mono text-gray-400">...</div>
+</div>
+<!-- Placeholder for scrolling -->
+<div class="col-span-3 h-4"></div>
+</div>
+<!-- Analysis FAB (Floating Action Button style within content) -->
+<button class="absolute bottom-4 right-4 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center group transition-all">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">analytics</span>
+</button>
+</div>
+<!-- Footer Actions -->
+<div class="p-3 border-t border-gray-800 bg-surface-dark grid grid-cols-3 gap-3">
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors group">
+<span class="material-symbols-outlined text-xl group-hover:animate-pulse">flag_circle</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Resign</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">handshake</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Draw</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg bg-primary hover:bg-blue-600 text-white transition-colors shadow-lg shadow-blue-900/20">
+<span class="material-symbols-outlined text-xl">check</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Submit</span>
+</button>
+</div>
+</section>
+</body></html>
+
+<!-- Tournaments Hub -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tournaments Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1a2230", 
+                        "surface-light": "#ffffff"
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white pb-24">
+<!-- Header -->
+<header class="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<button class="flex items-center justify-center p-2 -ml-2 rounded-full active:bg-slate-200 dark:active:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Tournaments Hub</h1>
+<button class="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium text-sm hover:text-primary dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+<span>Filter</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex flex-col gap-6 p-4">
+<!-- Create Tournament Button -->
+<button class="w-full relative group overflow-hidden rounded-xl bg-primary p-4 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+<div class="flex items-center justify-center gap-3">
+<span class="material-symbols-outlined text-white text-3xl">add_circle</span>
+<span class="text-white text-lg font-bold tracking-wide">Create Tournament</span>
+</div>
+</button>
+<!-- Section: Daily Arenas -->
+<section>
+<div class="flex items-center justify-between mb-3 px-1">
+<h2 class="text-xl font-bold">Daily Arenas</h2>
+<a class="text-primary text-sm font-semibold hover:underline" href="#">View All</a>
+</div>
+<div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2 -mx-4 px-4">
+<!-- Card 1 -->
+<div class="flex flex-col w-64 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Abstract chess board visualization with dark lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1N-wvBboKW3lbHQZ8KTqWL_0ulL87LdeRCzXuB2z7RMmEoB1CLbrlwuw-jG4zRgVxeKpniOfyb9cjC-KJGypI7iPuNDd8GUqXFCGIiqGEUO6IoRBIcIwYA6JSl_vfG9tuj7QKqcnTc0ywIIJsCUGBehZKOF059mdZBqvmy1tH4h7Gswu7CNyb85flC-XbefFRkPTTXo_Lrwxd6KL-MSdrWbC59oHyMsVZlQIZ1EdXQ5fkpKPWOWzemJvmrUfLfKrbaRx76U3c9PVV');">
+<div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                            LIVE
+                        </div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-2 left-3">
+<span class="text-white font-bold text-shadow-sm">Bullet Brawl</span>
+</div>
+</div>
+<div class="p-3 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                                1+0 • Bullet
+                            </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">group</span>
+                                1,204
+                            </div>
+</div>
+<button class="w-full mt-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2 rounded-lg text-sm transition-colors">
+                            Join Now
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col w-64 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Close up of chess pieces on a board with dramatic lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjv_oy2hXwfTFjcKWwcyNJHzqxlmPWzBd4VMLWfZnD6MAJmZUm0-muXELllFxGydnLsxzUgmY2Hoy-5PZOCJhCHNaRZjZt_Mz1CIcF5WIAlGxQjyzyc2VgbmzO42ZPgWQjuMZLuRpT6oxi51iizXaLx8faonia-bY4hm1_Ygim6EHi4MPsmlNR2hcE7iuSgBuZXhXkxSdrfMaTVxaqpr4Gb4bQ_A6K0MXv1zJnnOUZaMpqMSKqpytkzRR1Gcgg0BFGypYqS6kuX15k');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-2 left-3">
+<span class="text-white font-bold text-shadow-sm">Super Blitz Arena</span>
+</div>
+</div>
+<div class="p-3 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                                3+0 • Blitz
+                            </div>
+<div class="flex items-center gap-1 text-primary">
+                                Starts in 5m
+                            </div>
+</div>
+<button class="w-full mt-1 bg-surface-light dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-lg text-sm transition-colors">
+                            Register
+                        </button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col w-64 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Abstract dark geometric shapes representing strategy" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA815ztCeiNtIaIPD27FguoBIOqHoTx2PsJmqJ7EEW6libmmQLbrhWZeCt152O5IK91aoXF6IUm135N9uthR2sF6iecmcG2mWDOHgz8vdDfRSk60thQTmFQozwIYokOE2RG8C-UAKwqWCSAGRQghXFLXpkPRVKdiJDSEdxVUXDMX3GwudWYnFRaQxkxvC34IIG7uncOhGQ7SXEzrkIvF8Z0Xzl81W3xUpqJVyGR8twj44SheCHq3yM-fIbIbWJgg0HMIbinGrM9EYwm');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-2 left-3">
+<span class="text-white font-bold text-shadow-sm">Rapid Shield</span>
+</div>
+</div>
+<div class="p-3 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                                10+0 • Rapid
+                            </div>
+<div class="flex items-center gap-1">
+                                Starts in 1h
+                            </div>
+</div>
+<button class="w-full mt-1 bg-surface-light dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-lg text-sm transition-colors">
+                            Register
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Swiss Opens -->
+<section>
+<div class="flex items-center justify-between mb-3 px-1">
+<h2 class="text-xl font-bold">Swiss Opens</h2>
+<a class="text-primary text-sm font-semibold hover:underline" href="#">View All</a>
+</div>
+<div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2 -mx-4 px-4">
+<!-- Card 1 -->
+<div class="flex flex-col w-72 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="p-4 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-start bg-gradient-to-br from-primary/5 to-transparent">
+<div>
+<div class="text-xs font-bold text-primary uppercase tracking-wider mb-1">Official Event</div>
+<h3 class="font-bold text-lg leading-tight">Weekly Rapid Open</h3>
+</div>
+<div class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">emoji_events</span>
+                            $500
+                        </div>
+</div>
+<div class="p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">schedule</span>
+                                10+5 Rapid
+                            </div>
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">person</span>
+                                32/100
+                            </div>
+</div>
+<div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 32%"></div>
+</div>
+<button class="w-full mt-1 bg-primary text-white font-bold py-2.5 rounded-lg text-sm shadow-md shadow-primary/20 hover:bg-blue-600 transition-colors">
+                            Enter Tournament
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col w-72 shrink-0 bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="p-4 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-start">
+<div>
+<div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Community</div>
+<h3 class="font-bold text-lg leading-tight">Weekend Classical</h3>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">schedule</span>
+                                30+20 Classical
+                            </div>
+<div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">person</span>
+                                14/50
+                            </div>
+</div>
+<div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 28%"></div>
+</div>
+<button class="w-full mt-1 bg-surface-light dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-lg text-sm transition-colors">
+                            Register
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Knockout Brackets -->
+<section>
+<div class="flex items-center justify-between mb-3 px-1">
+<h2 class="text-xl font-bold">Knockout Brackets</h2>
+<a class="text-primary text-sm font-semibold hover:underline" href="#">View All</a>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Row Item 1 -->
+<div class="flex items-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shrink-0 text-white shadow-md">
+<span class="material-symbols-outlined">emoji_events</span>
+</div>
+<div class="ml-3 flex-1">
+<h4 class="font-bold text-sm leading-tight">Grandmaster Qualifier</h4>
+<div class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+<span>5+3 Blitz</span>
+<span class="w-1 h-1 rounded-full bg-slate-400"></span>
+<span>Starts in 2h</span>
+</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300">
+                            8/16
+                        </div>
+</div>
+</div>
+<!-- Row Item 2 -->
+<div class="flex items-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm opacity-70">
+<div class="h-12 w-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<div class="ml-3 flex-1">
+<h4 class="font-bold text-sm leading-tight text-slate-500 dark:text-slate-400">Rapid Invitational</h4>
+<div class="text-xs text-slate-500 dark:text-slate-500 mt-1 flex items-center gap-2">
+<span>15+10 Rapid</span>
+<span class="w-1 h-1 rounded-full bg-slate-400"></span>
+<span>Tomorrow</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs font-medium text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded">Invite Only</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-2 z-50 h-[84px]">
+<div class="grid grid-cols-4 h-full pb-4">
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">smart_toy</span>
+<span class="text-[10px] font-medium">Play</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-[28px] fill-current">trophy</span>
+<span class="text-[10px] font-bold">Tournaments</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+<!-- Safe area padding spacer for bottom nav -->
+<div class="h-6"></div>
+</body></html>
+
+<!-- User Profile & Rating History -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Profile &amp; Rating History</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e2430", // Slightly lighter than background-dark
+                        "border-light": "#e5e7eb",
+                        "border-dark": "#2d3544",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        /* Custom scrollbar for horizontal lists */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col font-display antialiased selection:bg-primary/30">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-border-light dark:border-border-dark px-4 py-3 flex items-center justify-between">
+<button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold">Profile</h1>
+<button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto overflow-x-hidden pb-8">
+<!-- Profile Header Section -->
+<div class="px-4 py-6 flex flex-col items-center">
+<div class="relative mb-4">
+<div class="w-28 h-28 rounded-xl overflow-hidden shadow-lg ring-4 ring-surface-light dark:ring-surface-dark bg-slate-200 dark:bg-slate-700" data-alt="Portrait of a focused chess player looking at a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCquKCk1teg9QAEtUYArtyLdGfTbirZcg-rJTgAFAbJY2ibrAbfCuW_vdpp8_IOrWQhzi6Ws85uXYTG0rty-UZk9owzX3MwKxsEh2FLue1unyYvU8sHUEi7KBWTBASD31usEGtNhJ2psvOWO_wnovmxWngvL0krO3rCPe9FAA72XYzdNXT9-X7PC95XTusIabl72VGXIVyvnrIQ59cG8I-l_xyJx49cmVjRGSxFqeUhS-86DhDbo_HZ-SC5XT2Z5Fp1OXrmBWaRwBGt'); background-size: cover; background-position: center;">
+</div>
+<!-- Online Indicator -->
+<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-background-light dark:border-background-dark flex items-center justify-center">
+<div class="w-full h-full rounded-full animate-ping opacity-20 bg-green-500 absolute"></div>
+</div>
+</div>
+<div class="text-center space-y-1">
+<div class="flex items-center justify-center gap-2">
+<span class="bg-yellow-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">GM</span>
+<h2 class="text-2xl font-bold tracking-tight">GrandmasterFlash</h2>
+<span class="text-lg">🇺🇸</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">New York, United States</p>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-3 gap-4 w-full max-w-sm mt-6">
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">1,204</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Friends</p>
+</div>
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">5.4k</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Followers</p>
+</div>
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">320</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Following</p>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-3 w-full max-w-sm mt-4">
+<button class="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">person_add</span>
+                    Follow
+                </button>
+<button class="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-primary/20 transition-colors flex items-center justify-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">mail</span>
+                    Message
+                </button>
+</div>
+</div>
+<!-- Rating Section -->
+<div class="mt-4">
+<div class="px-4 mb-4">
+<h3 class="text-lg font-bold mb-3">Performance</h3>
+<!-- Format Selector -->
+<div class="bg-surface-light dark:bg-surface-dark p-1 rounded-xl flex gap-1 border border-border-light dark:border-border-dark overflow-x-auto hide-scrollbar">
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Bullet
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg bg-white dark:bg-background-dark shadow-sm text-primary font-bold text-sm ring-1 ring-black/5 dark:ring-white/10">
+                        Blitz
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Rapid
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Classical
+                    </button>
+</div>
+</div>
+<!-- Rating Chart Card -->
+<div class="mx-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5 relative overflow-hidden shadow-sm">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Current Rating</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-bold text-slate-900 dark:text-white">2,842</h2>
+<span class="text-green-500 text-sm font-bold flex items-center">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> +12
+                            </span>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">Peak</p>
+<p class="text-lg font-bold text-slate-700 dark:text-slate-300">2,910</p>
+</div>
+</div>
+<!-- Chart Visualization (Using CSS/SVG for look & feel without JS lib) -->
+<div class="relative h-48 w-full mt-4 group">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between text-xs text-slate-400 dark:text-slate-600 font-mono pointer-events-none">
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+</div>
+<!-- Line Graph -->
+<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 50">
+<defs>
+<lineargradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#135bec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#135bec" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path class="drop-shadow-lg" d="M0,40 C10,38 20,42 30,30 C40,18 50,25 60,20 C70,15 80,18 90,10 C95,6 100,5 100,5" fill="none" stroke="#135bec" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M0,40 C10,38 20,42 30,30 C40,18 50,25 60,20 C70,15 80,18 90,10 C95,6 100,5 100,5 L100,50 L0,50 Z" fill="url(#gradient)" stroke="none"></path>
+<!-- Interactive Point (Mock) -->
+<circle class="fill-background-light dark:fill-background-dark stroke-primary stroke-[1.5]" cx="90" cy="10" r="2.5"></circle>
+</svg>
+<!-- Tooltip Mock -->
+<div class="absolute top-[5%] left-[80%] -translate-x-1/2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs py-1 px-2 rounded font-bold shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        2,835
+                    </div>
+</div>
+<!-- X Axis Labels -->
+<div class="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">
+<span>Jan</span>
+<span>Mar</span>
+<span>May</span>
+<span>Jul</span>
+<span>Sep</span>
+</div>
+</div>
+<!-- Stats Summary Grid -->
+<div class="grid grid-cols-3 gap-3 px-4 mt-4">
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-green-500 font-bold text-lg">52%</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Win Rate</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-slate-500 dark:text-slate-300 font-bold text-lg">1,029</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Games</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-primary font-bold text-lg">98th</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Percentile</span>
+</div>
+</div>
+</div>
+<!-- Recent Games List -->
+<div class="mt-8 px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Recent Games</h3>
+<button class="text-primary text-sm font-semibold hover:underline">View All</button>
+</div>
+<div class="space-y-3">
+<!-- Game Item: Win -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-green-500 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-green-500 uppercase">Win</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            1-0
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. ChessKing12</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2300</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Sicilian Defense: Najdorf Variation</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">2h ago</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+<!-- Game Item: Loss -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-red-500 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-red-500 uppercase">Loss</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            0-1
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. PawnStar</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2150</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Queen's Gambit Declined</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">Yesterday</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+<!-- Game Item: Draw -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-slate-400 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-slate-500 uppercase">Draw</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            ½-½
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. MagnusEffect</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2850</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Ruy Lopez: Berlin Defense</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">2 days ago</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Simple Bottom Nav for Context -->
+<div class="sticky bottom-0 border-t border-border-light dark:border-border-dark bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md pb-safe">
+<div class="flex justify-around items-center h-16">
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">sports_esports</span>
+<span class="text-[10px] font-medium">Play</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined filled">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-medium">Social</span>
+</button>
+</div>
+</div>
+</body></html>
+
+<!-- Social & Players Hub -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Social &amp; Players Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1c2433",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'glow': '0 0 15px rgba(19, 91, 236, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* Hide scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-effect {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased overflow-x-hidden min-h-screen relative flex flex-col">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-40 bg-background-light/95 dark:bg-background-dark/95 glass-effect border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center justify-between px-4 py-3">
+<h1 class="text-xl font-bold tracking-tight">Social Hub</h1>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined" style="font-size: 24px;">search</span>
+</button>
+<button class="relative flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined" style="font-size: 24px;">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</div>
+</div>
+<!-- Segmented Control Navigation -->
+<div class="px-4 pb-4">
+<div class="flex p-1 bg-slate-200 dark:bg-surface-dark rounded-xl">
+<button class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    Friends
+                </button>
+<button class="flex-1 py-2 text-sm font-medium rounded-lg bg-primary text-white shadow-lg shadow-primary/30">
+                    Players
+                </button>
+<button class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    Chat
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 px-4 py-4 pb-24 space-y-6">
+<!-- Filters Section -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<h2 class="text-lg font-bold">Leaderboard</h2>
+<button class="text-primary text-sm font-medium flex items-center gap-1">
+                    Filters <span class="material-symbols-outlined" style="font-size: 16px;">filter_list</span>
+</button>
+</div>
+<div class="flex overflow-x-auto gap-2 no-scrollbar pb-1">
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium">All</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Standard</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Blitz</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Bullet</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Rapid</button>
+</div>
+</div>
+<!-- Top 3 Podium (Visual Treat) -->
+<div class="grid grid-cols-3 gap-3 items-end pt-4 pb-2">
+<!-- Rank 2 -->
+<div class="flex flex-col items-center gap-2">
+<div class="relative">
+<div class="w-16 h-16 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-2 ring-slate-400 dark:ring-slate-500">
+<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a smiling man with glasses" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAl8B8S-mpdI3LLovwjcBt0uBKwqQlU_eSuWSqu-E1kToZLGaizGur6Nndj6y6UxYd9mi9uQhiZymvqRM6zvtO2xoqKUj5QfRFI2visbM8-9dtGpxCHw0sP6FBIe4QPca5BJ1h7AZGd4yBFunTauDKCAUkkwgMLnY_b8J1jS8-iS_l2rmohdEUilg_8e98IHCq8Xr90QoJfYyFMMZ9gg64QRZu66PmNXoR1cWpAJCGc5_uTr6Nt2xfRPJ4dq8cLeG8rtw2VTkoIlYvV');"></div>
+</div>
+<div class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-slate-400 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        #2
+                    </div>
+</div>
+<div class="text-center mt-1">
+<p class="font-semibold text-sm truncate w-20">Hikaru_N</p>
+<p class="text-xs text-primary font-bold">2880</p>
+</div>
+</div>
+<!-- Rank 1 -->
+<div class="flex flex-col items-center gap-2 -mt-4">
+<div class="relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[#FFD700]">
+<span class="material-symbols-outlined fill-current" style="font-size: 28px; font-variation-settings: 'FILL' 1;">crown</span>
+</div>
+<div class="w-20 h-20 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-4 ring-[#FFD700] shadow-glow">
+<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a focused young man" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB6DTLm8FBTchlLVUSGYWkSW401uLOKw5_mNrmk6ZtC8mgFskstuS4ugRLfJdZPgwzJLd6YK29oXJTVLB0iwMpp0hK4MqlSzXlKzVxAEi3bucmr6sZZgBDXLth5grKHnlZY_9V_mQKjjEnXJgEihy7soRilrVyTvjJa2yTFbyhM1s1uxtoOZA6Oee59ALLEaMhiIpo_WqcEOFHwesozeoHSOOtnm5ZkOPlBrhW4erfDEOte15ENgRepf9XUEUWb0we_8PtJ9yy-qKKd');"></div>
+</div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-black text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">
+                        #1
+                    </div>
+</div>
+<div class="text-center mt-2">
+<p class="font-bold text-base truncate w-24">Magnus_C</p>
+<p class="text-sm text-primary font-bold">2882</p>
+</div>
+</div>
+<!-- Rank 3 -->
+<div class="flex flex-col items-center gap-2">
+<div class="relative">
+<div class="w-16 h-16 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-2 ring-[#CD7F32]">
+<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a serious man with beard" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCVVWworiVDmuIHa3CqyOeryUTNtCwk9ir5rKP1GXYY59G99lCqzUxbcJhKuzKFLiDBQIusuF7IfkBVupWT1JyRn95dcM4SYeLbvVUOj3LiRO2rEU3zZGCqare7r8NNg3XeGW8PVk3TR2DYdKafp6ePUgFdiY5oDgUiCoZuq5knv3tFDk3GRrOZSONPH7TNyZGqoUqi7G5j4kjhP-XXPB6PTm79OUj-hmIXsw6GEWnKmVMqOuLygEcyHGFMRrp4eiHQs4Y6cGAkqYkL');"></div>
+</div>
+<div class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        #3
+                    </div>
+</div>
+<div class="text-center mt-1">
+<p class="font-semibold text-sm truncate w-20">Fabi_C</p>
+<p class="text-xs text-primary font-bold">2801</p>
+</div>
+</div>
+</div>
+<!-- Leaderboard List -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+<!-- Header -->
+<div class="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 uppercase">
+<div class="col-span-1 text-center">#</div>
+<div class="col-span-6">Player</div>
+<div class="col-span-3 text-right">Rating</div>
+<div class="col-span-2 text-right"></div>
+</div>
+<!-- Item 4 -->
+<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+<div class="col-span-1 text-sm font-bold text-slate-500 text-center">4</div>
+<div class="col-span-6 flex items-center gap-3">
+<div class="relative shrink-0">
+<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a woman" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPmlz-DDHdnKnUqvUuLAH6dRYcB0-4B00mLAx3_YZ0t-P3gxp6UQFKWOrjnQS6ReMlalqGqU5v5ctWGVWDd4XNY63MUpEkbnXNvfRBB0pEkAwcwlqawsA6yQgpE2dlBSj683u7GJs0BGXXcCdfboztyCno5NEX1mMtYN2s63lxNEntUg02GrakFS4jzXbx7GpFePVmZaw2xSNRHH295HglGm0Trvt4KEk00Ev0zJ35HNGrzjYwgGuk6_uUOMrO7Pm6e-eMA7YaFQ0v');"></div>
+<span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-surface-light dark:border-surface-dark"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="truncate font-medium text-sm">ChessQueen99</span>
+<span class="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1 rounded font-bold">GM</span>
+</div>
+<span class="text-xs text-slate-500">Online</span>
+</div>
+</div>
+<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">2795</div>
+<div class="col-span-2 flex justify-end">
+<button class="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">swords</span>
+</button>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+<div class="col-span-1 text-sm font-bold text-slate-500 text-center">5</div>
+<div class="col-span-6 flex items-center gap-3">
+<div class="relative shrink-0">
+<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a man" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjVfVwQMGikCk7diS5vWt1U2WFjft-9AMuVwrxdmiPrEPe5PruNmfX8c1GEAqZMGLFSfeXcPY5KPA4noGqUFFFLzM_T3bDQD3_NjBul11LsjXzf0A-KVf_vNTgF7ULbi-xbmkEXlkitESNkKkDzVd9WuTbeWeZG3dhH47qAGzjspWdH8M9OTazK5UiRQMGcGTKnAt4VBRmEH1YuZooxNWfbU-GY7p1n0dh6hLQIjLDpHDjg0Hv-4M5nJgC0FXJtwYN1ZT5dJcS_YEu');"></div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="truncate font-medium text-sm">Bobby_F</span>
+<span class="text-[10px] bg-red-500/20 text-red-600 dark:text-red-400 px-1 rounded font-bold">IM</span>
+</div>
+<span class="text-xs text-slate-500">15m ago</span>
+</div>
+</div>
+<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">2750</div>
+<div class="col-span-2 flex justify-end">
+<button class="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">mail</span>
+</button>
+</div>
+</div>
+<!-- Item 6 (Me) -->
+<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary border-b border-slate-100 dark:border-slate-800/50 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors cursor-pointer">
+<div class="col-span-1 text-sm font-bold text-primary text-center">42</div>
+<div class="col-span-6 flex items-center gap-3">
+<div class="relative shrink-0">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                            ME
+                        </div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="truncate font-medium text-sm text-primary">GrandMasterFlash</span>
+</div>
+<span class="text-xs text-slate-500">France</span>
+</div>
+</div>
+<div class="col-span-3 text-right font-bold text-primary text-sm">1500</div>
+<div class="col-span-2 flex justify-end">
+<button class="text-slate-400 p-1.5 rounded-lg">
+<span class="material-symbols-outlined" style="font-size: 20px;">bar_chart</span>
+</button>
+</div>
+</div>
+<!-- Item 7 -->
+<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+<div class="col-span-1 text-sm font-bold text-slate-500 text-center">43</div>
+<div class="col-span-6 flex items-center gap-3">
+<div class="relative shrink-0">
+<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a woman looking away" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCdm61Er5OK1m7McfD9RM3zJDhTw5Vv8vnBa4gmyUBjfMcl4oQPNsjazPdt7aWH3V97JXG56dZTZoS3Dwo5T3A-BIRJKE0vSlUWXvetOo5tZ1ZjYC7Xs6hyS_ub0pAQtmWMHlHDC_02s82xtpnNoRlj0bLfDOAI_Yxw2CZh2RKmCtxAY9xHRqeMrO9rL_c0hlV81-beWjwjKo8Cp72nb4yoVwP19cJhVqKtUdETJKWzb1ZMJyHE-IKhzmlREJ7TD9nc5CvuQF0Qd_nu');"></div>
+<span class="absolute bottom-0 right-0 w-2 h-2 bg-gray-500 rounded-full border border-surface-light dark:border-surface-dark"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="truncate font-medium text-sm">Ana_Chess</span>
+</div>
+<span class="text-xs text-slate-500">Offline</span>
+</div>
+</div>
+<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">1498</div>
+<div class="col-span-2 flex justify-end">
+<button class="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">swords</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Promo / Friend Activity -->
+<div class="bg-gradient-to-r from-blue-900 to-primary rounded-xl p-4 text-white relative overflow-hidden">
+<div class="relative z-10 flex items-center justify-between">
+<div>
+<p class="text-xs font-medium opacity-80 mb-1">Weekly Tournament</p>
+<h3 class="font-bold text-lg leading-tight">Speed Chess<br/>Championship</h3>
+<button class="mt-3 bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                        Register Now
+                    </button>
+</div>
+<div class="text-white/20">
+<span class="material-symbols-outlined" style="font-size: 64px;">trophy</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+</div>
+</main>
+<!-- Floating Chat Button (Persistent) -->
+<button class="fixed right-4 bottom-20 z-50 flex items-center justify-center w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/40 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" style="font-size: 28px;">chat_bubble</span>
+<span class="absolute top-3 right-3 w-3 h-3 bg-red-500 border-2 border-primary rounded-full"></span>
+</button>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 w-full z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-safe">
+<div class="flex justify-around items-center h-16 px-2">
+<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">swords</span>
+<span class="text-[10px] font-medium">Play</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-current" style="font-size: 24px;">groups</span>
+<span class="text-[10px] font-medium">Social</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<div class="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdoAjd0l3C8rkJsYCdllRtp_bRdUai0wEZPk71fht8R7KcKI3sJ15Y3f7EkK4iG_-z_J0qvJF5nOaBzYOnJwebzKeCUGc338TNhkIdb0IhBCsjaXRipaEZDHuNgdqK_9to9zZD2naqmzcHR9z63OcjCBAASHP_5-gNp2YAWGXNkp0fmUN-Xv5CIKB3OgTzAGPIBJBE1JG8ouUG3FoOUVbDRU6bPuSYqQoJrwLx56QZ8gC3QGgPEPAWOn1zycefDpDrIG2OHMeah_nT"/>
+</div>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>
+
+<!-- Stockfish Deep Analysis View -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stockfish Deep Analysis View</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .chessboard-pattern {
+            background-image:
+                linear-gradient(45deg, #2a2f3d 25%, transparent 25%),
+                linear-gradient(-45deg, #2a2f3d 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #2a2f3d 75%),
+                linear-gradient(-45deg, transparent 75%, #2a2f3d 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        /* Custom scrollbar for horizontal lists */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col overflow-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark shrink-0">
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="text-base font-bold leading-tight">Post-Game Analysis</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Rapid • 10+0 • Dec 12, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">settings</span>
+</button>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">share</span>
+</button>
+</div>
+</header>
+<!-- Match Info Summary -->
+<div class="px-4 pb-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-white border border-slate-300"></div>
+<span class="text-sm font-semibold">User123 (1800)</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-primary font-bold text-lg">1 - 0</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold text-slate-500">Opponent (1750)</span>
+<div class="w-2 h-2 rounded-full bg-slate-600"></div>
+</div>
+</div>
+<!-- Main Content Area: Board + Controls -->
+<main class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+<!-- Chessboard Container -->
+<div class="px-2 w-full max-w-md mx-auto aspect-square relative my-2 shrink-0">
+<!-- Board Image/Div -->
+<div class="w-full h-full rounded-lg overflow-hidden shadow-lg relative bg-[#b58863]" data-alt="Chessboard position showing middle game" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBuru3Ryxv2jqteeGZG7YLCcWa-uFSm9RyWQp6nPRJXN3E1lXfU_t01r7JK_3Aq7U6XlTU9VRGi0mSVpoZ4944tp9claorowHS4LmOVhbxtrw9nAK8APBvo3QhT6xqONlIaJleTWYeEBP43_eEYatYAlWdT17DONK47AaKCm-SdPeQXozWWdQGySab3TEUNk52lK6RuuazhYWsXKyQWqKu9iIWBtTIxj7fgLdBPBk3jakMhvpsjZg_4u2DqslWtGbPbPe8dYbWYKB9U'); background-size: cover; background-position: center;">
+<!-- Overlay Gradients for emphasis (simulating highlights) -->
+<div class="absolute inset-0 bg-black/10"></div>
+<!-- Example Highlight: Best Move -->
+<div class="absolute top-[37.5%] left-[37.5%] w-[12.5%] h-[12.5%] bg-primary/40 border-2 border-primary"></div>
+<!-- Example Highlight: From Square -->
+<div class="absolute top-[62.5%] left-[25%] w-[12.5%] h-[12.5%] bg-yellow-400/40"></div>
+<!-- Evaluation Bar (Integrated) -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-700/80 backdrop-blur-sm flex flex-col justify-end">
+<div class="bg-white w-full transition-all duration-500" style="height: 65%;"></div>
+</div>
+</div>
+<!-- Floating Eval Score -->
+<div class="absolute top-2 right-4 bg-background-dark/80 backdrop-blur-md text-white text-xs font-mono py-1 px-2 rounded border border-white/10 shadow-lg">
+                +2.45
+            </div>
+</div>
+<!-- Playback Controls -->
+<div class="flex items-center justify-center gap-1 px-4 py-2 shrink-0">
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">first_page</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<button class="mx-2 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl">play_arrow</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">chevron_right</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">last_page</span>
+</button>
+</div>
+<!-- Engine Status -->
+<div class="px-4 py-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+<p class="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">Stockfish 16 • Depth 24</p>
+</div>
+<button class="text-primary text-xs font-bold uppercase tracking-wider hover:underline">Settings</button>
+</div>
+<!-- Bottom Sheet / Analysis Tabs -->
+<div class="flex-1 bg-white dark:bg-[#1c1f27] rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+<!-- Tab Headers -->
+<div class="flex border-b border-slate-200 dark:border-slate-700">
+<button class="flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary">Engine</button>
+<button class="flex-1 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Graph</button>
+<button class="flex-1 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Moves</button>
+</div>
+<!-- Tab Content (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Engine Lines -->
+<div class="space-y-3">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Top Lines</h3>
+<!-- Line 1 (Best) -->
+<div class="group flex items-start gap-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-1 min-w-[4px] self-stretch bg-primary rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-bold text-slate-800 dark:text-white">1. Nf3 d5 2. d4 Nf6</span>
+<span class="text-sm font-bold text-green-500">+2.45</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-mono">
+                                3. c4 e6 4. Nc3 Be7 5. Bf4 O-O 6. e3 c5
+                            </p>
+</div>
+</div>
+<!-- Line 2 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent">
+<div class="w-1 min-w-[4px] self-stretch bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">1. e3 e6 2. Nf3 d5</span>
+<span class="text-sm font-medium text-slate-400">+2.10</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-mono">
+                                3. b3 Nf6 4. Bb2 Be7 5. c4 O-O
+                            </p>
+</div>
+</div>
+<!-- Line 3 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent">
+<div class="w-1 min-w-[4px] self-stretch bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">1. g3 d5 2. Bg2 Nf6</span>
+<span class="text-sm font-medium text-slate-400">+1.85</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-mono">
+                                3. Nf3 e6 4. O-O Be7 5. d3 O-O
+                            </p>
+</div>
+</div>
+</div>
+<!-- Moments Carousel Section -->
+<div>
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 mt-4">Key Moments</h3>
+<div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x">
+<!-- Moment Card: Blunder -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-red-500">
+<span class="material-symbols-outlined text-lg">cancel</span>
+<span class="text-xs font-bold uppercase">Blunder</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 12</div>
+<div class="text-xs text-slate-500">-3.2 Eval Loss</div>
+</div>
+<!-- Moment Card: Brilliant -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-teal-500/10 border border-teal-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-teal-400">
+<span class="material-symbols-outlined text-lg">hotel_class</span>
+<span class="text-xs font-bold uppercase">Brilliant</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 24</div>
+<div class="text-xs text-slate-500">Only Move</div>
+</div>
+<!-- Moment Card: Miss -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-orange-400">
+<span class="material-symbols-outlined text-lg">do_not_disturb_on</span>
+<span class="text-xs font-bold uppercase">Miss</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 30</div>
+<div class="text-xs text-slate-500">Mate in 3</div>
+</div>
+<!-- Moment Card: Great -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-blue-400">
+<span class="material-symbols-outlined text-lg">thumb_up</span>
+<span class="text-xs font-bold uppercase">Great</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 34</div>
+<div class="text-xs text-slate-500">+1.5 Advantage</div>
+</div>
+</div>
+</div>
+<!-- Spacer for scrolling -->
+<div class="h-8"></div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button for Analyze Mode Toggle (Optional overlay) -->
+<div class="fixed bottom-6 right-6 z-10">
+<button class="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-3 rounded-full shadow-lg shadow-primary/40 transition-all active:scale-95">
+<span class="material-symbols-outlined">search</span>
+<span class="font-bold text-sm">Deep Analyze</span>
+</button>
+</div>
+</body></html>
+
+<!-- Tournament Live Lobby & Brackets -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tournament Live Lobby</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for mobile feel */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col antialiased selection:bg-primary/30 selection:text-primary">
+<!-- Header & Navigation Area -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+<!-- Top App Bar -->
+<div class="flex items-center justify-between px-4 py-3">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h1 class="text-base font-bold text-gray-900 dark:text-white tracking-tight">Tournament Lobby</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+</div>
+<!-- Tournament Info & Timer -->
+<div class="px-4 pb-2">
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-3">Winter Blitz Championship 2024</h2>
+<div class="flex flex-wrap items-center gap-2 mb-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider border border-red-500/20">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+</span>
+                    Live
+                </span>
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold border border-gray-300 dark:border-gray-700">
+                    Round 4/9
+                </span>
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                    Blitz 3+2
+                </span>
+</div>
+<!-- Countdown Timer Row -->
+<div class="flex gap-3 mb-4">
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">00</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Hours</span>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">14</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Minutes</span>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-primary tabular-nums">32</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Seconds</span>
+</div>
+</div>
+<!-- Segmented Control Tabs -->
+<div class="bg-gray-200 dark:bg-[#1e293b] p-1 rounded-xl flex mb-2">
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-semibold bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm transition-all">
+                    Live Games
+                </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
+                    Standings
+                </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
+                    Chat &amp; Info
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Area: Live Games -->
+<main class="flex-1 p-4 pb-24 space-y-6 overflow-y-auto">
+<!-- Featured Top Board -->
+<section>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">star</span>
+                    Top Board
+                </h3>
+<button class="text-primary text-xs font-semibold">View Analysis</button>
+</div>
+<!-- Card -->
+<div class="bg-white dark:bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
+<!-- Players Header -->
+<div class="p-3 bg-gray-50 dark:bg-[#161f2e] border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+<!-- Black Player -->
+<div class="flex items-center gap-2">
+<div class="h-8 w-8 rounded-full bg-gray-300 overflow-hidden relative border border-gray-400">
+<img alt="Hikaru Nakamura Avatar" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIsWz0Xu7WWtGKKmMG9lVdxZODL0BC1hkt0knC6Vn4K8voMHaJauVBpJnHPqNnchliufs_AOH1GpoEraNTuQAUmTA0BaCnHei4ZbT77C6u0BjUpTDx4stW0QiSZsZS8I0QBkBO0EfaF21dQGqUbCBadthdEvtJTaDRRAUPeMuCHKNwE9IaXpV5vozo2AfY6AFJk-U_MSB79FOvvzXDsrk4qmu1KoDIKB4p_5wByXqgmIkpNPNvLRK9XKqWlg8jHGNr5_9ipyUgInsb"/>
+</div>
+<div>
+<p class="text-sm font-bold text-gray-900 dark:text-white leading-none">Hikaru N.</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">2800</p>
+</div>
+</div>
+<!-- Clock Black -->
+<div class="bg-gray-800 text-white px-2 py-1 rounded font-mono text-sm font-bold tabular-nums">
+                        03:55
+                    </div>
+</div>
+<!-- Chess Board Visual (Simplified SVG representation) -->
+<div class="relative aspect-square w-full bg-[#101622] flex items-center justify-center p-1" data-alt="Active chess game board showing mid-game position">
+<!-- Chess Board Grid -->
+<div class="w-full h-full grid grid-cols-8 grid-rows-8 border-4 border-[#333]">
+<!-- Generating squares with simple pattern for visual representation -->
+<!-- Row 8 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 7 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 6 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 5 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 4 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 3 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 2 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 1 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+<!-- Overlay Pieces (Abstracted for UI demo) -->
+<div class="absolute inset-0 p-1 pointer-events-none">
+<!-- Example Piece at e4 -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[50%] left-[50%] flex items-center justify-center">
+<span class="material-symbols-outlined text-black text-4xl drop-shadow-sm" style="font-variation-settings: 'FILL' 1;">chess_pawn</span>
+</div>
+<!-- Example Piece at d5 -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[37.5%] left-[37.5%] flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span>
+</div>
+</div>
+<!-- Last Move Indicator -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[50%] left-[50%] bg-primary/40 border-2 border-primary"></div>
+<div class="absolute w-[12.5%] h-[12.5%] top-[62.5%] left-[50%] bg-primary/40 border-2 border-primary"></div>
+</div>
+<!-- Players Footer -->
+<div class="p-3 bg-white dark:bg-[#1e293b] flex justify-between items-center border-t border-gray-200 dark:border-gray-700 relative">
+<!-- Eval Bar Background -->
+<div class="absolute top-0 left-0 h-1 w-full flex">
+<div class="h-full bg-white w-[55%]"></div> <!-- White advantage -->
+<div class="h-full bg-gray-800 w-[45%]"></div>
+</div>
+<!-- White Player -->
+<div class="flex items-center gap-2 mt-2">
+<div class="h-8 w-8 rounded-full bg-gray-100 overflow-hidden relative border border-gray-200">
+<img alt="Magnus Carlsen Avatar" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhiMBAyl_qm5lrPXb3zHkGZiY8U6msZH1thMh3iOCFRGNWzMkB6xtSenpmr6CmwNoWSMCsxSSWg-zNKHxfWJAzGKYyMSl_5Xt28mBSjdBZYQ9SEz17DrrJxGcwQAihzsDC8bMvNWdmiOnMafuNNFaYCNGjfRGwL4mmLn7exF9JCtuebYrL2XEnlGjW9c3hdMvZkaLebOOJMj2Jf85BHKeyYu6CR4lG3b2pjrRTVzDfAsi7rI0n3rUNzpgppmqAE4bnUrAGpYYu_wDa"/>
+</div>
+<div>
+<p class="text-sm font-bold text-gray-900 dark:text-white leading-none">Magnus C.</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">2882</p>
+</div>
+</div>
+<!-- Clock White -->
+<div class="bg-gray-200 text-gray-900 px-2 py-1 rounded font-mono text-sm font-bold mt-2 tabular-nums border border-gray-300">
+                        04:20
+                    </div>
+</div>
+</div>
+</section>
+<!-- Other Live Games Grid -->
+<section>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Other Matches</h3>
+<button class="text-primary text-xs font-semibold">View All</button>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Game Card 2 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing an endgame position">
+<div class="w-full h-full grid grid-cols-4 grid-rows-4">
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center">
+<!-- Abstract pieces -->
+<span class="material-symbols-outlined text-black text-lg absolute top-2 right-2" style="font-variation-settings: 'FILL' 1;">chess_rook</span>
+<span class="material-symbols-outlined text-white text-lg absolute bottom-2 left-2 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_king</span>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<!-- Black -->
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-black border border-gray-600"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">Nepomniachtchi</span>
+</div>
+<span class="text-xs font-mono text-gray-500 dark:text-gray-400">01:45</span>
+</div>
+<!-- White -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-white border border-gray-400"></div>
+<span class="text-sm font-bold text-gray-900 dark:text-white truncate">Caruana F.</span>
+<span class="bg-green-500/20 text-green-600 dark:text-green-400 text-[10px] px-1 rounded font-bold">+2</span>
+</div>
+<span class="text-xs font-mono text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-700 px-1 rounded">05:12</span>
+</div>
+<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">visibility</span> 12.5k watching
+                        </div>
+</div>
+</div>
+<!-- Game Card 3 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing mid-game tactical position">
+<div class="w-full h-full grid grid-cols-4 grid-rows-4">
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<!-- Black -->
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-black border border-gray-600"></div>
+<span class="text-sm font-bold text-gray-900 dark:text-white truncate">Gukesh D.</span>
+</div>
+<span class="text-xs font-mono text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-700 px-1 rounded">00:32</span>
+</div>
+<!-- White -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-white border border-gray-400"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">Firouzja A.</span>
+</div>
+<span class="text-xs font-mono text-gray-500 dark:text-gray-400">00:15</span>
+</div>
+<div class="mt-2 text-xs text-red-500 flex items-center gap-1 font-semibold">
+<span class="material-symbols-outlined text-[14px]">timer</span> Time Trouble
+                        </div>
+</div>
+</div>
+<!-- Game Card 4 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center opacity-70">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing completed game">
+<div class="w-full h-full bg-gray-400 flex items-center justify-center">
+<span class="text-xs font-bold text-gray-800">1/2 - 1/2</span>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">So W.</span>
+</div>
+<span class="text-xs font-bold text-gray-900 dark:text-white">0.5</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Aronian L.</span>
+</div>
+<span class="text-xs font-bold text-gray-900 dark:text-white">0.5</span>
+</div>
+<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                           Draw by repetition • 32 moves
+                        </div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Actions / Floating Elements -->
+<div class="fixed bottom-6 right-6 z-50">
+<button class="bg-primary hover:bg-primary/90 text-white w-14 h-14 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center transition-transform active:scale-95">
+<span class="material-symbols-outlined text-2xl">chat_bubble</span>
+</button>
+</div>
+</body></html>
+
+<!-- Desktop Main Landing Dashboard -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Platform Mobile Dashboard</title>
+<!-- Google Fonts: Lexend -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2bee6c",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#1c271f",
+                        "surface-dark-highlight": "#2a3b2e",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden">
+<div class="relative flex flex-col min-h-screen w-full pb-24"> <!-- Padding bottom for navigation bar -->
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-[#2a3b2e] px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="text-primary flex items-center justify-center p-1 rounded-lg bg-primary/10">
+<span class="material-symbols-outlined text-[28px]">
+                        chess_knight
+                    </span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">Chess Platform</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-gray-300">search</span>
+</button>
+<button class="relative flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-gray-300">notifications</span>
+<span class="absolute top-2 right-2 size-2.5 bg-primary rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 p-4 space-y-8">
+<!-- Quick Play Section -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold">Quick Play</h2>
+<button class="text-sm font-medium text-primary hover:text-primary/80">Custom</button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- 1 min Bullet -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-amber-500 mb-2 text-3xl">bolt</span>
+<span class="text-lg font-bold">1 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Bullet</span>
+</button>
+<!-- 3 min Blitz (Featured) -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary transition-all active:scale-[0.98]">
+<div class="absolute top-2 right-2 bg-primary text-background-dark text-[10px] font-bold px-1.5 py-0.5 rounded">HOT</div>
+<span class="material-symbols-outlined text-primary mb-2 text-3xl">offline_bolt</span>
+<span class="text-lg font-bold text-primary">3 min</span>
+<span class="text-xs text-primary/80 font-medium">Blitz</span>
+</button>
+<!-- 5 min Blitz -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-blue-400 mb-2 text-3xl">schedule</span>
+<span class="text-lg font-bold">5 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Blitz</span>
+</button>
+<!-- 10 min Rapid -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-green-400 mb-2 text-3xl">timer</span>
+<span class="text-lg font-bold">10 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Rapid</span>
+</button>
+</div>
+</section>
+<!-- Active Tournaments Slider -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold">Active Tournaments</h2>
+<button class="text-sm font-medium text-slate-500 dark:text-gray-400 hover:text-white">View All</button>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 no-scrollbar snap-x snap-mandatory">
+<!-- Card 1 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Close up of a chess board with wooden pieces in focus" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnTvfel9ybm7hwNsgPzsdhuB9faqHh4x41U4iq4msXt7i2EGzqIdbonly9-XW0uE6jeGSgklX6_lLJbzpTsr3mj35_EjJJPP7fwz3dlPDXnmAk_1QYftRlUSHozX3EGUBotZiLPsFMMes4zFSud5JsszbA4B3nYUW3nlQzSCOvxzVHt6j8P9twLTf5XNVUY7ejmwKNXgsnLo4ZZMBlcpfbLfOaOOiX07lbexBKVYJYZsukAPxydlT2k-OZUN_aJhvSoHtIHOnRhGHj');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-red-500 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">LIVE</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Titled Tuesday</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">GM/IM/FM only • 3+1 Blitz</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2VK0VeAsvbFfIas-fRuYz0nh-2I1WuX7BvPJs6RI5aJjfrzVDNgDepRGwVDSAUaxqh4uP-aTQx7U4xel31LZTshf9h_hmk6rw-lvR3s84G6bYMbaMR_O8DQnYDpeVxsa_kwm4M7u6wSMmGMY55SXk-2PkqG5IQxHFUuGexRbYIRrqXebM9LSJLmfQVgcMlzux6jFDxFkq7np29kN4iRca93x5bqv-40PlTPUcZwzrxkVPk3zamvgLuYPFfnz7AVFIjivSM8XpsCan"/>
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvLYIRTqVOahtDnu6uJ3KLnKmq-wYXBvGy8faGGERS_XhNEZn3JCWSha07b7OusGe3CRQowG5zVHRWmtSumZZhNNfrEA0-UhvHz8cZWzsp76PUy6iFWsRm8BIo2WLZSAnwhrqfub3CXcHpRDhDrRvTk-3I0gMUtfO_w2SzEPp4uT3c4A5HWNOVDpzYej1hkp7VWzvnp4IcqCGJb9ro1wjged1NXwcuG3-Oz1_3bNw9CeLD55b8BtQ4zgtMKhWmt9k1Cv3izENf1nKz"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+240</div>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background-dark text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">Join</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Abstract dark background representing speed chess" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCjEoPncDgDpofUaJQ40R5plKCaaaw9YyIC_76h60PocNpnoINWN5s0UYJAgDupe5p66vH-fIeQX8gNAu9FzsZ_CkHhe5J262hffps-Pf3u72aUjyaGgJfqfbwMMeukxWq0u2kHHCCQ_brdf349Ywxz2hwDjgZHNJxE9ObrWnppUHulf6HFJchPXRtXwrpXFVVCmWKmkEssg7uyPRndJYbs3KhA66ehWix8gjkM8PTF1XIfBZ8eUD-2KBSok7vfDI8srTkqWpN2Gdy9');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-primary text-background-dark text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">Starting in 10m</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Hourly Bullet Arena</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">Open for all • 1+0 Bullet</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwILNpAR6vyvWGxmkM_LSZv503mlhYKNdYDQtKnkfpLVV19pp3cpwE5hxRFLIV9L1lHTH8oZ565m0knFOEtiWmIfzHLeJfaiTqlCGUHui0Ht1trgvCVm0CTpBxHUXehXQIINIxrWwMopdb0gNt7E68q2FrScXnL_tK0_0RGNgu6lcgcUlyMXrCG6tP8JW0N_NDIxM6Vx1ayDziipFxIFmhnisc2qHygHqQDPxFq_vdBz-jLgFMAlSt2ZhTgFs-rrSdz7P7LEU_M45r"/>
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAobH75B8X8FdTzoB_jqkc4wMpmub7uiPITkHzZ-GW0TMlK1mLKSLc65ii40km2VpkM1Y5lzO3MK1pNBhiIGTFviCX0m8wlVHIUHlbPWITvjDN_GowYysZlNgYl6PYgMmFMb3RR9E7PAl669iRluHcczn9ABPpnMa4eYUZ2mJz6PR1Pi_oc6B5MZcDvBwWRnXq2CmXBdNiU03WrhAtA3B5JdUywrzmZeyEj2UDxQnjkcU72zNA1dHUfNpXK3zb49qBzoOyD6uC-7mIt"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+85</div>
+</div>
+<button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">Register</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Strategic chess position on a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDwEr71s84M2LmicrugpxAPhLZ9jEOYJhOdKHSZIfx3QFCRfhyRqZyWs6MLrB_E1kpw3x_OtW60UNHlvTIdv9WWELs99RQ46M-hfiUt2GhBCPahtm-8z752CKAw6pvHSHY3cYWhjqT1Q0UvVgQ9EkLeQPjTJa-J7Fv8JwxPl2Co5rqCbkXTCB-c9eLI7wK7g_-FnGsOJVMA2EOMLh0gVQXGLfCV_68GS54QS-TvwIKYCPKV0MWu6SaUybjJlmjQI-T4_z-eYPLHZt_l');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">Daily</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Rapid Shield</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">Swiss System • 10+0 Rapid</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkBQtNkRImBnIXbRf59dd0cQgwNllADGY4Qz5hc9UWGGD2Qd06RfvlLRRd-3-xpaM_ox00_pHMAHWkkybvLdNJxblNeWE8DHa3OU4F1MaIthA-szwtotqAahe4OBT55tmOcR_2803a-0AWj4DvZIJaD2BdLS7bP2L9S0QMEbAm_YrdRMDq6Txq3fvLtR-ClNPjldwlbQ_N0OqWyTs_zZYuTtvHJUK1LN4VPz-4i2RSy54BCt_HUNlNeW8MITiN8VlerYGqjz7GuBX5"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+1k</div>
+</div>
+<button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">Register</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats & Friends Grid -->
+<div class="grid gap-6">
+<!-- Personal Stats Widget -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] p-4">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-base font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">monitoring</span>
+                            Your Stats
+                        </h2>
+<span class="text-xs font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">All Time</span>
+</div>
+<div class="flex items-end gap-1 h-16 w-full mb-4 px-2">
+<!-- Fake Sparkline -->
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[30%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[45%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[35%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[50%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[60%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[55%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[70%]"></div>
+<div class="w-1/12 bg-primary/40 rounded-t-sm h-[65%]"></div>
+<div class="w-1/12 bg-primary/60 rounded-t-sm h-[80%]"></div>
+<div class="w-1/12 bg-primary/80 rounded-t-sm h-[75%]"></div>
+<div class="w-1/12 bg-primary rounded-t-sm h-[90%]"></div>
+<div class="w-1/12 bg-primary rounded-t-sm h-[85%]"></div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center">
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider">Rapid</p>
+<p class="font-bold text-lg">1,240</p>
+<p class="text-[10px] text-green-500 font-bold">+12</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center border border-primary/30 relative overflow-hidden">
+<div class="absolute inset-0 bg-primary/5"></div>
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider relative z-10">Blitz</p>
+<p class="font-bold text-lg text-primary relative z-10">1,452</p>
+<p class="text-[10px] text-green-500 font-bold relative z-10">+4</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center">
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider">Bullet</p>
+<p class="font-bold text-lg">980</p>
+<p class="text-[10px] text-red-500 font-bold">-2</p>
+</div>
+</div>
+</section>
+<!-- Friends Online -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] p-4">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-base font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-green-400 text-xl">group</span>
+                            Friends Online
+                        </h2>
+<span class="size-6 flex items-center justify-center bg-green-500 text-background-dark text-xs font-bold rounded-full">3</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Friend 1 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user GrandmasterFlash" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABhZAGQRnVEb8PXvr7Dp_eVvnlFpe088ROfJOzA3yCshG52YI-ReIbbL4sMh4IG6qrBZFcPMQPCRnRnbCkIM1Whu9UgA7O6EDdSMjMk4zyKhOwsKAKkjUVv3VC_gzTRoYL6Zdh-IbXCKsRqBIzcuMwUjD3Ihk4yl9vJFI73e0C7TusdVGpwf_gVdPMHCDWPJMN5qjTI_zJB_b2zlB--Q8qS8CZj9zaNgzbLOAobvuS0X3fyhSI4UtBWqO6uA7Zm6U24lkRTioJRtm6"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-primary border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">GrandmasterFlash</h4>
+<p class="text-xs text-primary truncate">Online in Menu</p>
+</div>
+<button class="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors" title="Challenge">
+<span class="material-symbols-outlined text-xl block">swords</span>
+</button>
+</div>
+<!-- Friend 2 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user ChessWiz" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEQgAgrEMP3l3dqe5mxOWSy7GYqw-9vVc-rG0ENPzO6SLP-bGhDr_0S0yNtaDljQd_d4aJ9PoPaZ-oVxuvNITq9CuT9sA18ZyRqqM9P3g68nVTS-G8n9yN8lTEm2cwEzTe9q93vLBugl-ONxhyOVngUpcGiMZLXAIjNLeJYyViVHXSfBHM3kCTVMi8jay3vykrNLrcidtTYCEF7Cwefkbf-e8D6nTBPsx6PWFO1RaX4pZpg4P1Xh9aIziYSwZopRA64A71NBcsfv2-"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-amber-500 border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">ChessWiz</h4>
+<p class="text-xs text-amber-500 truncate">Playing • Rapid 10+0</p>
+</div>
+<button class="p-2 bg-white/5 hover:bg-white/10 text-slate-400 dark:text-gray-400 rounded-lg transition-colors" title="Spectate">
+<span class="material-symbols-outlined text-xl block">visibility</span>
+</button>
+</div>
+<!-- Friend 3 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user KnightRider" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_Ky4KeAyUoist5kTNvsUamAq8-CW23wdQHuBcdf0ngGpObP0NrIWrc3oli-BJ6kQ6cwLKnW11e8yti6rB6mmwnmxreLWAqVWcYGOLf7ye-68pOwKRobtK5OxRe46AKWkbGFVaPaqF09cYltgPPzL3evtLYTrQJoZVEsjBnErpJwPN8lJaz5Ar6yAcrGeBVZaa8qoCui0j--r80hrd4L4O_b0j_AzkBILsfs8CrQui-aZa2dZx5CXFRKWwmkDzg58uuOBdeHe2W7Ig"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-primary border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">KnightRider</h4>
+<p class="text-xs text-primary truncate">Solving Puzzles</p>
+</div>
+<button class="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors" title="Challenge">
+<span class="material-symbols-outlined text-xl block">swords</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full bg-white dark:bg-background-dark border-t border-gray-200 dark:border-[#2a3b2e] pb-safe z-50">
+<div class="grid grid-cols-5 h-16 items-center">
+<a class="flex flex-col items-center justify-center gap-1 h-full text-primary" href="#">
+<span class="material-symbols-outlined text-[26px] fill-current">home</span>
+<span class="text-[10px] font-medium">Play</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+<span class="text-[10px] font-medium">Puzzles</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">live_tv</span>
+<span class="text-[10px] font-medium">Watch</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">forum</span>
+<span class="text-[10px] font-medium">Social</span>
+</a>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-1 w-full"></div>
+</nav>
+</div>
+</body></html>
+
+<!-- Global Leaderboards & Player Directory -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Leaderboards</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-dark": "#0e45b5",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a212e",
+                        "accent-gold": "#FFD700",
+                        "accent-silver": "#C0C0C0",
+                        "accent-bronze": "#CD7F32",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen font-display antialiased text-slate-900 dark:text-white overflow-hidden flex flex-col">
+<!-- Top App Bar -->
+<header class="bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-50">
+<div class="flex items-center justify-between px-4 py-3">
+<button class="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Leaderboards</h1>
+<button class="p-2 -mr-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-surface-light dark:border-surface-dark"></span>
+</button>
+</div>
+<!-- Category Segments -->
+<div class="px-4 pb-4">
+<div class="flex p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl">
+<button class="flex-1 py-1.5 text-sm font-semibold rounded-lg bg-white dark:bg-primary shadow-sm text-slate-900 dark:text-white transition-all">
+                    Bullet
+                </button>
+<button class="flex-1 py-1.5 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    Blitz
+                </button>
+<button class="flex-1 py-1.5 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    Rapid
+                </button>
+<button class="flex-1 py-1.5 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                    Classical
+                </button>
+</div>
+</div>
+</header>
+<!-- Search & Filters -->
+<div class="shrink-0 bg-background-light dark:bg-background-dark pt-4 px-4 pb-2 z-40">
+<!-- Search Input -->
+<div class="relative mb-4">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-white dark:bg-surface-dark text-sm placeholder-slate-400 focus:ring-2 focus:ring-primary shadow-sm" placeholder="Search for players, streamers..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2 flex items-center">
+<button class="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Filter Chips (Horizontal Scroll) -->
+<div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+<button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-xs font-medium whitespace-nowrap active:scale-95 transition-transform">
+<span>Rating Range</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium whitespace-nowrap active:scale-95 transition-transform">
+<span>Country: All</span>
+<span class="material-symbols-outlined text-[16px]">public</span>
+</button>
+<button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-xs font-medium whitespace-nowrap active:scale-95 transition-transform">
+<span>Title: GM</span>
+<span class="material-symbols-outlined text-[16px] text-red-500">verified</span>
+</button>
+<button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-xs font-medium whitespace-nowrap active:scale-95 transition-transform">
+<span>Online Only</span>
+</button>
+</div>
+<!-- List Header -->
+<div class="flex items-center px-2 py-2 mt-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+<div class="w-8 text-center">#</div>
+<div class="flex-1 pl-3">Player</div>
+<div class="w-16 text-right mr-3">Rating</div>
+<div class="w-8"></div>
+</div>
+</div>
+<!-- Scrollable List Area -->
+<div class="flex-1 overflow-y-auto pb-20 no-scrollbar relative">
+<!-- Top 3 Podium (Visual Enhancement) -->
+<div class="px-4 mb-2 grid grid-cols-1 gap-3">
+<!-- Rank 1 -->
+<div class="flex items-center p-3 rounded-xl bg-gradient-to-r from-surface-light to-white dark:from-surface-dark dark:to-[#1e2532] border border-accent-gold/30 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-accent-gold"></div>
+<div class="w-8 flex justify-center shrink-0">
+<span class="material-symbols-outlined text-accent-gold fill-1">emoji_events</span>
+</div>
+<div class="shrink-0 relative">
+<div class="w-12 h-12 rounded-lg bg-cover bg-center shadow-md border border-slate-200 dark:border-slate-700" data-alt="Magnus Carlsen portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCHAczqd9aPIhjwBaKhUCaZopft3V_QQ1XevMxX3cEmN1qKaBHj20WLQemeFZVpW15buVANDFIiq0W-P5I6zog0EiuU9-iMvZTKd4I1ouZVEFj3wk-qomm2q2n03OOUsH4P42cBNIpD39S4DsTZDJNd23sxlQNbSl531v5I_22zIcq-fbfwxodym6OzX4hoVj7Ze2V9p1nGfbLcnZhv3cL7yi-UzLzfzUQEMxCpgci7vlqwRaWK0yBhN1Pv75tYcw5G32V9ofrzzftF');"></div>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded border border-slate-600 w-4 h-3 overflow-hidden flex items-center justify-center">
+<!-- Norway Flag Placeholder -->
+<div class="w-full h-full bg-red-700 relative">
+<div class="absolute inset-x-0 top-1 bottom-1 bg-white"></div>
+<div class="absolute inset-y-0 left-1 right-2 bg-white"></div>
+<div class="absolute inset-x-0 top-[5px] bottom-[5px] bg-[#00205b] z-10"></div>
+<div class="absolute inset-y-0 left-[5px] right-[9px] bg-[#00205b] z-10"></div>
+</div>
+</div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-bold text-slate-900 dark:text-white truncate text-base">MagnusCarlsen</h3>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">World Champion</p>
+</div>
+<div class="text-right">
+<div class="text-lg font-bold text-slate-900 dark:text-white">3302</div>
+</div>
+<button class="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Rank 2 -->
+<div class="flex items-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 group">
+<div class="w-8 flex flex-col items-center justify-center shrink-0">
+<span class="text-lg font-bold text-accent-silver font-display leading-none">2</span>
+</div>
+<div class="shrink-0 relative">
+<div class="w-10 h-10 rounded-lg bg-cover bg-center" data-alt="Hikaru Nakamura portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBmg8i8U3oV-OTBIPQSmVSUy4fmoWtv46B_X2jK4cMqxmDnhx0_IJF5L8HEu_U6k19R6uAqb9R2nlYrImtfG-iEjlHNVkdwyqYEQT9ngOFrJoNdgdMJ3NVbaqGyyslvqPY6Fg2PZNa2CsrBq9w1l10Rjx6tTJTAxLs1swNVRaFiyuY8S61ICI12XUyHGryDMm1bPh3cSAc7je_g70P3zG4SRBf0eNtP__GRVB-772WEyziHO1rOWOJTRN4II1O_eIB2iJKUp_nlhFuZ');"></div>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded border border-slate-600 w-4 h-3 overflow-hidden flex items-center justify-center text-[8px] leading-none text-white bg-blue-600">
+                        US
+                    </div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-bold text-slate-900 dark:text-white truncate text-sm">Hikaru</h3>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Streamer</p>
+</div>
+<div class="text-right">
+<div class="text-base font-bold text-slate-900 dark:text-white">3250</div>
+</div>
+<button class="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Rank 3 -->
+<div class="flex items-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 group">
+<div class="w-8 flex flex-col items-center justify-center shrink-0">
+<span class="text-lg font-bold text-accent-bronze font-display leading-none">3</span>
+</div>
+<div class="shrink-0 relative">
+<div class="w-10 h-10 rounded-lg bg-cover bg-center" data-alt="Alireza Firouzja portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCyHB_sxL_Pm90FK5j2pr1fEcK2K6xMwQaAJ02qqqx_ujswQn2gYgeUSY5lrVhL52zyyjVudQ1RfIRxWeU0HJl_RQMgM8Ygthh1qDWbfuUZR2S0ImdyHJERClliTm6jjV-adcFaDZXMcfHL-UT6lm3iohZK5iq8LcYmBsSN9bhy4k49tT5RjJuHO_gV7zq5HoxMRhOgbR-F6XpNvWDvlAH35G84DcJD1iYHFZmPFx_7fm-aktFYzvHlLAUbtdMeRBTibJi7PuFs4qrP');"></div>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded border border-slate-600 w-4 h-3 overflow-hidden flex items-center justify-center text-[8px] leading-none text-white bg-blue-400">
+                        FR
+                    </div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-bold text-slate-900 dark:text-white truncate text-sm">Alireza2003</h3>
+</div>
+</div>
+<div class="text-right">
+<div class="text-base font-bold text-slate-900 dark:text-white">3199</div>
+</div>
+<button class="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+</div>
+<!-- Standard List -->
+<div class="px-2">
+<!-- Row 4 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">4</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg bg-cover bg-center bg-slate-200 dark:bg-slate-700" data-alt="Generic player portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKSY1p8cEn0_K645Jip90y9P0jXdIuaWvQ8Dh5El9yfZQpHKpgChQpbpr4PSFWcX1c8zwy_kYSEHPQZVyl3cjcwWiXbrCNluCWBy7szOak67UwXMVy7r0-Kn2xD1N6xFthlvQxDHJrqKdNMxD5HkDg-qwi1OmukHoBXljydqy6vEAwbOVYELciV5vhU4OtU1j_3QjKVNaCtkSglXLI9_XGzXD0-OQnbzh0gb15m23oTcazr71gElgCnP1rzkYOnw72ZGXvW5yYbih8');"></div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">NihilSarin</h3>
+<span class="text-[10px]">🇮🇳</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3150</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Row 5 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">5</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg bg-cover bg-center bg-slate-200 dark:bg-slate-700" data-alt="Generic player portrait 2" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-zzIpojb1Dx886X7Y6EUae8UkWVIcM4Y1a-ex7_v8_0NB0jkQDs1HVwVZztZ1qKiAKlR716G4yQVSZrlMsK96vvyvXdSY__UgxPlkyLIXqBaz4saVBVL3lwIcZlQ6Vg4fjqEC9VaXeZZNUkuTqsB3D8ycWu8oW4l9yIoaO1DYpJme5tbozb3AYemZDVF0--cZxB5Uoen_Ru20BqaFIVQu4EWB4jP399qRJEPWGRBRP-6Un0yb-nbbGuJltF5w0ITae3I-TaNFf6Dd');"></div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">NepoChess</h3>
+<span class="text-[10px]">🏳️</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3142</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Row 6 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">6</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg bg-cover bg-center bg-slate-200 dark:bg-slate-700" data-alt="Female player portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQtFxx2kNUOFiuGsk00jYSqmXvJYXcU2tnac0fEiYVtJcealYXcwD1hac9MyNm6QWIIwK8Vu3W81ImeHy4xYS-AmcrSpF8LhjjtJW9beyNP2jJF3A7ESBPyhxD1VON7mUchmjK2ViGAhACGPGpNqe074tBqMAKYcHCQn16uHMvVTJYDwqLRDDA9ftBr0g7NKupHoih9iKG1AsKzlMoNZFY1eN76q04uNq5LhWCmSgKKecfXl2IJgfAbB6Mv3b4zFBu5xU06eBnApTB');"></div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">JuditP</h3>
+<span class="text-[10px]">🇭🇺</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3120</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-primary bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</button>
+</div>
+<!-- Row 7 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">7</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg bg-cover bg-center bg-slate-200 dark:bg-slate-700" data-alt="Generic player portrait 3" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAZ1bmRAAzANvyL1PgFque6Im2PalwJGYHHyWF6YIlk6qWqFGXpoDYPfZlbM-11augF6u_KIfowMZtjfIOshh64slumJD46qyrarDmH4QpOn7EAE5-N6OylDXpZp0roUoiLFfq63_m0GLtLZQZbD-XGa-9jriuEXTLscCSfM9m5j6INthlNEwyNJVd01AbIXZL2mmV8hU8jFNFkkWunDqmhd3IVGly3LSSvwpfIwZA3tFTPhhAYT7ixtuCim3B-lccB2d5EKD1jVfBn');"></div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold px-1 py-0.5 rounded border border-purple-500/20">IM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">LevyRozman</h3>
+<span class="text-[10px]">🇺🇸</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3090</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Row 8 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">8</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg flex items-center justify-center bg-green-600 text-white font-bold">
+                        D
+                    </div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold px-1 py-0.5 rounded border border-red-500/20">GM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">DingLiren</h3>
+<span class="text-[10px]">🇨🇳</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3088</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+</div>
+<!-- Row 9 -->
+<div class="flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+<div class="w-8 flex justify-center shrink-0 text-sm font-medium text-slate-500">9</div>
+<div class="shrink-0 relative">
+<div class="w-9 h-9 rounded-lg bg-cover bg-center bg-slate-200 dark:bg-slate-700" data-alt="Generic player portrait 4" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD9XjbPqGZXTBDXa7TnNpl5lpkvov3U0mWWZl6dnL5lZJomrcq6xhHxCIPuyGMu3NrKqi9gI7uU6FHD6dCPapfiHzvdyJZxgqdTbSlJdNm_pgACQno3_tKMNGgoP7lxo988HwcdMGsNvFDU7jTntFeTPu8irq1ZUd9fT3wqwvsroi-Jnb-qP0ke0vlS67vOqMCrQIBkMWDiig3woK6KOCq3cLRqGxewhRofpwCObEpo_4bup1kNqsa5JMAIU332Q8TsHMV42D604Mw2');"></div>
+</div>
+<div class="flex-1 ml-3 min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1 py-0.5 rounded border border-blue-500/20">FM</span>
+<h3 class="font-medium text-slate-900 dark:text-white truncate text-sm">EricRosen</h3>
+<span class="text-[10px]">🇺🇸</span>
+</div>
+</div>
+<div class="text-right mr-3 font-semibold text-sm text-slate-900 dark:text-slate-200">3050</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-primary bg-primary/10">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</button>
+</div>
+<!-- Loader for infinite scroll simulation -->
+<div class="flex justify-center py-6">
+<span class="material-symbols-outlined animate-spin text-slate-500">progress_activity</span>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar (Contextual) -->
+<nav class="bg-surface-light dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 shrink-0 safe-area-bottom z-50">
+<div class="flex justify-around items-center h-[60px]">
+<button class="flex flex-col items-center justify-center w-full h-full text-slate-500 dark:text-slate-400 gap-1 hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full text-slate-500 dark:text-slate-400 gap-1 hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-[24px]">swords</span>
+<span class="text-[10px] font-medium">Play</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full text-primary dark:text-primary gap-1">
+<span class="material-symbols-outlined text-[24px] fill-1">leaderboard</span>
+<span class="text-[10px] font-medium">Rankings</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full text-slate-500 dark:text-slate-400 gap-1 hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-[24px]">extension</span>
+<span class="text-[10px] font-medium">Puzzles</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full text-slate-500 dark:text-slate-400 gap-1 hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</div>
+</nav>
+<div class="h-1 bg-surface-light dark:bg-surface-dark w-full shrink-0"></div>
+</body></html>
+
+
+
+
+

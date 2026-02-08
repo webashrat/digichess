@@ -5,6 +5,7 @@ Usage: python manage.py check_stockfish [--fix]
 import os
 import subprocess
 import platform
+import tarfile
 from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -119,18 +120,40 @@ class Command(BaseCommand):
                 import zipfile
                 import tempfile
                 import shutil
+                import os
                 
-                url = "https://github.com/official-stockfish/Stockfish/releases/download/sf_16/stockfish_16_linux_x64_bmi2.zip"
+                url = os.getenv(
+                    "STOCKFISH_LINUX_URL",
+                    "https://sourceforge.net/projects/stockfish.mirror/files/sf_16.1/stockfish-ubuntu-x86-64.tar/download",
+                )
                 
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    zip_path = os.path.join(tmpdir, "stockfish.zip")
-                    urllib.request.urlretrieve(url, zip_path)
+                    archive_path = os.path.join(tmpdir, "stockfish.download")
+                    urllib.request.urlretrieve(url, archive_path)
+
+                    extracted = False
+                    try:
+                        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                            zip_ref.extractall(tmpdir)
+                            extracted = True
+                    except zipfile.BadZipFile:
+                        extracted = False
+                    if not extracted:
+                        try:
+                            with tarfile.open(archive_path, "r:*") as tar_ref:
+                                tar_ref.extractall(tmpdir)
+                                extracted = True
+                        except tarfile.TarError:
+                            self.stdout.write(self.style.ERROR("❌ Downloaded archive is not a zip/tar file"))
+                            return
                     
-                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                        zip_ref.extractall(tmpdir)
-                    
-                    binary_path = os.path.join(tmpdir, "stockfish_16_linux_x64_bmi2", "stockfish")
-                    if os.path.exists(binary_path):
+                    binary_path = None
+                    for root, _, files in os.walk(tmpdir):
+                        if "stockfish" in files:
+                            binary_path = os.path.join(root, "stockfish")
+                            break
+
+                    if binary_path and os.path.exists(binary_path):
                         # Backup old binary if exists
                         if os.path.exists(engine_path):
                             backup_path = f"{engine_path}.backup"

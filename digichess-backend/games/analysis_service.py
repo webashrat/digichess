@@ -100,8 +100,8 @@ def analyze_game_with_stockfish(
 
     try:
         with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-            start_fen = game.current_fen if game.current_fen and game.current_fen != chess.STARTING_FEN else None
-            temp_board = chess.Board(start_fen) if start_fen else chess.Board()
+            # Always replay from the starting position to avoid double-applying moves.
+            temp_board = chess.Board()
 
             for i, move_san in enumerate(moves):
                 try:
@@ -292,7 +292,7 @@ def run_full_analysis(
 
     if not analysis_data:
         engine_path = get_stockfish_path()
-        works, message = ensure_stockfish_works(engine_path)
+        works, message, engine_path = ensure_stockfish_works(engine_path)
         if not works:
             if allow_lichess_fallback and not prefer_lichess:
                 analysis_data = analyze_game_with_lichess(game, depth=depth, max_moves=max_moves)
@@ -351,7 +351,7 @@ def run_quick_eval(game: Game, prefer_lichess: bool = True) -> dict:
             logger.warning(f"Quick eval via Lichess failed: {exc}")
 
     engine_path = get_stockfish_path()
-    works, message = ensure_stockfish_works(engine_path)
+    works, message, engine_path = ensure_stockfish_works(engine_path)
     if not works:
         # Lightweight fallback: material-only evaluation.
         return {

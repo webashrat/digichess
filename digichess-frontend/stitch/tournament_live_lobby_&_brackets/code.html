@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tournament Live Lobby</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for mobile feel */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col antialiased selection:bg-primary/30 selection:text-primary">
+<!-- Header & Navigation Area -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+<!-- Top App Bar -->
+<div class="flex items-center justify-between px-4 py-3">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h1 class="text-base font-bold text-gray-900 dark:text-white tracking-tight">Tournament Lobby</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+</div>
+<!-- Tournament Info & Timer -->
+<div class="px-4 pb-2">
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-3">Winter Blitz Championship 2024</h2>
+<div class="flex flex-wrap items-center gap-2 mb-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider border border-red-500/20">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+</span>
+                    Live
+                </span>
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold border border-gray-300 dark:border-gray-700">
+                    Round 4/9
+                </span>
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                    Blitz 3+2
+                </span>
+</div>
+<!-- Countdown Timer Row -->
+<div class="flex gap-3 mb-4">
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">00</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Hours</span>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">14</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Minutes</span>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<div class="h-12 flex items-center justify-center bg-white dark:bg-[#1e293b] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+<span class="text-xl font-bold text-primary tabular-nums">32</span>
+</div>
+<span class="text-[10px] text-center uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">Seconds</span>
+</div>
+</div>
+<!-- Segmented Control Tabs -->
+<div class="bg-gray-200 dark:bg-[#1e293b] p-1 rounded-xl flex mb-2">
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-semibold bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm transition-all">
+                    Live Games
+                </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
+                    Standings
+                </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
+                    Chat &amp; Info
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Area: Live Games -->
+<main class="flex-1 p-4 pb-24 space-y-6 overflow-y-auto">
+<!-- Featured Top Board -->
+<section>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">star</span>
+                    Top Board
+                </h3>
+<button class="text-primary text-xs font-semibold">View Analysis</button>
+</div>
+<!-- Card -->
+<div class="bg-white dark:bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700">
+<!-- Players Header -->
+<div class="p-3 bg-gray-50 dark:bg-[#161f2e] border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+<!-- Black Player -->
+<div class="flex items-center gap-2">
+<div class="h-8 w-8 rounded-full bg-gray-300 overflow-hidden relative border border-gray-400">
+<img alt="Hikaru Nakamura Avatar" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIsWz0Xu7WWtGKKmMG9lVdxZODL0BC1hkt0knC6Vn4K8voMHaJauVBpJnHPqNnchliufs_AOH1GpoEraNTuQAUmTA0BaCnHei4ZbT77C6u0BjUpTDx4stW0QiSZsZS8I0QBkBO0EfaF21dQGqUbCBadthdEvtJTaDRRAUPeMuCHKNwE9IaXpV5vozo2AfY6AFJk-U_MSB79FOvvzXDsrk4qmu1KoDIKB4p_5wByXqgmIkpNPNvLRK9XKqWlg8jHGNr5_9ipyUgInsb"/>
+</div>
+<div>
+<p class="text-sm font-bold text-gray-900 dark:text-white leading-none">Hikaru N.</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">2800</p>
+</div>
+</div>
+<!-- Clock Black -->
+<div class="bg-gray-800 text-white px-2 py-1 rounded font-mono text-sm font-bold tabular-nums">
+                        03:55
+                    </div>
+</div>
+<!-- Chess Board Visual (Simplified SVG representation) -->
+<div class="relative aspect-square w-full bg-[#101622] flex items-center justify-center p-1" data-alt="Active chess game board showing mid-game position">
+<!-- Chess Board Grid -->
+<div class="w-full h-full grid grid-cols-8 grid-rows-8 border-4 border-[#333]">
+<!-- Generating squares with simple pattern for visual representation -->
+<!-- Row 8 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 7 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 6 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 5 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 4 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 3 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<!-- Row 2 -->
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<!-- Row 1 -->
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+<!-- Overlay Pieces (Abstracted for UI demo) -->
+<div class="absolute inset-0 p-1 pointer-events-none">
+<!-- Example Piece at e4 -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[50%] left-[50%] flex items-center justify-center">
+<span class="material-symbols-outlined text-black text-4xl drop-shadow-sm" style="font-variation-settings: 'FILL' 1;">chess_pawn</span>
+</div>
+<!-- Example Piece at d5 -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[37.5%] left-[37.5%] flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span>
+</div>
+</div>
+<!-- Last Move Indicator -->
+<div class="absolute w-[12.5%] h-[12.5%] top-[50%] left-[50%] bg-primary/40 border-2 border-primary"></div>
+<div class="absolute w-[12.5%] h-[12.5%] top-[62.5%] left-[50%] bg-primary/40 border-2 border-primary"></div>
+</div>
+<!-- Players Footer -->
+<div class="p-3 bg-white dark:bg-[#1e293b] flex justify-between items-center border-t border-gray-200 dark:border-gray-700 relative">
+<!-- Eval Bar Background -->
+<div class="absolute top-0 left-0 h-1 w-full flex">
+<div class="h-full bg-white w-[55%]"></div> <!-- White advantage -->
+<div class="h-full bg-gray-800 w-[45%]"></div>
+</div>
+<!-- White Player -->
+<div class="flex items-center gap-2 mt-2">
+<div class="h-8 w-8 rounded-full bg-gray-100 overflow-hidden relative border border-gray-200">
+<img alt="Magnus Carlsen Avatar" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhiMBAyl_qm5lrPXb3zHkGZiY8U6msZH1thMh3iOCFRGNWzMkB6xtSenpmr6CmwNoWSMCsxSSWg-zNKHxfWJAzGKYyMSl_5Xt28mBSjdBZYQ9SEz17DrrJxGcwQAihzsDC8bMvNWdmiOnMafuNNFaYCNGjfRGwL4mmLn7exF9JCtuebYrL2XEnlGjW9c3hdMvZkaLebOOJMj2Jf85BHKeyYu6CR4lG3b2pjrRTVzDfAsi7rI0n3rUNzpgppmqAE4bnUrAGpYYu_wDa"/>
+</div>
+<div>
+<p class="text-sm font-bold text-gray-900 dark:text-white leading-none">Magnus C.</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">2882</p>
+</div>
+</div>
+<!-- Clock White -->
+<div class="bg-gray-200 text-gray-900 px-2 py-1 rounded font-mono text-sm font-bold mt-2 tabular-nums border border-gray-300">
+                        04:20
+                    </div>
+</div>
+</div>
+</section>
+<!-- Other Live Games Grid -->
+<section>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Other Matches</h3>
+<button class="text-primary text-xs font-semibold">View All</button>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Game Card 2 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing an endgame position">
+<div class="w-full h-full grid grid-cols-4 grid-rows-4">
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center">
+<!-- Abstract pieces -->
+<span class="material-symbols-outlined text-black text-lg absolute top-2 right-2" style="font-variation-settings: 'FILL' 1;">chess_rook</span>
+<span class="material-symbols-outlined text-white text-lg absolute bottom-2 left-2 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_king</span>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<!-- Black -->
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-black border border-gray-600"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">Nepomniachtchi</span>
+</div>
+<span class="text-xs font-mono text-gray-500 dark:text-gray-400">01:45</span>
+</div>
+<!-- White -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-white border border-gray-400"></div>
+<span class="text-sm font-bold text-gray-900 dark:text-white truncate">Caruana F.</span>
+<span class="bg-green-500/20 text-green-600 dark:text-green-400 text-[10px] px-1 rounded font-bold">+2</span>
+</div>
+<span class="text-xs font-mono text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-700 px-1 rounded">05:12</span>
+</div>
+<div class="mt-2 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">visibility</span> 12.5k watching
+                        </div>
+</div>
+</div>
+<!-- Game Card 3 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing mid-game tactical position">
+<div class="w-full h-full grid grid-cols-4 grid-rows-4">
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+<div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div>
+<div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div><div class="bg-[#739552]"></div><div class="bg-[#ebecd0]"></div>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<!-- Black -->
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-black border border-gray-600"></div>
+<span class="text-sm font-bold text-gray-900 dark:text-white truncate">Gukesh D.</span>
+</div>
+<span class="text-xs font-mono text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-700 px-1 rounded">00:32</span>
+</div>
+<!-- White -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-2 h-2 rounded-full bg-white border border-gray-400"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">Firouzja A.</span>
+</div>
+<span class="text-xs font-mono text-gray-500 dark:text-gray-400">00:15</span>
+</div>
+<div class="mt-2 text-xs text-red-500 flex items-center gap-1 font-semibold">
+<span class="material-symbols-outlined text-[14px]">timer</span> Time Trouble
+                        </div>
+</div>
+</div>
+<!-- Game Card 4 -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 flex gap-3 items-center opacity-70">
+<!-- Mini Board -->
+<div class="w-20 h-20 shrink-0 bg-gray-300 dark:bg-gray-800 rounded overflow-hidden relative" data-alt="Mini chess board showing completed game">
+<div class="w-full h-full bg-gray-400 flex items-center justify-center">
+<span class="text-xs font-bold text-gray-800">1/2 - 1/2</span>
+</div>
+</div>
+<!-- Info -->
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">So W.</span>
+</div>
+<span class="text-xs font-bold text-gray-900 dark:text-white">0.5</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Aronian L.</span>
+</div>
+<span class="text-xs font-bold text-gray-900 dark:text-white">0.5</span>
+</div>
+<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                           Draw by repetition • 32 moves
+                        </div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Actions / Floating Elements -->
+<div class="fixed bottom-6 right-6 z-50">
+<button class="bg-primary hover:bg-primary/90 text-white w-14 h-14 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center transition-transform active:scale-95">
+<span class="material-symbols-outlined text-2xl">chat_bubble</span>
+</button>
+</div>
+</body></html>

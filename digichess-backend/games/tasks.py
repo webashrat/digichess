@@ -101,8 +101,8 @@ def analyze_game_full_async(game_id: int, prefer_lichess: bool = True, force: bo
         analysis_data, source, _engine_path = run_full_analysis(
             game,
             prefer_lichess=False,
-            time_per_move=0.25,
-            depth=14,
+            time_per_move=0.1,
+            depth=12,
             max_moves=None,
             allow_lichess_fallback=False,
         )
@@ -376,6 +376,28 @@ def check_pending_challenge_expiry():
         game.result = Game.RESULT_NONE
         game.finished_at = now
         game.save(update_fields=["status", "result", "finished_at"])
+
+        try:
+            from notifications.views import create_notification
+            players = [game.white, game.black]
+            for player in players:
+                if not player:
+                    continue
+                opponent = game.black if player == game.white else game.white
+                opponent_name = opponent.username if opponent and opponent.username else (opponent.email if opponent else "opponent")
+                create_notification(
+                    user=player,
+                    notification_type="challenge_expired",
+                    title="Challenge Expired",
+                    message=f"Challenge with {opponent_name} expired.",
+                    data={
+                        "game_id": game.id,
+                        "opponent_id": opponent.id if opponent else None,
+                        "opponent_username": opponent.username if opponent else None,
+                    },
+                )
+        except Exception:
+            pass
 
         if channel_layer:
             game_data = GameSerializer(game).data

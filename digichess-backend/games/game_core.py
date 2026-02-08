@@ -174,6 +174,7 @@ def _build_state(
         "turn": "white" if board.turn is chess.WHITE else "black",
         "status": game.status,
         "result": game.result,
+        "draw_offer_by": game.draw_offer_by.id if game.draw_offer_by else None,
         "server_time": int(now.timestamp()),
         "created_at": game.created_at.isoformat() if game.created_at else None,
         "started_at": game.started_at.isoformat() if game.started_at else None,
@@ -301,6 +302,10 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             move_list.append(san)
             game.moves = " ".join(move_list)
             game.current_fen = extra.get("fen", board.fen())
+            draw_offer_cleared = False
+            if game.draw_offer_by and game.draw_offer_by != player:
+                game.draw_offer_by = None
+                draw_offer_cleared = True
 
             if current_player == game.white:
                 game.white_time_left += game.white_increment_seconds
@@ -319,19 +324,20 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             else:
                 game.status = Game.STATUS_ACTIVE
 
-            game.save(
-                update_fields=[
-                    "status",
-                    "result",
-                    "current_fen",
-                    "moves",
-                    "white_time_left",
-                    "black_time_left",
-                    "last_move_at",
-                    "started_at",
-                    "finished_at",
-                ]
-            )
+            update_fields = [
+                "status",
+                "result",
+                "current_fen",
+                "moves",
+                "white_time_left",
+                "black_time_left",
+                "last_move_at",
+                "started_at",
+                "finished_at",
+            ]
+            if draw_offer_cleared:
+                update_fields.append("draw_offer_by")
+            game.save(update_fields=update_fields)
 
             if r:
                 _update_redis_clock(r, game, board, now)

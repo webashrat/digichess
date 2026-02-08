@@ -74,7 +74,7 @@ class EnqueueView(APIView):
                     "opponent_id": opponent.id,
                     "time_control": time_control,
                 }
-                serializer = GameSerializer(data=payload, context={"request": request})
+                serializer = GameSerializer(data=payload, context={"request": request, "matchmaking": True})
                 serializer.is_valid(raise_exception=True)
                 game = serializer.save()
                 channel_layer = get_channel_layer()

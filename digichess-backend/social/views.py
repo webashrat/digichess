@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -92,7 +93,7 @@ class MessageListCreateView(APIView):
     def get_thread(self, request, thread_id: int):
         thread = get_object_or_404(ChatThread, id=thread_id)
         if not thread.participants.filter(id=request.user.id).exists():
-            raise permissions.PermissionDenied("You are not part of this chat.")
+            raise PermissionDenied("You are not part of this chat.")
         return thread
 
     def get(self, request, thread_id: int):

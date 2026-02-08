@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stockfish Deep Analysis View</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .chessboard-pattern {
+            background-image:
+                linear-gradient(45deg, #2a2f3d 25%, transparent 25%),
+                linear-gradient(-45deg, #2a2f3d 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #2a2f3d 75%),
+                linear-gradient(-45deg, transparent 75%, #2a2f3d 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        /* Custom scrollbar for horizontal lists */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col overflow-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark shrink-0">
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="text-base font-bold leading-tight">Post-Game Analysis</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Rapid • 10+0 • Dec 12, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">settings</span>
+</button>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-white">share</span>
+</button>
+</div>
+</header>
+<!-- Match Info Summary -->
+<div class="px-4 pb-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-white border border-slate-300"></div>
+<span class="text-sm font-semibold">User123 (1800)</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-primary font-bold text-lg">1 - 0</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold text-slate-500">Opponent (1750)</span>
+<div class="w-2 h-2 rounded-full bg-slate-600"></div>
+</div>
+</div>
+<!-- Main Content Area: Board + Controls -->
+<main class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+<!-- Chessboard Container -->
+<div class="px-2 w-full max-w-md mx-auto aspect-square relative my-2 shrink-0">
+<!-- Board Image/Div -->
+<div class="w-full h-full rounded-lg overflow-hidden shadow-lg relative bg-[#b58863]" data-alt="Chessboard position showing middle game" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBuru3Ryxv2jqteeGZG7YLCcWa-uFSm9RyWQp6nPRJXN3E1lXfU_t01r7JK_3Aq7U6XlTU9VRGi0mSVpoZ4944tp9claorowHS4LmOVhbxtrw9nAK8APBvo3QhT6xqONlIaJleTWYeEBP43_eEYatYAlWdT17DONK47AaKCm-SdPeQXozWWdQGySab3TEUNk52lK6RuuazhYWsXKyQWqKu9iIWBtTIxj7fgLdBPBk3jakMhvpsjZg_4u2DqslWtGbPbPe8dYbWYKB9U'); background-size: cover; background-position: center;">
+<!-- Overlay Gradients for emphasis (simulating highlights) -->
+<div class="absolute inset-0 bg-black/10"></div>
+<!-- Example Highlight: Best Move -->
+<div class="absolute top-[37.5%] left-[37.5%] w-[12.5%] h-[12.5%] bg-primary/40 border-2 border-primary"></div>
+<!-- Example Highlight: From Square -->
+<div class="absolute top-[62.5%] left-[25%] w-[12.5%] h-[12.5%] bg-yellow-400/40"></div>
+<!-- Evaluation Bar (Integrated) -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-700/80 backdrop-blur-sm flex flex-col justify-end">
+<div class="bg-white w-full transition-all duration-500" style="height: 65%;"></div>
+</div>
+</div>
+<!-- Floating Eval Score -->
+<div class="absolute top-2 right-4 bg-background-dark/80 backdrop-blur-md text-white text-xs font-mono py-1 px-2 rounded border border-white/10 shadow-lg">
+                +2.45
+            </div>
+</div>
+<!-- Playback Controls -->
+<div class="flex items-center justify-center gap-1 px-4 py-2 shrink-0">
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">first_page</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<button class="mx-2 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl">play_arrow</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">chevron_right</span>
+</button>
+<button class="p-3 text-slate-400 hover:text-white rounded-full active:bg-white/10">
+<span class="material-symbols-outlined text-2xl">last_page</span>
+</button>
+</div>
+<!-- Engine Status -->
+<div class="px-4 py-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+<p class="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">Stockfish 16 • Depth 24</p>
+</div>
+<button class="text-primary text-xs font-bold uppercase tracking-wider hover:underline">Settings</button>
+</div>
+<!-- Bottom Sheet / Analysis Tabs -->
+<div class="flex-1 bg-white dark:bg-[#1c1f27] rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+<!-- Tab Headers -->
+<div class="flex border-b border-slate-200 dark:border-slate-700">
+<button class="flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary">Engine</button>
+<button class="flex-1 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Graph</button>
+<button class="flex-1 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Moves</button>
+</div>
+<!-- Tab Content (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Engine Lines -->
+<div class="space-y-3">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Top Lines</h3>
+<!-- Line 1 (Best) -->
+<div class="group flex items-start gap-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors cursor-pointer">
+<div class="w-1 min-w-[4px] self-stretch bg-primary rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-bold text-slate-800 dark:text-white">1. Nf3 d5 2. d4 Nf6</span>
+<span class="text-sm font-bold text-green-500">+2.45</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-mono">
+                                3. c4 e6 4. Nc3 Be7 5. Bf4 O-O 6. e3 c5
+                            </p>
+</div>
+</div>
+<!-- Line 2 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent">
+<div class="w-1 min-w-[4px] self-stretch bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">1. e3 e6 2. Nf3 d5</span>
+<span class="text-sm font-medium text-slate-400">+2.10</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-mono">
+                                3. b3 Nf6 4. Bb2 Be7 5. c4 O-O
+                            </p>
+</div>
+</div>
+<!-- Line 3 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent">
+<div class="w-1 min-w-[4px] self-stretch bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">1. g3 d5 2. Bg2 Nf6</span>
+<span class="text-sm font-medium text-slate-400">+1.85</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed font-mono">
+                                3. Nf3 e6 4. O-O Be7 5. d3 O-O
+                            </p>
+</div>
+</div>
+</div>
+<!-- Moments Carousel Section -->
+<div>
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 mt-4">Key Moments</h3>
+<div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x">
+<!-- Moment Card: Blunder -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-red-500">
+<span class="material-symbols-outlined text-lg">cancel</span>
+<span class="text-xs font-bold uppercase">Blunder</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 12</div>
+<div class="text-xs text-slate-500">-3.2 Eval Loss</div>
+</div>
+<!-- Moment Card: Brilliant -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-teal-500/10 border border-teal-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-teal-400">
+<span class="material-symbols-outlined text-lg">hotel_class</span>
+<span class="text-xs font-bold uppercase">Brilliant</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 24</div>
+<div class="text-xs text-slate-500">Only Move</div>
+</div>
+<!-- Moment Card: Miss -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-orange-400">
+<span class="material-symbols-outlined text-lg">do_not_disturb_on</span>
+<span class="text-xs font-bold uppercase">Miss</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 30</div>
+<div class="text-xs text-slate-500">Mate in 3</div>
+</div>
+<!-- Moment Card: Great -->
+<div class="snap-start shrink-0 w-36 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex flex-col gap-2">
+<div class="flex items-center gap-1 text-blue-400">
+<span class="material-symbols-outlined text-lg">thumb_up</span>
+<span class="text-xs font-bold uppercase">Great</span>
+</div>
+<div class="text-lg font-bold text-slate-800 dark:text-white">Move 34</div>
+<div class="text-xs text-slate-500">+1.5 Advantage</div>
+</div>
+</div>
+</div>
+<!-- Spacer for scrolling -->
+<div class="h-8"></div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button for Analyze Mode Toggle (Optional overlay) -->
+<div class="fixed bottom-6 right-6 z-10">
+<button class="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-3 rounded-full shadow-lg shadow-primary/40 transition-all active:scale-95">
+<span class="material-symbols-outlined">search</span>
+<span class="font-bold text-sm">Deep Analyze</span>
+</button>
+</div>
+</body></html>

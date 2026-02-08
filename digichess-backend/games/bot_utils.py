@@ -179,7 +179,7 @@ def get_bot_move(board: chess.Board, bot_rating: int, time_control: str = "blitz
     try:
         from games.stockfish_utils import get_stockfish_path, ensure_stockfish_works
         engine_path = get_stockfish_path()
-        ok, msg = ensure_stockfish_works(engine_path)
+        ok, msg, engine_path = ensure_stockfish_works(engine_path)
         if ok:
             import chess.engine
             config = get_stockfish_config(bot_rating)

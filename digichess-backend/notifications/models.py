@@ -17,6 +17,7 @@ class Notification(models.Model):
         ('rematch', 'Rematch'),
         ('rematch_requested', 'Rematch Requested'),
         ('challenge_rejected', 'Challenge Rejected'),
+        ('challenge_expired', 'Challenge Expired'),
         ('tournament_start', 'Tournament Start'),
         ('tournament_result', 'Tournament Result'),
     ]

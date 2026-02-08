@@ -77,6 +77,8 @@ class CreateBotGameView(APIView):
             return Response({"detail": "You are already in an active game."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Determine colors
+        if preferred_color not in {'white', 'black', 'auto'}:
+            preferred_color = 'auto'
         if preferred_color == 'white':
             white = request.user
             black = bot

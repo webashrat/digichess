@@ -17,10 +17,6 @@ class LiveClockView(APIView):
     def get(self, request, pk: int):
         game = get_object_or_404(Game, id=pk)
         
-        # If game is not active, return 404
-        if game.status != Game.STATUS_ACTIVE:
-            return Response({"detail": "Game is not active"}, status=status.HTTP_404_NOT_FOUND)
-        
         now = timezone.now()
         try:
             board = chess.Board(game.current_fen or chess.STARTING_FEN)
@@ -28,6 +24,17 @@ class LiveClockView(APIView):
             board = chess.Board()
 
         snapshot = compute_clock_snapshot(game, now=now, board=board)
+        if game.status != Game.STATUS_ACTIVE:
+            return Response(
+                {
+                    "white_time_left": snapshot["white_time_left"],
+                    "black_time_left": snapshot["black_time_left"],
+                    "last_move_at": snapshot.get("last_move_at") or 0,
+                    "turn": snapshot["turn"],
+                    "status": game.status,
+                    "server_time": snapshot.get("server_time"),
+                }
+            )
         turn = snapshot["turn"]
         white_time_left = snapshot["white_time_left"]
         black_time_left = snapshot["black_time_left"]
@@ -75,7 +82,17 @@ class LiveClockView(APIView):
                     },
                 },
             )
-            return Response({"detail": "Game finished - timeout"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {
+                    "white_time_left": white_time_left,
+                    "black_time_left": black_time_left,
+                    "last_move_at": snapshot.get("last_move_at") or 0,
+                    "turn": turn,
+                    "status": game.status,
+                    "server_time": snapshot.get("server_time"),
+                    "detail": "Game finished - timeout",
+                }
+            )
         
         return Response(
             {
@@ -83,5 +100,7 @@ class LiveClockView(APIView):
                 "black_time_left": black_time_left,
                 "last_move_at": snapshot.get("last_move_at") or 0,
                 "turn": turn,
+                "status": game.status,
+                "server_time": snapshot.get("server_time"),
             }
         )
