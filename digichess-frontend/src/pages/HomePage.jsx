@@ -208,108 +208,110 @@ export default function HomePage() {
     return (
         <Layout showHeader={false}>
             <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-                <header className="sticky top-0 z-30 flex items-center justify-between bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md p-4 border-b dark:border-gray-800 border-gray-200 shadow-sm">
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        className="flex items-center gap-3 text-left"
-                        onClick={() => navigate('/profile')}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                navigate('/profile');
-                            }
-                        }}
-                    >
-                        <div className="relative">
-                            <div
-                                className={`rounded-full size-10 border-2 border-primary ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
-                                style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
-                            >
-                                {!avatarUrl ? initials : null}
+                <header className="sticky top-0 z-30 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md p-4 border-b dark:border-gray-800 border-gray-200 shadow-sm">
+                    <div className="grid w-full grid-cols-[auto_auto] grid-rows-[auto_auto] items-center gap-y-2 gap-x-3 sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1">
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            className="flex items-center gap-2 sm:gap-3 text-left min-w-0"
+                            onClick={() => navigate('/profile')}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    navigate('/profile');
+                                }
+                            }}
+                        >
+                            <div className="relative">
+                                <div
+                                    className={`rounded-full size-10 border-2 border-primary ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
+                                    style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
+                                >
+                                    {!avatarUrl ? initials : null}
+                                </div>
+                                <div className="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
                             </div>
-                            <div className="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
+                            <div className="min-w-0">
+                                <h1 className="text-sm font-bold leading-tight truncate">{user?.username || 'Guest'}</h1>
+                                <div className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
+                                    {user ? (
+                                        <span className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {user.rating_blitz}
+                                        </span>
+                                    ) : (
+                                        <button
+                                            className="text-[11px] sm:text-xs font-semibold text-primary hover:text-blue-400 hover:underline cursor-pointer"
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                navigate('/login');
+                                            }}
+                                        >
+                                            Login to play
+                                        </button>
+                                    )}
+                                    {blitzTag ? (
+                                        <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${getRatingTagClasses(blitzTag)}`}>
+                                            {blitzTag}
+                                        </span>
+                                    ) : null}
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-sm font-bold leading-tight">{user?.username || 'Guest'}</h1>
-                            <div className="flex items-center gap-1">
-                                <span className="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
-                                {user ? (
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                        {user.rating_blitz}
-                                    </span>
-                                ) : (
+                        <div className="col-span-2 row-start-2 flex justify-center sm:col-span-1 sm:row-start-1 sm:col-start-2">
+                            <span
+                                className="text-xl sm:text-2xl md:text-3xl font-black tracking-[0.04em] text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-300 drop-shadow-sm"
+                                style={{ fontFamily: '"Calibri", "Lexend", sans-serif' }}
+                            >
+                                DIGICHESS
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 sm:col-start-3">
+                            {!isAuthenticated ? (
+                                <button
+                                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full bg-primary text-white text-[11px] sm:text-xs font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
+                                    type="button"
+                                    onClick={() => navigate('/signup')}
+                                >
+                                    Sign up
+                                </button>
+                            ) : (
+                                <>
                                     <button
-                                        className="text-xs font-semibold text-primary hover:text-blue-400 hover:underline cursor-pointer"
+                                        className="flex items-center justify-center size-9 sm:size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative"
                                         type="button"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            navigate('/login');
+                                        onClick={() => {
+                                            setShowNotifications((prev) => {
+                                                const next = !prev;
+                                                if (next) setNotificationsPage(1);
+                                                return next;
+                                            });
+                                            markAllRead();
                                         }}
                                     >
-                                        Login to play
+                                        <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
+                                        {unreadCount > 0 ? (
+                                            <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+                                        ) : null}
                                     </button>
-                                )}
-                                {blitzTag ? (
-                                    <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${getRatingTagClasses(blitzTag)}`}>
-                                        {blitzTag}
-                                    </span>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex-1 flex justify-center">
-                        <span
-                            className="text-2xl md:text-3xl font-black tracking-[0.04em] text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-300 drop-shadow-sm"
-                            style={{ fontFamily: '"Calibri", "Lexend", sans-serif' }}
-                        >
-                            DIGICHESS
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {!isAuthenticated ? (
+                                    <button
+                                        className="flex items-center justify-center px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full bg-slate-200 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold"
+                                        type="button"
+                                        onClick={logout}
+                                    >
+                                        Logout
+                                    </button>
+                                </>
+                            )}
                             <button
-                                className="px-3 py-2 rounded-full bg-primary text-white text-xs font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
+                                className="flex items-center justify-center size-9 sm:size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                                 type="button"
-                                onClick={() => navigate('/signup')}
+                                onClick={() => setShowSettings((prev) => !prev)}
                             >
-                                Sign up
+                                <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">settings</span>
                             </button>
-                        ) : (
-                            <>
-                                <button
-                                    className="flex items-center justify-center size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative"
-                                    type="button"
-                                onClick={() => {
-                                    setShowNotifications((prev) => {
-                                        const next = !prev;
-                                        if (next) setNotificationsPage(1);
-                                        return next;
-                                    });
-                                    markAllRead();
-                                }}
-                                >
-                                    <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
-                                    {unreadCount > 0 ? (
-                                        <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
-                                    ) : null}
-                                </button>
-                                <button
-                                    className="flex items-center justify-center px-3 py-2 rounded-full bg-slate-200 dark:bg-slate-800 text-xs font-semibold"
-                                    type="button"
-                                    onClick={logout}
-                                >
-                                    Logout
-                                </button>
-                            </>
-                        )}
-                        <button
-                            className="flex items-center justify-center size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                            type="button"
-                            onClick={() => setShowSettings((prev) => !prev)}
-                        >
-                            <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">settings</span>
-                        </button>
+                        </div>
                     </div>
                     {showSettings ? (
                         <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
