@@ -2068,8 +2068,10 @@ export default function GamePage() {
                                                 <div className="space-y-2">
                                                     <div className="text-xs font-semibold text-slate-500">Powered by DigiChess</div>
                                                     {analysisGraphBars.length ? (
-                                                        <div className="relative h-28 rounded-lg border border-slate-700/60 bg-slate-900/40 overflow-hidden">
-                                                            <div className="absolute inset-x-0 top-1/2 h-px bg-slate-600/60" />
+                                                        <div className="relative h-28 rounded-lg border-2 border-amber-400/80 bg-slate-700/60 overflow-hidden">
+                                                            <div className="absolute inset-x-0 top-0 h-px bg-amber-400/80" />
+                                                            <div className="absolute inset-x-0 bottom-0 h-px bg-amber-400/80" />
+                                                            <div className="absolute inset-x-0 top-1/2 h-px bg-slate-400/40" />
                                                             {analysisGraphBars.map((bar, index) => (
                                                                 <div
                                                                     key={`eval-bar-${index}`}

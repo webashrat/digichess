@@ -114,18 +114,21 @@ jobs:
         with:
           node-version: 18
           cache: npm
+          cache-dependency-path: digichess-frontend/package-lock.json
 
       - name: Install dependencies
+        working-directory: digichess-frontend
         run: npm ci
 
       - name: Build frontend
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_WS_BASE_URL: ${{ secrets.VITE_WS_BASE_URL }}
+        working-directory: digichess-frontend
         run: npm run build
 
       - name: Sync to GCS bucket
         run: |
-          gsutil -m rsync -R dist gs://$GCS_BUCKET
+          gsutil -m rsync -R digichess-frontend/dist gs://$GCS_BUCKET
           gsutil web set -m index.html -e index.html gs://$GCS_BUCKET
           gsutil iam ch allUsers:objectViewer gs://$GCS_BUCKET
