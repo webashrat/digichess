@@ -312,7 +312,7 @@ export default function HomePage() {
                         </button>
                     </div>
                     {showSettings ? (
-                        <div className="absolute right-4 top-16 z-40 w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
+                        <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
                             <div>
                                 <div className="text-xs font-semibold text-slate-500 mb-2">Board theme</div>
                                 <div className="flex items-center gap-3">
@@ -362,7 +362,7 @@ export default function HomePage() {
                         </div>
                     ) : null}
                     {showNotifications ? (
-                        <div className="absolute right-4 top-16 z-40 w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
+                        <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(92vw,24rem)] sm:w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
                             <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-sm font-semibold">Notifications</h4>
                                 <button
@@ -492,11 +492,11 @@ export default function HomePage() {
                     </button>
                 ) : null}
 
-                <div className="flex gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
                     {stats.map((stat) => (
                         <div
                             key={stat.label}
-                            className="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm"
+                                className="flex min-w-[90px] sm:min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm"
                         >
                             <span className={`material-symbols-outlined text-[20px] ${stat.color}`}>{stat.icon}</span>
                             <p className="text-white text-lg font-bold leading-tight">{stat.value}</p>
@@ -510,13 +510,13 @@ export default function HomePage() {
                         <span className="material-symbols-outlined text-primary">swords</span>
                         Play Chess
                     </h2>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {quickPlayCards.map((card) => (
                             <button
                                 key={card.id}
                                 onClick={() => handleQuickPlay(card.id)}
                                 disabled={queueLoading || Boolean(queueingControl)}
-                                className="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden disabled:opacity-60"
+                                className="group relative flex flex-col items-start justify-between p-4 h-28 sm:h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden disabled:opacity-60"
                                 type="button"
                             >
                                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -580,7 +580,7 @@ export default function HomePage() {
                                 return (
                                     <button
                                         key={game.id}
-                                        className="snap-center shrink-0 w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg text-left"
+                                        className="snap-center shrink-0 w-[min(80vw,240px)] sm:w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg text-left"
                                         type="button"
                                         onClick={() => navigate(`/game/${game.id}`)}
                                     >
