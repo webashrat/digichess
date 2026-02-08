@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Live Chess Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1e2430",
+                        "board-light": "#cbd5e1", // slate-300
+                        "board-dark": "#475569", // slate-600
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom board pattern using css gradients */
+        .chess-board-bg {
+            background-image: 
+                conic-gradient(
+                    var(--tw-colors-board-light) 90deg, 
+                    var(--tw-colors-board-dark) 90deg 180deg, 
+                    var(--tw-colors-board-light) 180deg 270deg, 
+                    var(--tw-colors-board-dark) 270deg
+                );
+            background-size: 25% 25%; /* 2 squares by 2 squares (100% / 4) */
+        }
+        
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display h-screen w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 pb-2 z-10 shrink-0">
+<button class="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold tracking-tight">Live Game</h2>
+<button class="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</header>
+<!-- Main Game Area -->
+<main class="flex-1 flex flex-col relative min-h-0">
+<!-- Opponent Header -->
+<div class="px-4 py-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="relative shrink-0">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-surface-dark dark:border-gray-700" data-alt="Portrait of opponent player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEYDgigRf04w5ANjDnBPuTstErWuijMeGJL09_m4mbnkSXgaIMWQjDUyc7yW19R508r5Q_AvGJy6ASGMGVcY84QGpokfBmTcXBaDvc0L7NEQ_iRE_X0lZWcx6YnsE9y6FbINhiGc4n_dQdJNcsditGs_oj9bGrL5mbclE86FVjXn4Uk6FHRKGJ0o6ExSAWVCYaLEh-FzapNEPXPeNEItM9UCFcXmHwJ_hPrNxkuLnMW2p-hecz08PrdDA1V8WdtY2ge1UrtMy1BJTt"/>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-0.5">
+<!-- Flag Icon using Material Symbols as fallback or placeholder for country flag -->
+<span class="material-symbols-outlined text-[14px] text-gray-400">flag</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2">
+<p class="font-bold text-sm truncate">GrandMasterCheck</p>
+<span class="bg-yellow-600/20 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded">GM</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono">2800 • USA</p>
+</div>
+</div>
+<!-- Opponent Clock -->
+<div class="flex flex-col items-end gap-1">
+<div class="bg-surface-dark/10 dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 min-w-[80px] text-center">
+<span class="text-xl font-bold font-mono text-gray-700 dark:text-gray-300">04:52</span>
+</div>
+</div>
+</div>
+<!-- Board & Eval Container -->
+<div class="flex-1 flex items-center justify-center px-2 py-1 gap-2 md:gap-4 min-h-0">
+<!-- Evaluation Bar -->
+<div class="h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
+<div class="bg-white transition-all duration-700 ease-in-out w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style="height: 55%;"></div>
+<!-- Eval Score Tooltip (Optional, visualized here as floating) -->
+<div class="absolute top-[52%] -right-8 bg-gray-800 text-[10px] px-1 rounded text-white font-bold z-10 translate-y-[-50%] opacity-0 md:opacity-100 transition-opacity">
+                    +0.5
+                </div>
+</div>
+<!-- Chess Board -->
+<div class="aspect-square h-full max-h-[calc(100vw-4rem)] w-auto relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark">
+<!-- Board Background Pattern -->
+<div class="absolute inset-0 chess-board-bg w-full h-full"></div>
+<!-- Coordinates (Optional decoration) -->
+<div class="absolute bottom-0.5 right-1 text-[10px] font-bold text-board-dark dark:text-board-light opacity-50">h</div>
+<div class="absolute top-1 left-0.5 text-[10px] font-bold text-board-dark dark:text-board-light opacity-50">8</div>
+<!-- Pieces Layer (Grid Overlay) -->
+<div class="absolute inset-0 grid grid-cols-8 grid-rows-8 w-full h-full">
+<!-- Example Pieces positioned in grid -->
+<!-- Row 1 (Black Backrank) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_queen</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_king</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<!-- Row 2 (Black Pawns) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="col-span-1"></div> <!-- Empty square d7 -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<!-- Row 3 -->
+<div class="col-span-3"></div>
+<div class="flex items-center justify-center bg-yellow-400/30 ring-inset ring-2 ring-yellow-400/50"><span class="material-symbols-outlined text-4xl lg:text-5xl text-gray-900 drop-shadow-md" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div> <!-- d5 pawn moved -->
+<div class="col-span-4"></div>
+<!-- Row 4 -->
+<div class="col-span-3"></div>
+<div class="flex items-center justify-center bg-primary/30 ring-inset ring-2 ring-primary/60"></div> <!-- Last move highlight source -->
+<div class="flex items-center justify-center bg-primary/30 ring-inset ring-2 ring-primary/60"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div> <!-- e4 pawn (White) -->
+<div class="col-span-3"></div>
+<!-- Row 5-6 (Empty mostly) -->
+<div class="col-span-8"></div>
+<div class="col-span-8"></div>
+<!-- Row 7 (White Pawns) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="col-span-1"></div> <!-- e2 empty -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span></div>
+<!-- Row 8 (White Backrank) -->
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_queen</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_king</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_bishop</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_knight</span></div>
+<div class="flex items-center justify-center"><span class="material-symbols-outlined text-4xl lg:text-5xl text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" style="font-variation-settings: 'FILL' 1;">chess_rook</span></div>
+</div>
+</div>
+</div>
+<!-- User Header (Bottom) -->
+<div class="px-4 py-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="relative shrink-0">
+<img class="w-12 h-12 rounded-full object-cover border-2 border-primary ring-2 ring-primary/20" data-alt="Portrait of current user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANrNZEo7qmx6DHwW4VM39Nd_BulELZyJz8AsIWRqwIt9Cg0HnX0Wz1WEY6N3zWe_ETkVDWgfuVfz5L687dHVY3eHBr9YZ0po6nxjdJ69jrZPEcDzuRz3IAw2eHH51ZKAJNhlxzStFeaMZ9cDVhyav6p5skHGCYdOKSIIX5JQ6hkDslbU_oAY6RLnLL4psabzMStyeEwFg8i373BQQtFS8n67Sc99hmK974Sx28MvtsrV0xv90aiGwzXlLX4j8zTFvQ6IZ3KwpaJQ-E"/>
+<div class="absolute -bottom-1 -right-1 bg-surface-dark rounded-full p-0.5">
+<span class="material-symbols-outlined text-[14px] text-gray-400">flag</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2">
+<p class="font-bold text-base truncate text-white">ChessHero</p>
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded">IM</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-mono">2750 • UK</p>
+</div>
+</div>
+<!-- User Clock (Active) -->
+<div class="flex flex-col items-end gap-1">
+<div class="bg-primary dark:bg-primary border border-blue-400 rounded-lg px-3 py-2 min-w-[90px] text-center shadow-[0_0_15px_rgba(19,91,236,0.4)]">
+<span class="text-2xl font-bold font-mono text-white">05:10</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Drawer / Tabs -->
+<section class="bg-surface-dark rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.3)] flex flex-col h-[35vh] max-h-[350px] shrink-0 border-t border-gray-800 z-10">
+<!-- Tab Headers -->
+<div class="flex items-center border-b border-gray-800">
+<button class="flex-1 py-3 text-sm font-semibold text-primary border-b-2 border-primary bg-primary/5 transition-colors">Moves</button>
+<button class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Chat <span class="ml-1 text-[10px] bg-red-500 text-white px-1.5 rounded-full">1</span></button>
+<button class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Accuracy</button>
+</div>
+<!-- Content Area: Move List -->
+<div class="flex-1 overflow-y-auto no-scrollbar p-0 relative">
+<div class="grid grid-cols-[auto_1fr_1fr] auto-rows-min w-full text-sm">
+<!-- Header Row -->
+<div class="sticky top-0 bg-surface-dark z-10 col-span-3 grid grid-cols-[3rem_1fr_1fr] border-b border-gray-800 text-xs text-gray-500 font-medium py-1.5">
+<div class="text-center">#</div>
+<div class="pl-2">White</div>
+<div class="pl-2">Black</div>
+</div>
+<!-- Moves -->
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 hover:bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">1.</div>
+<div class="pl-2 font-mono font-medium text-white">e4</div>
+<div class="pl-2 font-mono font-medium text-white">e5</div>
+</div>
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">2.</div>
+<div class="pl-2 font-mono font-medium text-white">Nf3</div>
+<div class="pl-2 font-mono font-medium text-white">Nc6</div>
+</div>
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 hover:bg-white/5 border-b border-gray-800/50">
+<div class="text-gray-500 font-mono text-center">3.</div>
+<div class="pl-2 font-mono font-medium text-white">Bb5</div>
+<div class="pl-2 font-mono font-medium text-white">a6</div>
+</div>
+<!-- Current Move Highlight -->
+<div class="col-span-3 grid grid-cols-[3rem_1fr_1fr] py-1.5 bg-primary/20 border-l-2 border-primary">
+<div class="text-gray-500 font-mono text-center">4.</div>
+<div class="pl-2 font-mono font-bold text-white">Ba4</div>
+<div class="pl-2 font-mono text-gray-400">...</div>
+</div>
+<!-- Placeholder for scrolling -->
+<div class="col-span-3 h-4"></div>
+</div>
+<!-- Analysis FAB (Floating Action Button style within content) -->
+<button class="absolute bottom-4 right-4 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center group transition-all">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">analytics</span>
+</button>
+</div>
+<!-- Footer Actions -->
+<div class="p-3 border-t border-gray-800 bg-surface-dark grid grid-cols-3 gap-3">
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors group">
+<span class="material-symbols-outlined text-xl group-hover:animate-pulse">flag_circle</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Resign</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">handshake</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Draw</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg bg-primary hover:bg-blue-600 text-white transition-colors shadow-lg shadow-blue-900/20">
+<span class="material-symbols-outlined text-xl">check</span>
+<span class="text-[10px] uppercase font-bold tracking-wide">Submit</span>
+</button>
+</div>
+</section>
+</body></html>

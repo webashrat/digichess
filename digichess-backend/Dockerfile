@@ -25,10 +25,12 @@ COPY Stockfish /build/Stockfish
 
 # Build Stockfish
 RUN cd Stockfish/src && \
-    make -j$(nproc) ARCH=x86-64-modern COMP=gcc && \
+    make clean >/dev/null 2>&1 || true && \
+    rm -f stockfish && \
+    make -j$(nproc) profile-build ARCH=x86-64 COMP=gcc && \
     mv stockfish /usr/local/bin/stockfish && \
     chmod +x /usr/local/bin/stockfish && \
-    stockfish bench > /dev/null 2>&1 || true
+    (stockfish bench > /dev/null 2>&1 || true)
 
 # Optionally build lc0 (for Maia support)
 # This is optional - the system works without it using Stockfish

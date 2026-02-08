@@ -5,6 +5,7 @@ from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -72,7 +73,11 @@ class TournamentRegisterView(APIView):
     def post(self, request, pk: int):
         tournament = get_object_or_404(Tournament, id=pk)
         now = timezone.now()
-        if tournament.status != Tournament.STATUS_PENDING or now >= tournament.start_at:
+        late_allowed = (
+            tournament.status == Tournament.STATUS_ACTIVE
+            and tournament.type in {Tournament.TYPE_ARENA, Tournament.TYPE_SWISS}
+        )
+        if not late_allowed and (tournament.status != Tournament.STATUS_PENDING or now >= tournament.start_at):
             return Response({"detail": "Registration closed."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Get password from request if provided
@@ -92,7 +97,7 @@ class TournamentStartView(APIView):
     def post(self, request, pk: int):
         tournament = get_object_or_404(Tournament, id=pk)
         if request.user != tournament.creator:
-            raise permissions.PermissionDenied("Only the creator can start the tournament.")
+            raise PermissionDenied("Only the creator can start the tournament.")
         if tournament.status != Tournament.STATUS_PENDING:
             return Response({"detail": "Tournament already started."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -129,7 +134,7 @@ class TournamentFinishView(APIView):
     def post(self, request, pk: int):
         tournament = get_object_or_404(Tournament, id=pk)
         if request.user != tournament.creator:
-            raise permissions.PermissionDenied("Only the creator can finish the tournament.")
+            raise PermissionDenied("Only the creator can finish the tournament.")
         data = TournamentWinnersSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         tournament.winners = data.validated_data["winners"][:3]
@@ -227,7 +232,7 @@ class TournamentPairingsView(APIView):
     def post(self, request, pk: int):
         tournament = get_object_or_404(Tournament, id=pk)
         if request.user != tournament.creator:
-            raise permissions.PermissionDenied("Only the creator can generate pairings.")
+            raise PermissionDenied("Only the creator can generate pairings.")
         if tournament.type == Tournament.TYPE_SWISS:
             swiss_pairings.delay(tournament.id)
             return Response({"detail": "Swiss pairings started"}, status=status.HTTP_202_ACCEPTED)

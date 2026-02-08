@@ -1,7 +1,7 @@
 #!/bin/sh
 
-wget_or_curl=$( (command -v wget > /dev/null 2>&1 && echo "wget -qO-") || \
-                (command -v curl > /dev/null 2>&1 && echo "curl -skL"))
+wget_or_curl=$( (command -v wget > /dev/null 2>&1 && echo "wget -qO- --timeout=20 --tries=3") || \
+                (command -v curl > /dev/null 2>&1 && echo "curl -skL --max-time 20 --retry 3 --retry-delay 2"))
 
 
 sha256sum=$( (command -v shasum > /dev/null 2>&1 && echo "shasum -a 256") || \

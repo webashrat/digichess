@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Platform Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#161b26",
+                        "accent-green": "#2e7d32",
+                        "accent-green-bright": "#4ade80",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem", 
+                        "lg": "0.5rem", 
+                        "xl": "0.75rem", 
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white overflow-x-hidden pb-24 selection:bg-primary selection:text-white">
+<!-- Top Header -->
+<header class="sticky top-0 z-30 flex items-center justify-between bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 border-b dark:border-gray-800 border-gray-200">
+<div class="flex items-center gap-3">
+<div class="relative">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-primary" data-alt="User avatar profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD_yYKt3Ghs-pCIiJCPvSIUlwhNHnMtyBR5B5KrfZYwhg54q9Mk6lgwh0TxqfDqY-iJ4ysQ2Janiy6K1Ucf_MzYeh4qp2f4Hr0Gx0uEX79xWjI4Zh21hopg2rTzTRaZwNbwoytqpnPqiQD3peq9IggsmyWZA8p7PrJGMzHcJ4HgborrmFmxOKiFb_xFdOfP2q8z31Tf_nxWx3nqXyZA7b2MIVYvfZOtObM1XdoI_9ILAyg5xuMtT1PYDiNCKVuBQ2GAHgxgK9EhLVzV");'></div>
+<div class="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
+</div>
+<div>
+<h1 class="text-sm font-bold leading-tight">GrandMaster_J</h1>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">2450</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+</button>
+</div>
+</header>
+<!-- Quick Stats Row -->
+<div class="flex gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-orange-400 text-[20px]">local_fire_department</span>
+<p class="text-white text-lg font-bold leading-tight">2450</p>
+<p class="text-gray-400 text-xs font-normal">Bullet</p>
+</div>
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-yellow-400 text-[20px]">flash_on</span>
+<p class="text-white text-lg font-bold leading-tight">1890</p>
+<p class="text-gray-400 text-xs font-normal">Blitz</p>
+</div>
+<div class="flex min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-green-400 text-[20px]">timer</span>
+<p class="text-white text-lg font-bold leading-tight">2100</p>
+<p class="text-gray-400 text-xs font-normal">Rapid</p>
+</div>
+</div>
+<!-- Play Section -->
+<section class="px-4 py-2">
+<h2 class="text-xl font-bold mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">swords</span>
+            Play Chess
+        </h2>
+<div class="grid grid-cols-2 gap-3">
+<!-- Bullet -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">rocket_launch</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-orange-400">local_fire_department</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">1+0</span>
+<span class="text-sm text-gray-400 font-medium">Bullet</span>
+</div>
+</button>
+<!-- Blitz -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">bolt</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-yellow-400">flash_on</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">3+2</span>
+<span class="text-sm text-gray-400 font-medium">Blitz</span>
+</div>
+</button>
+<!-- Rapid -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">schedule</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-green-400">timer</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">10+0</span>
+<span class="text-sm text-gray-400 font-medium">Rapid</span>
+</div>
+</button>
+<!-- Classical -->
+<button class="group relative flex flex-col items-start justify-between p-4 h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">hourglass_top</span>
+</div>
+<div class="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-blue-400">hourglass_empty</span>
+</div>
+<div>
+<span class="block text-2xl font-bold text-white">30+0</span>
+<span class="text-sm text-gray-400 font-medium">Classical</span>
+</div>
+</button>
+</div>
+<button class="mt-4 w-full py-3 rounded-xl border border-dashed border-gray-600 hover:border-gray-400 hover:bg-gray-800/30 text-gray-400 text-sm font-semibold flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+            Create Custom Game
+        </button>
+</section>
+<!-- Live Now Section -->
+<section class="mt-6 pl-4 border-t border-gray-800 pt-6 bg-gradient-to-b from-transparent to-black/20">
+<div class="flex items-center justify-between pr-4 mb-3">
+<h2 class="text-xl font-bold flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</span>
+                Live GM Games
+            </h2>
+<a class="text-primary text-sm font-bold hover:underline" href="#">View All</a>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 pr-4 snap-x no-scrollbar">
+<!-- Game Card 1 -->
+<div class="snap-center shrink-0 w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+<div class="relative aspect-square w-full bg-gray-800">
+<!-- Chessboard Placeholder -->
+<div class="w-full h-full bg-cover bg-center" data-alt="Chessboard top down view with pieces in mid-game position" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbrInG_WqYnN3Tu59WZynxed1CjaqxMK6zVVywWE3qtOQ_27Lo_oAo6AiVV9QYYaX_2omqb_UNlS3kBjsXnUC3KEpQ5fmB7kGaE3YBzppNzJaVL8G-eU_5W6zJIVdbutuFnUBrYJuloDse0DtL5C6ttP2h39KnFGSsp2QkPBp3ZQOeRy6_nXVtfXIjjJmdklCJWpiIVErRGPZi6_t2HhZulEbUWqShgZZr1zO-tgXl4QTrkEMNWEqqGueie_Gc9r-YDZXylMx2xaKM')"></div>
+<!-- Evaluation Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-gray-700 flex flex-col">
+<div class="bg-white h-[45%] w-full"></div>
+<div class="bg-black h-[55%] w-full"></div>
+</div>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-white"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Magnus</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2830</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-black border border-gray-600"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Hikaru</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2790</span>
+</div>
+</div>
+</div>
+<!-- Game Card 2 -->
+<div class="snap-center shrink-0 w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+<div class="relative aspect-square w-full bg-gray-800">
+<div class="w-full h-full bg-cover bg-center grayscale-[20%]" data-alt="Close up of chess pieces on a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCpfGsSsx1NC7gueJkKFS-wvKppT78IdYK4aorAE4M_dRqyfDJeQD2aqJSsX8GoYTmx21rAq8uYjtIY3N10hboZlTEKV1cILT1jrT8gNV-CkQ80bo4eNytxOEP7mQbOE1XdUgRDSQ38aPsjShJ9T4DQQDVRP4OSul_6ICzu_7pBmNs-nkl1aQzVqBD72wG9Q0xshC8Ok6Uk_B2Zbqu_hZfafPxhNS7oj2Ku2at5RGaI3XryrC9kVuXtCEcZyufJJJDTqSVoJnYsi5ri')"></div>
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-gray-700 flex flex-col">
+<div class="bg-white h-[60%] w-full"></div>
+<div class="bg-black h-[40%] w-full"></div>
+</div>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-white"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Nepo</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2770</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-black border border-gray-600"></span>
+<span class="text-sm font-bold truncate max-w-[80px]">Ding</span>
+</div>
+<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">2780</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tournaments -->
+<section class="mt-4 px-4 pb-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">trophy</span>
+                Tournaments
+            </h2>
+</div>
+<!-- Tabs -->
+<div class="flex bg-surface-dark p-1 rounded-lg mb-4 border border-gray-800">
+<button class="flex-1 py-1.5 text-sm font-bold rounded text-white bg-primary shadow-sm">Arena</button>
+<button class="flex-1 py-1.5 text-sm font-bold rounded text-gray-400 hover:text-white transition-colors">Swiss</button>
+</div>
+<!-- List -->
+<div class="flex flex-col gap-3">
+<!-- Item 1 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-orange-900/30 flex items-center justify-center text-orange-400">
+<span class="material-symbols-outlined">local_fire_department</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Hourly Bullet Arena</h3>
+<p class="text-xs text-gray-400">1+0 • <span class="text-green-400">Starting in 2m</span></p>
+</div>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                    Join
+                </button>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-yellow-900/30 flex items-center justify-center text-yellow-400">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Titled Tuesday Blitz</h3>
+<p class="text-xs text-gray-400">3+1 • 542 Players</p>
+</div>
+</div>
+<button class="bg-surface-dark border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold">
+                    Watch
+                </button>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between bg-surface-dark border border-gray-800 p-3 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-green-900/30 flex items-center justify-center text-green-400">
+<span class="material-symbols-outlined">timer</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-white">Daily Rapid Shield</h3>
+<p class="text-xs text-gray-400">10+0 • Round 2/7</p>
+</div>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                    Join
+                </button>
+</div>
+</div>
+</section>
+<!-- Social Floating Bar (Simulated Drawer Handle) -->
+<div class="fixed bottom-[72px] left-4 right-4 z-40">
+<button class="w-full bg-[#1e232e] border border-gray-700 shadow-xl rounded-xl p-3 flex items-center justify-between backdrop-blur-md bg-opacity-95">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXJstS7wISteIgjKv7pEoqejYJy4eeB5fvSJ4EkEd8MYHH0VKrjKHXNzz7ndu3HEDrZQ_X0JNsrV4vCHICm-BgrwU8kXK8s4MAo5OZm3nY7HRQ7DrLuV6kG8MSNNlS3aUY2mvHswSiQr_eCpeEA8_cdBlynXtNpCEOs88siSiRHp5C9ovSIUUc5IaeBxV3mohf6BOreCRNOkjCpFLba8PNXudI8agA4Sz-ZRKcoHBvJHsyqmb12NhcRPRzj603YNhWu3KB2hLpZx4B"/>
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBh8f4iU7TioOvSYK3Hvb5_XB94BpbPaafAEPgth2rUgF8bNSvlwrSnVdylTgSs0f4JcZarAiLQm6QaYxTZo8RfINSSr7C8pphPO4JoGXK1PO5osJl73sxIJxKYta6u_f-2cnQG8BubinZoyuwJS2F2_UhwGcQyu41jmMTFR2lwRsD0ajHI6uaEqGIEhkcCbiOJtpaQOhTW9NZqcvOQZuggs1YYY3L99gLZ0rogmzdb_19DaNtv7svIwKHbhmG1muOGPUY1Tsrc5-80"/>
+<img class="size-6 rounded-full border border-[#1e232e]" data-alt="Friend avatar 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6RhCywMgHaFGA7v8Sfb2UI0iTKuKjaykGuO2bFdOO1NOrSQZ2GK5-0w6xb94jCd4CXVdgenbQQUOExLklz_Uje_461Yhl3-tpCzZMOFEMHjp-dtv0iSBNJRy_PtwMTkTXms-Ow1GeSCCE1pJUbmQCPFMSUUQExiOysjEJ7vyLpTk3uAs2mmH32b9fRqrN3mdX8F4rT-VelQWu33QjpHM0mwNnh19QpHB8gA9lHEtfFonFTcB7aiNXUZXNiSprz21bgBX-RMSuiMl0"/>
+</div>
+<span class="text-sm font-medium text-gray-300"><span class="text-accent-green-bright font-bold">3 Friends</span> Online</span>
+</div>
+<span class="material-symbols-outlined text-gray-400">expand_less</span>
+</button>
+</div>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-[#111318] border-t border-gray-800 pb-safe z-50">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center gap-1 text-primary w-full" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">extension</span>
+<span class="text-[10px] font-medium">Puzzles</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-300 w-full transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+<!-- Safe area padding for bottom nav -->
+<style>
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</body></html>

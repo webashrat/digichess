@@ -39,6 +39,7 @@ from .views_tournament import (
 from .views_matchmaking import EnqueueView, CancelQueueView, QueueStatusView
 from .views_public_clock import LiveClockView
 from .views_prediction import PredictionCreateView
+from .views_events import GameEventsView
 from .views_leaderboard import RatingLeaderboardView, DigiQuizLeaderboardView
 from .views_bot import BotListView, CreateBotGameView
 from .views_puzzle import DailyPuzzleView, PuzzleView, NextPuzzleView, PuzzleBatchView
@@ -85,6 +86,7 @@ urlpatterns = [
     path("user/<str:username>/", UserGamesView.as_view(), name="user-games"),
     path("bots/", BotListView.as_view(), name="bots-list"),
     path("bots/create-game/", CreateBotGameView.as_view(), name="bot-create-game"),
+    path("<int:pk>/events/", GameEventsView.as_view(), name="game-events"),
     path("puzzles/daily/", DailyPuzzleView.as_view(), name="puzzle-daily"),
     path("puzzles/<str:puzzle_id>/", PuzzleView.as_view(), name="puzzle-detail"),
     path("puzzles/next/", NextPuzzleView.as_view(), name="puzzle-next"),

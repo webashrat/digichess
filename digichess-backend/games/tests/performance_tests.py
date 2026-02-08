@@ -106,7 +106,7 @@ class MoveProcessingPerformanceTest(TestCase):
         self.assertLess(avg_time, 50, f"Move processing too slow: {avg_time:.2f}ms")
         self.assertTrue(all([
             process_move_optimized(None, m, chess.Board())[0] 
-            for m in ['e4', 'e5', 'Nf3']
+            for m in ['e4', 'd4', 'Nf3']
         ]))
     
     def test_latency_monitoring(self):
@@ -149,6 +149,7 @@ class QueryOptimizationTest(TransactionTestCase):
     
     def test_select_related_optimization(self):
         """Test that select_related eliminates N+1 queries"""
+        connection.force_debug_cursor = True
         # Without optimization (N+1 problem)
         reset_queries()
         games_unoptimized = list(Game.objects.all())
@@ -156,6 +157,8 @@ class QueryOptimizationTest(TransactionTestCase):
             _ = game.white.username  # Triggers additional query
             _ = game.black.username
         queries_unoptimized = len(connection.queries)
+        if queries_unoptimized == 0:
+            self.skipTest("Query logging is disabled; enable DEBUG or force_debug_cursor.")
         
         # With optimization
         reset_queries()

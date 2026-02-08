@@ -422,6 +422,27 @@ class AcceptGameView(APIView):
                 game.result = Game.RESULT_NONE
                 game.finished_at = timezone.now()
                 game.save(update_fields=["status", "result", "finished_at"])
+                try:
+                    from notifications.views import create_notification
+                    players = [game.white, game.black]
+                    for player in players:
+                        if not player:
+                            continue
+                        opponent = game.black if player == game.white else game.white
+                        opponent_name = opponent.username if opponent and opponent.username else (opponent.email if opponent else "opponent")
+                        create_notification(
+                            user=player,
+                            notification_type="challenge_expired",
+                            title="Challenge Expired",
+                            message=f"Challenge with {opponent_name} expired.",
+                            data={
+                                "game_id": game.id,
+                                "opponent_id": opponent.id if opponent else None,
+                                "opponent_username": opponent.username if opponent else None,
+                            },
+                        )
+                except Exception:
+                    pass
                 # Notify game group about expiry
                 try:
                     channel_layer = get_channel_layer()
@@ -565,8 +586,6 @@ class AbortGameView(APIView):
         game.save(update_fields=["status", "finished_at", "result"])
         
         # Broadcast game update via WebSocket
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
         channel_layer = get_channel_layer()
         if channel_layer:
             async_to_sync(channel_layer.group_send)(
@@ -684,14 +703,14 @@ class GameAnalysisView(APIView):
             if not engine_path:
                 engine_info = {"error": "STOCKFISH_PATH not configured and repo Stockfish not available."}
             else:
-                works, message = ensure_stockfish_works(engine_path)
+                works, message, engine_path = ensure_stockfish_works(engine_path)
                 
                 if not works:
                     engine_info = {"error": message, "engine_path": engine_path}
                 else:
                     try:
                         with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-                            limit = chess.engine.Limit(time=0.5)
+                            limit = chess.engine.Limit(time=0.2)
                             result = engine.analyse(board, limit)
                             if result:
                                 score = result.get("score")

@@ -29,16 +29,22 @@ fi
 
 # Determine download URL based on system
 if [[ "$ARCH" == "x86_64" ]] || [[ "$ARCH" == "amd64" ]]; then
-    echo "📥 Downloading Stockfish 16 for x86_64 Linux..."
+    echo "📥 Downloading Stockfish for x86_64 Linux..."
     cd /tmp
-    rm -f stockfish_16_linux_x64_bmi2.zip
-    wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16/stockfish_16_linux_x64_bmi2.zip
+    rm -f stockfish-ubuntu-x86-64.tar
+    STOCKFISH_LINUX_URL="${STOCKFISH_LINUX_URL:-https://sourceforge.net/projects/stockfish.mirror/files/sf_16.1/stockfish-ubuntu-x86-64.tar/download}"
+    wget -q -O stockfish-ubuntu-x86-64.tar "$STOCKFISH_LINUX_URL"
     
     echo "📦 Extracting..."
-    unzip -q -o stockfish_16_linux_x64_bmi2.zip
+    tar -xf stockfish-ubuntu-x86-64.tar
     
     echo "📋 Installing..."
-    sudo cp stockfish_16_linux_x64_bmi2/stockfish "$STOCKFISH_PATH"
+    STOCKFISH_BIN="$(find /tmp -type f -name stockfish | head -1)"
+    if [ -z "$STOCKFISH_BIN" ]; then
+        echo "❌ Downloaded file doesn't contain expected binary"
+        exit 1
+    fi
+    sudo cp "$STOCKFISH_BIN" "$STOCKFISH_PATH"
     sudo chmod +x "$STOCKFISH_PATH"
     
     echo "🧪 Testing..."

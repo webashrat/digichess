@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Platform Mobile Dashboard</title>
+<!-- Google Fonts: Lexend -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2bee6c",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#1c271f",
+                        "surface-dark-highlight": "#2a3b2e",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden">
+<div class="relative flex flex-col min-h-screen w-full pb-24"> <!-- Padding bottom for navigation bar -->
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-[#2a3b2e] px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="text-primary flex items-center justify-center p-1 rounded-lg bg-primary/10">
+<span class="material-symbols-outlined text-[28px]">
+                        chess_knight
+                    </span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">Chess Platform</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-gray-300">search</span>
+</button>
+<button class="relative flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-gray-300">notifications</span>
+<span class="absolute top-2 right-2 size-2.5 bg-primary rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 p-4 space-y-8">
+<!-- Quick Play Section -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold">Quick Play</h2>
+<button class="text-sm font-medium text-primary hover:text-primary/80">Custom</button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- 1 min Bullet -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-amber-500 mb-2 text-3xl">bolt</span>
+<span class="text-lg font-bold">1 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Bullet</span>
+</button>
+<!-- 3 min Blitz (Featured) -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary transition-all active:scale-[0.98]">
+<div class="absolute top-2 right-2 bg-primary text-background-dark text-[10px] font-bold px-1.5 py-0.5 rounded">HOT</div>
+<span class="material-symbols-outlined text-primary mb-2 text-3xl">offline_bolt</span>
+<span class="text-lg font-bold text-primary">3 min</span>
+<span class="text-xs text-primary/80 font-medium">Blitz</span>
+</button>
+<!-- 5 min Blitz -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-blue-400 mb-2 text-3xl">schedule</span>
+<span class="text-lg font-bold">5 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Blitz</span>
+</button>
+<!-- 10 min Rapid -->
+<button class="group relative flex flex-col items-center justify-center p-4 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#3b5443] hover:border-primary dark:hover:border-primary transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-green-400 mb-2 text-3xl">timer</span>
+<span class="text-lg font-bold">10 min</span>
+<span class="text-xs text-slate-500 dark:text-gray-400">Rapid</span>
+</button>
+</div>
+</section>
+<!-- Active Tournaments Slider -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold">Active Tournaments</h2>
+<button class="text-sm font-medium text-slate-500 dark:text-gray-400 hover:text-white">View All</button>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 no-scrollbar snap-x snap-mandatory">
+<!-- Card 1 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Close up of a chess board with wooden pieces in focus" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnTvfel9ybm7hwNsgPzsdhuB9faqHh4x41U4iq4msXt7i2EGzqIdbonly9-XW0uE6jeGSgklX6_lLJbzpTsr3mj35_EjJJPP7fwz3dlPDXnmAk_1QYftRlUSHozX3EGUBotZiLPsFMMes4zFSud5JsszbA4B3nYUW3nlQzSCOvxzVHt6j8P9twLTf5XNVUY7ejmwKNXgsnLo4ZZMBlcpfbLfOaOOiX07lbexBKVYJYZsukAPxydlT2k-OZUN_aJhvSoHtIHOnRhGHj');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-red-500 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">LIVE</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Titled Tuesday</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">GM/IM/FM only • 3+1 Blitz</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2VK0VeAsvbFfIas-fRuYz0nh-2I1WuX7BvPJs6RI5aJjfrzVDNgDepRGwVDSAUaxqh4uP-aTQx7U4xel31LZTshf9h_hmk6rw-lvR3s84G6bYMbaMR_O8DQnYDpeVxsa_kwm4M7u6wSMmGMY55SXk-2PkqG5IQxHFUuGexRbYIRrqXebM9LSJLmfQVgcMlzux6jFDxFkq7np29kN4iRca93x5bqv-40PlTPUcZwzrxkVPk3zamvgLuYPFfnz7AVFIjivSM8XpsCan"/>
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvLYIRTqVOahtDnu6uJ3KLnKmq-wYXBvGy8faGGERS_XhNEZn3JCWSha07b7OusGe3CRQowG5zVHRWmtSumZZhNNfrEA0-UhvHz8cZWzsp76PUy6iFWsRm8BIo2WLZSAnwhrqfub3CXcHpRDhDrRvTk-3I0gMUtfO_w2SzEPp4uT3c4A5HWNOVDpzYej1hkp7VWzvnp4IcqCGJb9ro1wjged1NXwcuG3-Oz1_3bNw9CeLD55b8BtQ4zgtMKhWmt9k1Cv3izENf1nKz"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+240</div>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background-dark text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">Join</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Abstract dark background representing speed chess" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCjEoPncDgDpofUaJQ40R5plKCaaaw9YyIC_76h60PocNpnoINWN5s0UYJAgDupe5p66vH-fIeQX8gNAu9FzsZ_CkHhe5J262hffps-Pf3u72aUjyaGgJfqfbwMMeukxWq0u2kHHCCQ_brdf349Ywxz2hwDjgZHNJxE9ObrWnppUHulf6HFJchPXRtXwrpXFVVCmWKmkEssg7uyPRndJYbs3KhA66ehWix8gjkM8PTF1XIfBZ8eUD-2KBSok7vfDI8srTkqWpN2Gdy9');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-primary text-background-dark text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">Starting in 10m</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Hourly Bullet Arena</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">Open for all • 1+0 Bullet</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwILNpAR6vyvWGxmkM_LSZv503mlhYKNdYDQtKnkfpLVV19pp3cpwE5hxRFLIV9L1lHTH8oZ565m0knFOEtiWmIfzHLeJfaiTqlCGUHui0Ht1trgvCVm0CTpBxHUXehXQIINIxrWwMopdb0gNt7E68q2FrScXnL_tK0_0RGNgu6lcgcUlyMXrCG6tP8JW0N_NDIxM6Vx1ayDziipFxIFmhnisc2qHygHqQDPxFq_vdBz-jLgFMAlSt2ZhTgFs-rrSdz7P7LEU_M45r"/>
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAobH75B8X8FdTzoB_jqkc4wMpmub7uiPITkHzZ-GW0TMlK1mLKSLc65ii40km2VpkM1Y5lzO3MK1pNBhiIGTFviCX0m8wlVHIUHlbPWITvjDN_GowYysZlNgYl6PYgMmFMb3RR9E7PAl669iRluHcczn9ABPpnMa4eYUZ2mJz6PR1Pi_oc6B5MZcDvBwWRnXq2CmXBdNiU03WrhAtA3B5JdUywrzmZeyEj2UDxQnjkcU72zNA1dHUfNpXK3zb49qBzoOyD6uC-7mIt"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+85</div>
+</div>
+<button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">Register</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="snap-start flex-shrink-0 w-[280px] bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] overflow-hidden group">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Strategic chess position on a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDwEr71s84M2LmicrugpxAPhLZ9jEOYJhOdKHSZIfx3QFCRfhyRqZyWs6MLrB_E1kpw3x_OtW60UNHlvTIdv9WWELs99RQ46M-hfiUt2GhBCPahtm-8z752CKAw6pvHSHY3cYWhjqT1Q0UvVgQ9EkLeQPjTJa-J7Fv8JwxPl2Co5rqCbkXTCB-c9eLI7wK7g_-FnGsOJVMA2EOMLh0gVQXGLfCV_68GS54QS-TvwIKYCPKV0MWu6SaUybjJlmjQI-T4_z-eYPLHZt_l');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">Daily</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-lg leading-tight mb-1 group-hover:text-primary transition-colors">Rapid Shield</h3>
+<p class="text-sm text-slate-500 dark:text-gray-400 mb-3">Swiss System • 10+0 Rapid</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Player" class="w-6 h-6 rounded-full border border-surface-dark" data-alt="Avatar of a chess player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkBQtNkRImBnIXbRf59dd0cQgwNllADGY4Qz5hc9UWGGD2Qd06RfvlLRRd-3-xpaM_ox00_pHMAHWkkybvLdNJxblNeWE8DHa3OU4F1MaIthA-szwtotqAahe4OBT55tmOcR_2803a-0AWj4DvZIJaD2BdLS7bP2L9S0QMEbAm_YrdRMDq6Txq3fvLtR-ClNPjldwlbQ_N0OqWyTs_zZYuTtvHJUK1LN4VPz-4i2RSy54BCt_HUNlNeW8MITiN8VlerYGqjz7GuBX5"/>
+<div class="w-6 h-6 rounded-full border border-surface-dark bg-slate-700 flex items-center justify-center text-[8px] font-bold text-white">+1k</div>
+</div>
+<button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">Register</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats & Friends Grid -->
+<div class="grid gap-6">
+<!-- Personal Stats Widget -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] p-4">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-base font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">monitoring</span>
+                            Your Stats
+                        </h2>
+<span class="text-xs font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">All Time</span>
+</div>
+<div class="flex items-end gap-1 h-16 w-full mb-4 px-2">
+<!-- Fake Sparkline -->
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[30%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[45%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[35%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[50%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[60%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[55%]"></div>
+<div class="w-1/12 bg-primary/20 rounded-t-sm h-[70%]"></div>
+<div class="w-1/12 bg-primary/40 rounded-t-sm h-[65%]"></div>
+<div class="w-1/12 bg-primary/60 rounded-t-sm h-[80%]"></div>
+<div class="w-1/12 bg-primary/80 rounded-t-sm h-[75%]"></div>
+<div class="w-1/12 bg-primary rounded-t-sm h-[90%]"></div>
+<div class="w-1/12 bg-primary rounded-t-sm h-[85%]"></div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center">
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider">Rapid</p>
+<p class="font-bold text-lg">1,240</p>
+<p class="text-[10px] text-green-500 font-bold">+12</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center border border-primary/30 relative overflow-hidden">
+<div class="absolute inset-0 bg-primary/5"></div>
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider relative z-10">Blitz</p>
+<p class="font-bold text-lg text-primary relative z-10">1,452</p>
+<p class="text-[10px] text-green-500 font-bold relative z-10">+4</p>
+</div>
+<div class="bg-background-light dark:bg-background-dark p-2 rounded-lg text-center">
+<p class="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider">Bullet</p>
+<p class="font-bold text-lg">980</p>
+<p class="text-[10px] text-red-500 font-bold">-2</p>
+</div>
+</div>
+</section>
+<!-- Friends Online -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#3b5443] p-4">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-base font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-green-400 text-xl">group</span>
+                            Friends Online
+                        </h2>
+<span class="size-6 flex items-center justify-center bg-green-500 text-background-dark text-xs font-bold rounded-full">3</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Friend 1 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user GrandmasterFlash" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABhZAGQRnVEb8PXvr7Dp_eVvnlFpe088ROfJOzA3yCshG52YI-ReIbbL4sMh4IG6qrBZFcPMQPCRnRnbCkIM1Whu9UgA7O6EDdSMjMk4zyKhOwsKAKkjUVv3VC_gzTRoYL6Zdh-IbXCKsRqBIzcuMwUjD3Ihk4yl9vJFI73e0C7TusdVGpwf_gVdPMHCDWPJMN5qjTI_zJB_b2zlB--Q8qS8CZj9zaNgzbLOAobvuS0X3fyhSI4UtBWqO6uA7Zm6U24lkRTioJRtm6"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-primary border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">GrandmasterFlash</h4>
+<p class="text-xs text-primary truncate">Online in Menu</p>
+</div>
+<button class="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors" title="Challenge">
+<span class="material-symbols-outlined text-xl block">swords</span>
+</button>
+</div>
+<!-- Friend 2 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user ChessWiz" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEQgAgrEMP3l3dqe5mxOWSy7GYqw-9vVc-rG0ENPzO6SLP-bGhDr_0S0yNtaDljQd_d4aJ9PoPaZ-oVxuvNITq9CuT9sA18ZyRqqM9P3g68nVTS-G8n9yN8lTEm2cwEzTe9q93vLBugl-ONxhyOVngUpcGiMZLXAIjNLeJYyViVHXSfBHM3kCTVMi8jay3vykrNLrcidtTYCEF7Cwefkbf-e8D6nTBPsx6PWFO1RaX4pZpg4P1Xh9aIziYSwZopRA64A71NBcsfv2-"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-amber-500 border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">ChessWiz</h4>
+<p class="text-xs text-amber-500 truncate">Playing • Rapid 10+0</p>
+</div>
+<button class="p-2 bg-white/5 hover:bg-white/10 text-slate-400 dark:text-gray-400 rounded-lg transition-colors" title="Spectate">
+<span class="material-symbols-outlined text-xl block">visibility</span>
+</button>
+</div>
+<!-- Friend 3 -->
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="size-10 rounded-lg object-cover" data-alt="Profile picture of user KnightRider" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_Ky4KeAyUoist5kTNvsUamAq8-CW23wdQHuBcdf0ngGpObP0NrIWrc3oli-BJ6kQ6cwLKnW11e8yti6rB6mmwnmxreLWAqVWcYGOLf7ye-68pOwKRobtK5OxRe46AKWkbGFVaPaqF09cYltgPPzL3evtLYTrQJoZVEsjBnErpJwPN8lJaz5Ar6yAcrGeBVZaa8qoCui0j--r80hrd4L4O_b0j_AzkBILsfs8CrQui-aZa2dZx5CXFRKWwmkDzg58uuOBdeHe2W7Ig"/>
+<div class="absolute -bottom-1 -right-1 size-3 bg-primary border-2 border-surface-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-bold text-sm truncate">KnightRider</h4>
+<p class="text-xs text-primary truncate">Solving Puzzles</p>
+</div>
+<button class="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors" title="Challenge">
+<span class="material-symbols-outlined text-xl block">swords</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full bg-white dark:bg-background-dark border-t border-gray-200 dark:border-[#2a3b2e] pb-safe z-50">
+<div class="grid grid-cols-5 h-16 items-center">
+<a class="flex flex-col items-center justify-center gap-1 h-full text-primary" href="#">
+<span class="material-symbols-outlined text-[26px] fill-current">home</span>
+<span class="text-[10px] font-medium">Play</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+<span class="text-[10px] font-medium">Puzzles</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">school</span>
+<span class="text-[10px] font-medium">Learn</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">live_tv</span>
+<span class="text-[10px] font-medium">Watch</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 h-full text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">forum</span>
+<span class="text-[10px] font-medium">Social</span>
+</a>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-1 w-full"></div>
+</nav>
+</div>
+</body></html>

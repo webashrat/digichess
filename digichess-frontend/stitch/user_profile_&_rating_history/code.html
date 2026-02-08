@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chess Profile &amp; Rating History</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e2430", // Slightly lighter than background-dark
+                        "border-light": "#e5e7eb",
+                        "border-dark": "#2d3544",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        /* Custom scrollbar for horizontal lists */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col font-display antialiased selection:bg-primary/30">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-border-light dark:border-border-dark px-4 py-3 flex items-center justify-between">
+<button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold">Profile</h1>
+<button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto overflow-x-hidden pb-8">
+<!-- Profile Header Section -->
+<div class="px-4 py-6 flex flex-col items-center">
+<div class="relative mb-4">
+<div class="w-28 h-28 rounded-xl overflow-hidden shadow-lg ring-4 ring-surface-light dark:ring-surface-dark bg-slate-200 dark:bg-slate-700" data-alt="Portrait of a focused chess player looking at a board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCquKCk1teg9QAEtUYArtyLdGfTbirZcg-rJTgAFAbJY2ibrAbfCuW_vdpp8_IOrWQhzi6Ws85uXYTG0rty-UZk9owzX3MwKxsEh2FLue1unyYvU8sHUEi7KBWTBASD31usEGtNhJ2psvOWO_wnovmxWngvL0krO3rCPe9FAA72XYzdNXT9-X7PC95XTusIabl72VGXIVyvnrIQ59cG8I-l_xyJx49cmVjRGSxFqeUhS-86DhDbo_HZ-SC5XT2Z5Fp1OXrmBWaRwBGt'); background-size: cover; background-position: center;">
+</div>
+<!-- Online Indicator -->
+<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-background-light dark:border-background-dark flex items-center justify-center">
+<div class="w-full h-full rounded-full animate-ping opacity-20 bg-green-500 absolute"></div>
+</div>
+</div>
+<div class="text-center space-y-1">
+<div class="flex items-center justify-center gap-2">
+<span class="bg-yellow-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">GM</span>
+<h2 class="text-2xl font-bold tracking-tight">GrandmasterFlash</h2>
+<span class="text-lg">🇺🇸</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">New York, United States</p>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-3 gap-4 w-full max-w-sm mt-6">
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">1,204</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Friends</p>
+</div>
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">5.4k</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Followers</p>
+</div>
+<div class="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
+<p class="text-lg font-bold text-slate-900 dark:text-white">320</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Following</p>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-3 w-full max-w-sm mt-4">
+<button class="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">person_add</span>
+                    Follow
+                </button>
+<button class="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-primary/20 transition-colors flex items-center justify-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">mail</span>
+                    Message
+                </button>
+</div>
+</div>
+<!-- Rating Section -->
+<div class="mt-4">
+<div class="px-4 mb-4">
+<h3 class="text-lg font-bold mb-3">Performance</h3>
+<!-- Format Selector -->
+<div class="bg-surface-light dark:bg-surface-dark p-1 rounded-xl flex gap-1 border border-border-light dark:border-border-dark overflow-x-auto hide-scrollbar">
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Bullet
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg bg-white dark:bg-background-dark shadow-sm text-primary font-bold text-sm ring-1 ring-black/5 dark:ring-white/10">
+                        Blitz
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Rapid
+                    </button>
+<button class="flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        Classical
+                    </button>
+</div>
+</div>
+<!-- Rating Chart Card -->
+<div class="mx-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5 relative overflow-hidden shadow-sm">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Current Rating</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-bold text-slate-900 dark:text-white">2,842</h2>
+<span class="text-green-500 text-sm font-bold flex items-center">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> +12
+                            </span>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">Peak</p>
+<p class="text-lg font-bold text-slate-700 dark:text-slate-300">2,910</p>
+</div>
+</div>
+<!-- Chart Visualization (Using CSS/SVG for look & feel without JS lib) -->
+<div class="relative h-48 w-full mt-4 group">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between text-xs text-slate-400 dark:text-slate-600 font-mono pointer-events-none">
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+<div class="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
+</div>
+<!-- Line Graph -->
+<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 50">
+<defs>
+<lineargradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#135bec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#135bec" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path class="drop-shadow-lg" d="M0,40 C10,38 20,42 30,30 C40,18 50,25 60,20 C70,15 80,18 90,10 C95,6 100,5 100,5" fill="none" stroke="#135bec" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M0,40 C10,38 20,42 30,30 C40,18 50,25 60,20 C70,15 80,18 90,10 C95,6 100,5 100,5 L100,50 L0,50 Z" fill="url(#gradient)" stroke="none"></path>
+<!-- Interactive Point (Mock) -->
+<circle class="fill-background-light dark:fill-background-dark stroke-primary stroke-[1.5]" cx="90" cy="10" r="2.5"></circle>
+</svg>
+<!-- Tooltip Mock -->
+<div class="absolute top-[5%] left-[80%] -translate-x-1/2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs py-1 px-2 rounded font-bold shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        2,835
+                    </div>
+</div>
+<!-- X Axis Labels -->
+<div class="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">
+<span>Jan</span>
+<span>Mar</span>
+<span>May</span>
+<span>Jul</span>
+<span>Sep</span>
+</div>
+</div>
+<!-- Stats Summary Grid -->
+<div class="grid grid-cols-3 gap-3 px-4 mt-4">
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-green-500 font-bold text-lg">52%</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Win Rate</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-slate-500 dark:text-slate-300 font-bold text-lg">1,029</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Games</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
+<span class="text-primary font-bold text-lg">98th</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Percentile</span>
+</div>
+</div>
+</div>
+<!-- Recent Games List -->
+<div class="mt-8 px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Recent Games</h3>
+<button class="text-primary text-sm font-semibold hover:underline">View All</button>
+</div>
+<div class="space-y-3">
+<!-- Game Item: Win -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-green-500 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-green-500 uppercase">Win</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            1-0
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. ChessKing12</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2300</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Sicilian Defense: Najdorf Variation</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">2h ago</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+<!-- Game Item: Loss -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-red-500 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-red-500 uppercase">Loss</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            0-1
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. PawnStar</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2150</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Queen's Gambit Declined</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">Yesterday</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+<!-- Game Item: Draw -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer shadow-sm">
+<div class="w-1.5 h-12 rounded-full bg-slate-400 shrink-0"></div>
+<div class="flex flex-col items-center gap-1 shrink-0">
+<span class="text-xs font-bold text-slate-500 uppercase">Draw</span>
+<div class="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
+                            ½-½
+                        </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<p class="font-bold text-sm truncate">vs. MagnusEffect</p>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">2850</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Ruy Lopez: Berlin Defense</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] text-slate-400 whitespace-nowrap">2 days ago</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Simple Bottom Nav for Context -->
+<div class="sticky bottom-0 border-t border-border-light dark:border-border-dark bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md pb-safe">
+<div class="flex justify-around items-center h-16">
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">sports_esports</span>
+<span class="text-[10px] font-medium">Play</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined filled">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-medium">Social</span>
+</button>
+</div>
+</div>
+</body></html>

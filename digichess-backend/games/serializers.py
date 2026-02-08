@@ -38,6 +38,7 @@ class GameSerializer(serializers.ModelSerializer):
     rated = serializers.BooleanField(required=False, default=True)
     current_fen = serializers.CharField(read_only=True)
     legal_moves = serializers.SerializerMethodField(read_only=True)
+    legal_moves_uci = serializers.SerializerMethodField(read_only=True)
     first_move_deadline = serializers.SerializerMethodField(read_only=True)
     first_move_color = serializers.SerializerMethodField(read_only=True)
     move_count = serializers.SerializerMethodField(read_only=True)
@@ -69,6 +70,7 @@ class GameSerializer(serializers.ModelSerializer):
             "moves",
             "current_fen",
             "legal_moves",
+            "legal_moves_uci",
             "rematch_requested_by",
             "draw_offer_by",
             "created_at",
@@ -96,6 +98,13 @@ class GameSerializer(serializers.ModelSerializer):
         try:
             board = chess.Board(obj.current_fen or chess.STARTING_FEN)
             return [board.san(mv) for mv in board.legal_moves]
+        except Exception:
+            return []
+
+    def get_legal_moves_uci(self, obj):
+        try:
+            board = chess.Board(obj.current_fen or chess.STARTING_FEN)
+            return [mv.uci() for mv in board.legal_moves]
         except Exception:
             return []
 
@@ -167,6 +176,7 @@ class GameSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         opponent_id = validated_data.pop("opponent_id", None)
+        matchmaking = bool(self.context.get("matchmaking"))
         preferred_color = validated_data.pop("preferred_color", "white") or "white"
         initial_time = validated_data.pop("initial_time_seconds", None)
         increment = validated_data.pop("increment_seconds", None)
@@ -176,21 +186,7 @@ class GameSerializer(serializers.ModelSerializer):
         black_increment = validated_data.pop("black_increment_seconds", None)
         requester = self.context["request"].user
         if opponent_id is None:
-            active_ids = set(
-                Game.objects.filter(status=Game.STATUS_ACTIVE).values_list("white_id", flat=True)
-            ) | set(
-                Game.objects.filter(status=Game.STATUS_ACTIVE).values_list("black_id", flat=True)
-            )
-            candidate = (
-                User.objects.filter(is_online=True)
-                .exclude(id=requester.id)
-                .exclude(id__in=active_ids)
-                .order_by("?")
-                .first()
-            )
-            if not candidate:
-                raise serializers.ValidationError("No available opponent found.")
-            opponent = candidate
+            raise serializers.ValidationError("Matchmaking required. Please use the queue to find a game.")
         else:
             try:
                 opponent = User.objects.get(id=opponent_id)
@@ -274,72 +270,49 @@ class GameSerializer(serializers.ModelSerializer):
             **validated_data,
         )
         challenge_expiry_hours = CHALLENGE_EXPIRY_MINUTES / 60
-        # Send notification to opponent (incoming challenge)
-        try:
-            from notifications.views import create_notification
-            notification = create_notification(
-                user=opponent,
-                notification_type='game_challenge',
-                title='New Game Challenge',
-                message=f"{requester.username or requester.email} challenged you to a {time_control} game",
-                data={
-                    'game_id': game.id,
-                    'from_user_id': requester.id,
-                    'from_username': requester.username,
-                    'time_control': time_control,
-                    'white_time': white_time,
-                    'black_time': black_time,
-                    'white_inc': white_increment,
-                    'black_inc': black_increment,
-                },
-                expires_in_hours=challenge_expiry_hours
-            )
-            import sys
-            print(f"[game_create] Notification created for opponent {opponent.id} (username: {opponent.username}): notification_id={notification.id}, game_id={game.id}", file=sys.stdout)
-        except Exception as e:
-            import sys
-            import traceback
-            print(f"[game_create] Failed to create notification for opponent {opponent.id}: {e}", file=sys.stderr)
-            print(f"[game_create] Traceback: {traceback.format_exc()}", file=sys.stderr)
-
-        # Send notification to creator (outgoing challenge)
-        try:
-            from notifications.views import create_notification
-            create_notification(
-                user=requester,
-                notification_type='game_challenge',
-                title='Challenge Sent',
-                message=f"Challenge sent to {opponent.username or opponent.email}",
-                data={
-                    'game_id': game.id,
-                    'from_user_id': requester.id,
-                    'from_username': requester.username,
-                    'to_user_id': opponent.id,
-                    'to_username': opponent.username or opponent.email,
-                    'time_control': time_control,
-                    'white_time': white_time,
-                    'black_time': black_time,
-                    'white_inc': white_increment,
-                    'black_inc': black_increment,
-                },
-                expires_in_hours=challenge_expiry_hours
-            )
-        except Exception:
-            pass
+        # Send notification only for direct challenges/custom games (not matchmaking)
+        if opponent_id and not matchmaking:
+            try:
+                from notifications.views import create_notification
+                notification = create_notification(
+                    user=opponent,
+                    notification_type='game_challenge',
+                    title='New Game Challenge',
+                    message=f"{requester.username or requester.email} challenged you to a {time_control} game",
+                    data={
+                        'game_id': game.id,
+                        'from_user_id': requester.id,
+                        'from_username': requester.username,
+                        'time_control': time_control,
+                        'white_time': white_time,
+                        'black_time': black_time,
+                        'white_inc': white_increment,
+                        'black_inc': black_increment,
+                    },
+                    expires_in_hours=challenge_expiry_hours
+                )
+                import sys
+                print(f"[game_create] Notification created for opponent {opponent.id} (username: {opponent.username}): notification_id={notification.id}, game_id={game.id}", file=sys.stdout)
+            except Exception as e:
+                import sys
+                import traceback
+                print(f"[game_create] Failed to create notification for opponent {opponent.id}: {e}", file=sys.stderr)
+                print(f"[game_create] Traceback: {traceback.format_exc()}", file=sys.stderr)
         
-        # Also send email notification
-        send_email_notification(
-            "game_challenge",
-            opponent.email,
-            {
-                "from_user": requester.name or requester.email,
-                "time_summary": time_control,
-                "white_time": white_time,
-                "black_time": black_time,
-                "white_inc": white_increment,
-                "black_inc": black_increment,
-            },
-        )
+        # Also send email notification for direct challenges only
+        if opponent_id and not matchmaking:
+            send_email_notification(
+                "game_challenge",
+                opponent.email,
+                {
+                    "from_user": requester.name or requester.email,
+                    "time_summary": time_control,
+                    "white_time": white_time,
+                    "black_time": black_time,
+                    "white_inc": white_increment,
+                    "black_inc": black_increment,
+                },
+            )
         return game
 
 

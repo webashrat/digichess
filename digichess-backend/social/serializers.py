@@ -11,21 +11,35 @@ User = get_user_model()
 class FriendRequestSerializer(serializers.ModelSerializer):
     from_user = UserSerializer(read_only=True)
     to_user = UserSerializer(read_only=True)
-    to_email = serializers.EmailField(write_only=True)
+    to_email = serializers.EmailField(write_only=True, required=False)
+    to_user_id = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
         model = FriendRequest
-        fields = ("id", "from_user", "to_user", "to_email", "status", "created_at", "responded_at")
+        fields = ("id", "from_user", "to_user", "to_email", "to_user_id", "status", "created_at", "responded_at")
         read_only_fields = ("status", "created_at", "responded_at")
 
-    def validate_to_email(self, value):
+    def validate(self, attrs):
         requester = self.context["request"].user
-        if requester.email.lower() == value.lower():
+        to_user = None
+        if attrs.get("to_user_id") is not None:
+            try:
+                to_user = User.objects.get(id=attrs["to_user_id"])
+            except User.DoesNotExist:
+                raise serializers.ValidationError("User not found.")
+        elif attrs.get("to_email"):
+            value = attrs["to_email"].lower()
+            if requester.email and requester.email.lower() == value:
+                raise serializers.ValidationError("You cannot send a friend request to yourself.")
+            try:
+                to_user = User.objects.get(email=value)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("User with this email does not exist.")
+        else:
+            raise serializers.ValidationError("to_email or to_user_id is required.")
+
+        if to_user == requester:
             raise serializers.ValidationError("You cannot send a friend request to yourself.")
-        try:
-            to_user = User.objects.get(email=value.lower())
-        except User.DoesNotExist:
-            raise serializers.ValidationError("User with this email does not exist.")
 
         if Friendship.are_friends(requester, to_user):
             raise serializers.ValidationError("You are already friends.")
@@ -41,12 +55,28 @@ class FriendRequestSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This user already sent you a request.")
 
         self.context["to_user"] = to_user
-        return value
+        return attrs
 
     def create(self, validated_data):
         requester = self.context["request"].user
         to_user = self.context["to_user"]
         friend_request = FriendRequest.objects.create(from_user=requester, to_user=to_user)
+        try:
+            from notifications.views import create_notification
+            create_notification(
+                user=to_user,
+                notification_type='friend_request',
+                title='New Friend Request',
+                message=f"{requester.username or requester.email} sent you a friend request",
+                data={
+                    'friend_request_id': friend_request.id,
+                    'from_user_id': requester.id,
+                    'from_username': requester.username,
+                    'from_email': requester.email,
+                },
+            )
+        except Exception:
+            pass
         send_email_notification(
             "friend_request",
             to_user.email,

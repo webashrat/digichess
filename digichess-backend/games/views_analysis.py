@@ -2,24 +2,18 @@ import chess
 import chess.engine
 import chess.pgn
 from io import StringIO
-from pathlib import Path
-from django.conf import settings
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import requests
-import os
 import logging
 
 from .models import Game, GameAnalysis
 from .serializers import GameSerializer
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
 from .lichess_api import analyze_position_with_lichess, get_cloud_evaluation, get_opening_explorer, get_tablebase
-from .tasks import analyze_game_full_async
 from .analysis_service import run_full_analysis
-from config.celery import app as celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +26,6 @@ def _parse_bool(value, default: bool = False) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on"}
     return bool(value)
-
-
-ANALYSIS_QUEUE_STALE_SECONDS = int(os.getenv("ANALYSIS_QUEUE_STALE_SECONDS", "30"))
-ANALYSIS_SYNC_FALLBACK = _parse_bool(
-    os.getenv("ANALYSIS_SYNC_FALLBACK"),
-    default=getattr(settings, "DEBUG", False),
-)
 
 
 def _format_dt(value):
@@ -72,15 +59,6 @@ def _analysis_is_complete(analysis: dict | None) -> bool:
     return total_moves == 0 or len(moves) >= total_moves
 
 
-def _celery_worker_available() -> bool:
-    try:
-        inspect = celery_app.control.inspect(timeout=1)
-        response = inspect.ping() or {}
-        return bool(response)
-    except Exception:
-        return False
-
-
 class GameFullAnalysisView(APIView):
     """Full game analysis with Stockfish or Lichess API"""
     permission_classes = [permissions.AllowAny]
@@ -96,7 +74,6 @@ class GameFullAnalysisView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        prefer_lichess = False
         force = _parse_bool(request.data.get("force"), default=False)
 
         analysis_record, created = GameAnalysis.objects.get_or_create(
@@ -104,66 +81,17 @@ class GameFullAnalysisView(APIView):
             defaults={"status": GameAnalysis.STATUS_QUEUED},
         )
 
-        if not created:
-            if analysis_record.status == GameAnalysis.STATUS_COMPLETED and analysis_record.analysis and not force:
-                if _analysis_is_complete(analysis_record.analysis):
-                    return Response(_serialize_analysis_record(analysis_record))
-                analysis_record.status = GameAnalysis.STATUS_QUEUED
-                analysis_record.requested_at = timezone.now()
-                analysis_record.started_at = None
-                analysis_record.completed_at = None
-                analysis_record.error = ""
-                analysis_record.source = ""
-                analysis_record.analysis = None
-                analysis_record.save(
-                    update_fields=[
-                        "status",
-                        "requested_at",
-                        "started_at",
-                        "completed_at",
-                        "error",
-                        "source",
-                        "analysis",
-                        "updated_at",
-                    ]
-                )
+        if (
+            analysis_record.status == GameAnalysis.STATUS_COMPLETED
+            and analysis_record.analysis
+            and _analysis_is_complete(analysis_record.analysis)
+        ):
+            return Response(_serialize_analysis_record(analysis_record))
 
-            if analysis_record.status in [GameAnalysis.STATUS_QUEUED, GameAnalysis.STATUS_RUNNING] and not force:
-                if analysis_record.requested_at:
-                    age_seconds = (timezone.now() - analysis_record.requested_at).total_seconds()
-                    if age_seconds > ANALYSIS_QUEUE_STALE_SECONDS and ANALYSIS_SYNC_FALLBACK:
-                        try:
-                            analysis_data, source, _engine_path = run_full_analysis(
-                                game,
-                                prefer_lichess=False,
-                                time_per_move=0.08,
-                                depth=12,
-                                max_moves=None,
-                                allow_lichess_fallback=True,
-                            )
-                            analysis_record.analysis = analysis_data
-                            analysis_record.source = source
-                            analysis_record.status = GameAnalysis.STATUS_COMPLETED
-                            analysis_record.completed_at = timezone.now()
-                            analysis_record.error = ""
-                            analysis_record.save(
-                                update_fields=[
-                                    "analysis",
-                                    "source",
-                                    "status",
-                                    "completed_at",
-                                    "error",
-                                    "updated_at",
-                                ]
-                            )
-                            return Response(_serialize_analysis_record(analysis_record))
-                        except Exception:
-                            pass
-                return Response(_serialize_analysis_record(analysis_record, include_analysis=False))
-
-        analysis_record.status = GameAnalysis.STATUS_QUEUED
-        analysis_record.requested_at = timezone.now()
-        analysis_record.started_at = None
+        now = timezone.now()
+        analysis_record.status = GameAnalysis.STATUS_RUNNING
+        analysis_record.requested_at = now
+        analysis_record.started_at = now
         analysis_record.completed_at = None
         analysis_record.error = ""
         analysis_record.source = ""
@@ -183,51 +111,39 @@ class GameFullAnalysisView(APIView):
             ]
         )
 
-        worker_available = _celery_worker_available()
-
-        if not worker_available and ANALYSIS_SYNC_FALLBACK:
-            try:
-                analysis_data, source, _engine_path = run_full_analysis(
-                    game,
-                    prefer_lichess=False,
-                    time_per_move=0.08,
-                    depth=12,
-                    max_moves=None,
-                    allow_lichess_fallback=True,
-                )
-                analysis_record.analysis = analysis_data
-                analysis_record.source = source
-                analysis_record.status = GameAnalysis.STATUS_COMPLETED
-                analysis_record.completed_at = timezone.now()
-                analysis_record.error = ""
-                analysis_record.save(
-                    update_fields=[
-                        "analysis",
-                        "source",
-                        "status",
-                        "completed_at",
-                        "error",
-                        "updated_at",
-                    ]
-                )
-                return Response(_serialize_analysis_record(analysis_record))
-            except Exception as exc:
-                analysis_record.status = GameAnalysis.STATUS_FAILED
-                analysis_record.error = str(exc)
-                analysis_record.completed_at = timezone.now()
-                analysis_record.save(update_fields=["status", "error", "completed_at", "updated_at"])
-                return Response(_serialize_analysis_record(analysis_record), status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        if not worker_available:
+        try:
+            analysis_data, source, _engine_path = run_full_analysis(
+                game,
+                prefer_lichess=False,
+                time_per_move=0.1,
+                depth=12,
+                max_moves=None,
+                allow_lichess_fallback=False,
+            )
+            if not _analysis_is_complete(analysis_data):
+                raise Exception("Analysis incomplete: not all moves were analyzed.")
+            analysis_record.analysis = analysis_data
+            analysis_record.source = source
+            analysis_record.status = GameAnalysis.STATUS_COMPLETED
+            analysis_record.completed_at = timezone.now()
+            analysis_record.error = ""
+            analysis_record.save(
+                update_fields=[
+                    "analysis",
+                    "source",
+                    "status",
+                    "completed_at",
+                    "error",
+                    "updated_at",
+                ]
+            )
+            return Response(_serialize_analysis_record(analysis_record))
+        except Exception as exc:
             analysis_record.status = GameAnalysis.STATUS_FAILED
-            analysis_record.error = "Analysis worker is not running. Start Celery to compute full analysis."
+            analysis_record.error = str(exc)
             analysis_record.completed_at = timezone.now()
             analysis_record.save(update_fields=["status", "error", "completed_at", "updated_at"])
             return Response(_serialize_analysis_record(analysis_record), status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        analyze_game_full_async.delay(game.id, prefer_lichess=prefer_lichess, force=force)
-
-        return Response(_serialize_analysis_record(analysis_record, include_analysis=False))
 
     def _analyze_with_stockfish(self, game: Game, engine_path: str):
         """Analyze game with local Stockfish"""
@@ -276,10 +192,8 @@ class GameFullAnalysisView(APIView):
         
         try:
             with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-                # Analyze each position
-                # Start from the initial position (or custom starting FEN if specified)
-                start_fen = game.current_fen if game.current_fen and game.current_fen != chess.STARTING_FEN else None
-                temp_board = chess.Board(start_fen) if start_fen else chess.Board()
+                # Analyze each position from the standard starting position.
+                temp_board = chess.Board()
                 
                 for i, move_san in enumerate(moves):
                     try:
@@ -523,76 +437,18 @@ class GameAnalysisRequestView(APIView):
                 }
             )
 
-        now = timezone.now()
         if (
             analysis_record.status == GameAnalysis.STATUS_COMPLETED
             and analysis_record.analysis
             and not _analysis_is_complete(analysis_record.analysis)
         ):
-            analysis_record.status = GameAnalysis.STATUS_QUEUED
-            analysis_record.requested_at = now
-            analysis_record.started_at = None
-            analysis_record.completed_at = None
-            analysis_record.error = ""
-            analysis_record.source = ""
+            analysis_record.status = GameAnalysis.STATUS_FAILED
+            analysis_record.error = "Analysis incomplete. Please run analysis again."
+            analysis_record.completed_at = timezone.now()
             analysis_record.analysis = None
             analysis_record.save(
-                update_fields=[
-                    "status",
-                    "requested_at",
-                    "started_at",
-                    "completed_at",
-                    "error",
-                    "source",
-                    "analysis",
-                    "updated_at",
-                ]
+                update_fields=["status", "error", "completed_at", "analysis", "updated_at"]
             )
-            analyze_game_full_async.delay(game.id, prefer_lichess=False, force=True)
-        if analysis_record.status in [GameAnalysis.STATUS_QUEUED, GameAnalysis.STATUS_RUNNING]:
-            # Ensure quick eval is available for immediate UI feedback.
-            # Detect stale queued/running jobs.
-            started_at = analysis_record.started_at or analysis_record.requested_at
-            age_seconds = (now - started_at).total_seconds() if started_at else 0
-            if age_seconds > ANALYSIS_QUEUE_STALE_SECONDS:
-                if ANALYSIS_SYNC_FALLBACK:
-                    try:
-                        analysis_data, source, _engine_path = run_full_analysis(
-                            game,
-                            prefer_lichess=False,
-                            time_per_move=0.08,
-                            depth=12,
-                            max_moves=None,
-                            allow_lichess_fallback=True,
-                        )
-                        analysis_record.analysis = analysis_data
-                        analysis_record.source = source
-                        analysis_record.status = GameAnalysis.STATUS_COMPLETED
-                        analysis_record.completed_at = now
-                        analysis_record.error = ""
-                        analysis_record.save(
-                            update_fields=[
-                                "analysis",
-                                "source",
-                                "status",
-                                "completed_at",
-                                "error",
-                                "updated_at",
-                            ]
-                        )
-                    except Exception as exc:
-                        analysis_record.status = GameAnalysis.STATUS_FAILED
-                        analysis_record.error = str(exc)
-                        analysis_record.completed_at = now
-                        analysis_record.save(update_fields=["status", "error", "completed_at", "updated_at"])
-                else:
-                    worker_available = _celery_worker_available()
-                    if worker_available:
-                        # Requeue the job in case it was dropped.
-                        analysis_record.status = GameAnalysis.STATUS_QUEUED
-                        analysis_record.requested_at = now
-                        analysis_record.save(update_fields=["status", "requested_at", "updated_at"])
-                        analyze_game_full_async.delay(game.id, prefer_lichess=False, force=True)
 
         payload = _serialize_analysis_record(
             analysis_record,

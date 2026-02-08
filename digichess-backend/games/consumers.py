@@ -55,6 +55,9 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
             return
         
         message = data.get("message", "").strip()
+        room = data.get("room", "players")
+        if room not in ["players", "spectators"]:
+            room = "players"
         if not message:
             print(f"[GameChat] Empty message, ignoring", file=sys.stdout)
             return
@@ -77,6 +80,14 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
         if not (is_player or is_spectator):
             print(f"[GameChat] User {user.username} not authorized to chat in game {self.game_id}", file=sys.stderr)
             return
+
+        if room == "players" and not is_player:
+            print(f"[GameChat] User {user.username} attempted players chat without access", file=sys.stderr)
+            return
+
+        if room == "spectators" and is_player:
+            print(f"[GameChat] Player {user.username} attempted spectators chat", file=sys.stderr)
+            return
         
         # Broadcast chat message to all connected clients
         chat_payload = {
@@ -84,6 +95,7 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
             "user": user.username or f"User {user.id}",
             "user_id": user.id,
             "message": message,
+            "room": room,
         }
         print(f"[GameChat] Broadcasting chat message: {chat_payload}", file=sys.stdout)
         
