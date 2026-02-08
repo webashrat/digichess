@@ -1354,7 +1354,7 @@ export default function GamePage() {
 
     return (
         <Layout showHeader={false} showBottomNav={false}>
-            <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden bg-background-light dark:bg-background-dark relative">
+            <div className="flex-1 flex flex-col min-h-[100dvh] md:h-[100dvh] overflow-y-auto md:overflow-hidden bg-background-light dark:bg-background-dark relative">
                 {!game ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-sm text-slate-500 gap-3">
                         <div>{displayError || 'Loading game...'}</div>
@@ -1466,12 +1466,12 @@ export default function GamePage() {
                                 </div>
                                 <div className="pr-1 space-y-4">
                                     <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-gray-800">
-                                        <div className="grid grid-cols-[3rem_1fr_1fr] text-xs text-slate-500 font-medium py-1.5 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-gray-800">
+                                        <div className="grid grid-cols-[2.5rem_1fr_1fr] sm:grid-cols-[3rem_1fr_1fr] text-xs text-slate-500 font-medium py-1.5 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-gray-800">
                                             <div className="text-center">#</div>
                                             <div className="pl-2">White</div>
                                             <div className="pl-2">Black</div>
                                         </div>
-                                        <div className="max-h-[280px] overflow-y-auto no-scrollbar">
+                                        <div className="max-h-[200px] sm:max-h-[280px] overflow-y-auto no-scrollbar">
                                             {movePairs.length ? (
                                                 movePairs.map((pair, index) => {
                                                     const whiteIndex = index * 2 + 1;
@@ -1481,7 +1481,7 @@ export default function GamePage() {
                                                     return (
                                                         <div
                                                             key={`${pair.white || 'move'}-${index}`}
-                                                            className={`grid grid-cols-[3rem_1fr_1fr] py-1.5 text-sm border-b border-slate-200/60 dark:border-gray-800/50 ${index % 2 === 1 ? 'bg-slate-100/50 dark:bg-white/5' : ''}`}
+                                                            className={`grid grid-cols-[2.5rem_1fr_1fr] sm:grid-cols-[3rem_1fr_1fr] py-1.5 text-sm border-b border-slate-200/60 dark:border-gray-800/50 ${index % 2 === 1 ? 'bg-slate-100/50 dark:bg-white/5' : ''}`}
                                                         >
                                                             <div className="text-slate-500 font-mono text-center">{index + 1}.</div>
                                                             <button
@@ -1638,7 +1638,7 @@ export default function GamePage() {
                                     ) : null}
                                     <div
                                         ref={boardRef}
-                                        className="aspect-square w-[min(94vw,620px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        className="aspect-square w-[min(92vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[78vw] sm:max-h-[70vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
                                     >
                                     <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
                                         {Array.from({ length: 8 }).flatMap((_, displayRow) => (
@@ -1880,7 +1880,7 @@ export default function GamePage() {
                                             ) : null}
                                         </div>
                                     ) : null}
-                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 flex flex-col min-h-[280px]">
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 flex flex-col min-h-[200px] sm:min-h-[280px]">
                                         {chatNotice ? (
                                             <div className="px-3 pt-2 text-[11px] text-slate-500">{chatNotice}</div>
                                         ) : null}
