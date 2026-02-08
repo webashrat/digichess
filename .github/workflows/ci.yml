@@ -124,36 +124,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          # Disable cache to avoid authentication issues
+          cache: npm
+          cache-dependency-path: digichess-frontend/package-lock.json
 
-      - name: Remove package-lock.json with private registry
-        run: |
-          # package-lock.json contains private registry references
-          # Remove it and regenerate from package.json (public packages only)
-          rm -f package-lock.json
-          
       - name: Set npm registry to public
         run: |
           npm config set registry https://registry.npmjs.org/
           
       - name: Install dependencies
+        working-directory: digichess-frontend
         run: |
-          npm install --no-audit --legacy-peer-deps
+          npm ci --no-audit --legacy-peer-deps
 
       - name: Lint TypeScript/React
+        working-directory: digichess-frontend
         run: |
           npm install --save-dev eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-react || true
           npx eslint src --ext .ts,.tsx --max-warnings 0 || echo "ESLint check completed (non-blocking)"
         continue-on-error: true
 
       - name: Build frontend
+        working-directory: digichess-frontend
         run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: dist/
+          path: digichess-frontend/dist/
           retention-days: 7
 
   # Docker Build Test
