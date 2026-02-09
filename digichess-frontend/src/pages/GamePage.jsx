@@ -1045,6 +1045,7 @@ export default function GamePage() {
         return { white: Math.max(0, Math.min(100, white)), black: Math.max(0, 100 - white) };
     }, [effectiveEval]);
     const showEvalBar = showAnalysis && effectiveEval != null;
+    const evalBarFlip = isUserWhite;
     const activeClock = liveClock.turn === 'white' ? liveClock.white : liveClock.black;
 
     const topAvatar = topPlayer?.profile_pic || topPlayer?.avatar || topPlayer?.image || '';
@@ -1089,6 +1090,8 @@ export default function GamePage() {
     const showMoveHints = Boolean(selectedSquare);
     const topClockDisplay = topClock;
     const bottomClockDisplay = bottomClock;
+    const topClockActive = liveClock.turn === topColor;
+    const bottomClockActive = liveClock.turn === bottomColor;
     const firstMoveLabel = 'Play your first move';
 
     const outcome = useMemo(() => {
@@ -1529,28 +1532,26 @@ export default function GamePage() {
                     setLegalTargets([]);
                     return;
                 }
-                if (legalTargets.includes(squareCoord)) {
-                    setSelectedSquare(null);
-                    setLegalTargets([]);
-                    const promotionOptions = getPromotionOptions(selectedSquare, squareCoord, true);
-                    if (promotionOptions.length && !autoQueenEnabled) {
-                        const premovePiece = squareMap[selectedSquare];
-                        const premoveIsWhite = premovePiece === premovePiece?.toUpperCase();
-                        setPendingPromotion({
-                            from: selectedSquare,
-                            to: squareCoord,
-                            options: promotionOptions,
-                            color: premoveIsWhite ? 'w' : 'b',
-                            mode: 'premove',
-                        });
+                if (selectedSquare && selectedSquare !== squareCoord) {
+                    const premovePiece = squareMap[selectedSquare];
+                    if (premovePiece && premovePiece.toLowerCase() === 'p' && (squareCoord[1] === '1' || squareCoord[1] === '8')) {
+                        if (!autoQueenEnabled) {
+                            const premoveIsWhite = premovePiece === premovePiece?.toUpperCase();
+                            setPendingPromotion({
+                                from: selectedSquare,
+                                to: squareCoord,
+                                options: ['q', 'r', 'b', 'n'],
+                                color: premoveIsWhite ? 'w' : 'b',
+                                mode: 'premove',
+                            });
+                            return;
+                        }
+                        setPremove({ from: selectedSquare, to: squareCoord, promotion: 'q' });
+                        setPremoveNotice('Premove set.');
                         return;
                     }
-                    const uci = resolvePremoveUci(selectedSquare, squareCoord);
-                    if (uci) {
-                        const promotion = uci.length === 5 ? uci[4] : undefined;
-                        setPremove({ from: selectedSquare, to: squareCoord, promotion });
-                        setPremoveNotice('Premove set.');
-                    }
+                    setPremove({ from: selectedSquare, to: squareCoord });
+                    setPremoveNotice('Premove set.');
                     return;
                 }
                 if (piece && isOwnPiece(piece)) {
@@ -1712,28 +1713,27 @@ export default function GamePage() {
                             await submitMoveFromUci(uciMove);
                         }
                     }
-                    } else if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
-                    const targets = resolvePremoveTargets(fromSquare);
-                    if (targets.includes(targetSquare)) {
-                        const promotionOptions = getPromotionOptions(fromSquare, targetSquare, true);
-                        if (promotionOptions.length && !autoQueenEnabled) {
-                            const piece = squareMap[fromSquare];
-                            const isWhitePiece = piece === piece?.toUpperCase();
-                            setPendingPromotion({
-                                from: fromSquare,
-                                to: targetSquare,
-                                options: promotionOptions,
-                                color: isWhitePiece ? 'w' : 'b',
-                                mode: 'premove',
-                            });
+                } else if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
+                    if (targetSquare && fromSquare && targetSquare !== fromSquare) {
+                        const piece = squareMap[fromSquare];
+                        if (piece && piece.toLowerCase() === 'p' && (targetSquare[1] === '1' || targetSquare[1] === '8')) {
+                            if (!autoQueenEnabled) {
+                                const isWhitePiece = piece === piece?.toUpperCase();
+                                setPendingPromotion({
+                                    from: fromSquare,
+                                    to: targetSquare,
+                                    options: ['q', 'r', 'b', 'n'],
+                                    color: isWhitePiece ? 'w' : 'b',
+                                    mode: 'premove',
+                                });
+                                return;
+                            }
+                            setPremove({ from: fromSquare, to: targetSquare, promotion: 'q' });
+                            setPremoveNotice('Premove set.');
                             return;
                         }
-                            const uciMove = resolvePremoveUci(fromSquare, targetSquare);
-                        if (uciMove) {
-                            const promotion = uciMove.length === 5 ? uciMove[4] : undefined;
-                            setPremove({ from: fromSquare, to: targetSquare, promotion });
-                            setPremoveNotice('Premove set.');
-                        }
+                        setPremove({ from: fromSquare, to: targetSquare });
+                        setPremoveNotice('Premove set.');
                     }
                 }
             }
@@ -2167,8 +2167,8 @@ export default function GamePage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        <div className="bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 min-w-[80px] text-center">
-                                            <span className="text-xl font-bold font-mono text-gray-800 dark:text-gray-100">
+                                        <div className={`${topClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-1.5 min-w-[80px] text-center`}>
+                                            <span className={`text-xl font-bold font-mono ${topClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                                                 {formatClock(topClockDisplay)}
                                             </span>
                                         </div>
@@ -2177,7 +2177,7 @@ export default function GamePage() {
 
                                 <div className="flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
                                     {showEvalBar ? (
-                                        <div className="hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
+                                        <div className={`hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shrink-0 relative shadow-inner`}>
                                             <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
                                         </div>
                                     ) : null}
@@ -2364,8 +2364,8 @@ export default function GamePage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        <div className="bg-primary dark:bg-primary border border-blue-400 rounded-lg px-3 py-2 min-w-[90px] text-center shadow-[0_0_15px_rgba(19,91,236,0.4)]">
-                                            <span className="text-2xl font-bold font-mono text-white">
+                                        <div className={`${bottomClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-2 min-w-[90px] text-center`}>
+                                            <span className={`text-2xl font-bold font-mono ${bottomClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                                                 {formatClock(bottomClockDisplay)}
                                             </span>
                                         </div>
