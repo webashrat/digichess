@@ -33,6 +33,7 @@ export default function Header({
         setPage: setNotificationsPage,
     } = useNotifications({ pageSize: 10 });
     const [showNotifications, setShowNotifications] = useState(false);
+    const [notificationError, setNotificationError] = useState(null);
     const navigate = useNavigate();
     const handleBack = onBack || (() => window.history.back());
     const showRightAction = Boolean(rightAction);
@@ -41,6 +42,7 @@ export default function Header({
         setShowNotifications((prev) => {
             const next = !prev;
             if (next) setNotificationsPage(1);
+            if (next) setNotificationError(null);
             return next;
         });
         markAllRead();
@@ -67,7 +69,9 @@ export default function Header({
                 }
             }
         } catch (err) {
-            // ignore
+            if (notification.notification_type === 'game_challenge' && decision === 'accept' && err?.status === 400) {
+                setNotificationError('Challenge is no longer available.');
+            }
         } finally {
             removeNotification(notification.id);
         }
@@ -118,6 +122,9 @@ export default function Header({
                                 <span className="material-symbols-outlined text-base">close</span>
                             </button>
                         </div>
+                        {notificationError ? (
+                            <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>
+                        ) : null}
                         {notifications.length ? (
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {notifications.map((note) => (

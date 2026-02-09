@@ -127,6 +127,11 @@ export const fetchUserGames = (username, params = {}) => {
 export const fetchPublicAccount = (username) =>
     api.get(`/public/accounts/${username}/`);
 
+export const searchPublicUsers = (search, params = {}) => {
+    const query = new URLSearchParams({ search, ...params }).toString();
+    return api.get(`/public/accounts/?${query}`);
+};
+
 export const sendFriendRequest = (payload) => {
     if (payload && typeof payload === 'object') {
         return api.post('/social/friend-requests/', payload);

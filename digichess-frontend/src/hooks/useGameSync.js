@@ -63,6 +63,8 @@ export default function useGameSync({ gameId, spectate = false, token }) {
     };
 
     const mergeState = (payload) => {
+        const hasDrawOffer = Object.prototype.hasOwnProperty.call(payload, 'draw_offer_by');
+        const hasGameDrawOffer = payload.game && Object.prototype.hasOwnProperty.call(payload.game, 'draw_offer_by');
         setState((prev) => {
             const nextLegalMoves = payload.legal_moves
                 ?? payload.game_state?.legal_moves?.san
@@ -70,16 +72,20 @@ export default function useGameSync({ gameId, spectate = false, token }) {
             const nextLegalMovesUci = payload.legal_moves_uci
                 ?? payload.game_state?.legal_moves?.uci
                 ?? prev?.legal_moves_uci;
-            const nextDrawOffer = payload.draw_offer_by ?? prev?.draw_offer_by;
-            const nextFen = payload.fen ?? prev?.fen;
-            const nextMoves = payload.moves ?? prev?.moves;
-            const nextStatus = payload.status ?? prev?.status;
-            const nextResult = payload.result ?? prev?.result;
-            const nextDeadline = payload.first_move_deadline ?? prev?.first_move_deadline;
-            const nextColor = payload.first_move_color ?? prev?.first_move_color;
-            const nextWhite = payload.white_time_left ?? prev?.white_time_left;
-            const nextBlack = payload.black_time_left ?? prev?.black_time_left;
-            const nextTurn = payload.turn ?? deriveTurnFromFen(payload.fen) ?? prev?.turn;
+            const nextDrawOffer = hasDrawOffer
+                ? payload.draw_offer_by
+                : (hasGameDrawOffer ? payload.game.draw_offer_by : prev?.draw_offer_by);
+            const nextFen = payload.fen ?? payload.game?.current_fen ?? prev?.fen;
+            const nextMoves = payload.moves ?? payload.game?.moves ?? prev?.moves;
+            const nextStatus = payload.status ?? payload.game?.status ?? prev?.status;
+            const nextResult = payload.result ?? payload.game?.result ?? prev?.result;
+            const nextDeadline = payload.first_move_deadline ?? payload.game?.first_move_deadline ?? prev?.first_move_deadline;
+            const nextColor = payload.first_move_color ?? payload.game?.first_move_color ?? prev?.first_move_color;
+            const nextWhite = payload.white_time_left ?? payload.game?.white_time_left ?? prev?.white_time_left;
+            const nextBlack = payload.black_time_left ?? payload.game?.black_time_left ?? prev?.black_time_left;
+            const nextTurn = payload.turn
+                ?? deriveTurnFromFen(payload.fen ?? payload.game?.current_fen)
+                ?? prev?.turn;
             const nextLastMove = payload.last_move_at ?? prev?.last_move_at;
             const nextServerTime = payload.server_time ?? prev?.server_time;
             if (
@@ -102,6 +108,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
             return {
                 ...prev,
                 ...payload,
+                status: nextStatus,
+                result: nextResult,
+                first_move_deadline: nextDeadline,
+                first_move_color: nextColor,
                 fen: nextFen,
                 moves: nextMoves,
                 legal_moves: nextLegalMoves,
@@ -109,6 +119,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 draw_offer_by: nextDrawOffer,
                 white_time_left: nextWhite,
                 black_time_left: nextBlack,
+                move_count: payload.move_count ?? payload.game?.move_count ?? prev?.move_count,
                 turn: nextTurn,
                 last_move_at: nextLastMove,
                 server_time: nextServerTime,
@@ -120,7 +131,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 ...payload.game,
                 legal_moves: payload.game?.legal_moves ?? payload.game?.game_state?.legal_moves?.san ?? prev?.legal_moves,
                 legal_moves_uci: payload.game?.legal_moves_uci ?? payload.game?.game_state?.legal_moves?.uci ?? prev?.legal_moves_uci,
-                draw_offer_by: payload.game?.draw_offer_by ?? prev?.draw_offer_by,
+                draw_offer_by: hasGameDrawOffer ? payload.game.draw_offer_by : prev?.draw_offer_by,
             }));
             return;
         }
@@ -137,7 +148,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 first_move_deadline: payload.first_move_deadline ?? prev?.first_move_deadline,
                 first_move_color: payload.first_move_color ?? prev?.first_move_color,
                 legal_moves_uci: payload.legal_moves_uci ?? payload.game_state?.legal_moves?.uci ?? prev?.legal_moves_uci,
-                draw_offer_by: payload.draw_offer_by ?? prev?.draw_offer_by,
+                draw_offer_by: hasDrawOffer ? payload.draw_offer_by : prev?.draw_offer_by,
                 started_at: payload.started_at ?? prev?.started_at,
                 created_at: payload.created_at ?? prev?.created_at,
             }));

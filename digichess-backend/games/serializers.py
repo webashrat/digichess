@@ -42,6 +42,8 @@ class GameSerializer(serializers.ModelSerializer):
     first_move_deadline = serializers.SerializerMethodField(read_only=True)
     first_move_color = serializers.SerializerMethodField(read_only=True)
     move_count = serializers.SerializerMethodField(read_only=True)
+    white_rating_delta = serializers.IntegerField(read_only=True)
+    black_rating_delta = serializers.IntegerField(read_only=True)
 
     rematch_requested_by = serializers.SerializerMethodField()
     draw_offer_by = serializers.SerializerMethodField()
@@ -79,6 +81,8 @@ class GameSerializer(serializers.ModelSerializer):
             "first_move_deadline",
             "first_move_color",
             "move_count",
+            "white_rating_delta",
+            "black_rating_delta",
         )
         read_only_fields = (
             "status",
@@ -92,6 +96,8 @@ class GameSerializer(serializers.ModelSerializer):
             "first_move_deadline",
             "first_move_color",
             "move_count",
+            "white_rating_delta",
+            "black_rating_delta",
         )
 
     def get_legal_moves(self, obj):

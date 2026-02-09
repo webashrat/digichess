@@ -26,6 +26,7 @@ const DEFAULT_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 const BOARD_SETTING_EVENT = 'board-settings-change';
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
+const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 const outcomeToneStyles = {
@@ -98,6 +99,11 @@ export default function GamePage() {
         const stored = localStorage.getItem(LOCAL_STORAGE_SOUND);
         return stored ? stored === 'true' : true;
     });
+    const [autoQueenEnabled, setAutoQueenEnabled] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const stored = localStorage.getItem(LOCAL_STORAGE_AUTO_QUEEN);
+        return stored ? stored === 'true' : true;
+    });
     const [serverOffsetMs, setServerOffsetMs] = useState(0);
     const [firstMoveRemaining, setFirstMoveRemaining] = useState(null);
     const boardRef = useRef(null);
@@ -118,6 +124,14 @@ export default function GamePage() {
     const [clockNow, setClockNow] = useState(() => Date.now());
     const [resignConfirm, setResignConfirm] = useState(false);
     const [resignLoading, setResignLoading] = useState(false);
+    const [pendingPromotion, setPendingPromotion] = useState(null);
+    const [premove, setPremove] = useState(null);
+    const [premoveNotice, setPremoveNotice] = useState(null);
+    const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+    const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+    const [isMobileLayout, setIsMobileLayout] = useState(false);
+    const touchStateRef = useRef(null);
+    const pageRef = useRef(null);
 
     const { game, state, chat, connected, sendChat, syncEvents, error: syncError } = useGameSync({
         gameId,
@@ -146,15 +160,50 @@ export default function GamePage() {
     }, [pieceSet]);
 
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(LOCAL_STORAGE_AUTO_QUEEN, String(autoQueenEnabled));
+        }
+    }, [autoQueenEnabled]);
+
+    useEffect(() => {
         if (typeof window === 'undefined') return;
         const handleStorage = (event) => {
             if (event.key === LOCAL_STORAGE_SOUND) {
                 setSoundEnabled(event.newValue ? event.newValue === 'true' : true);
             }
+            if (event.key === LOCAL_STORAGE_AUTO_QUEEN) {
+                setAutoQueenEnabled(event.newValue ? event.newValue === 'true' : true);
+            }
         };
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const media = window.matchMedia('(max-width: 1023px)');
+        const update = () => setIsMobileLayout(media.matches);
+        update();
+        if (media.addEventListener) {
+            media.addEventListener('change', update);
+        } else {
+            media.addListener(update);
+        }
+        return () => {
+            if (media.removeEventListener) {
+                media.removeEventListener('change', update);
+            } else {
+                media.removeListener(update);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileLayout) {
+            setLeftDrawerOpen(false);
+            setRightDrawerOpen(false);
+        }
+    }, [isMobileLayout]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -312,6 +361,40 @@ export default function GamePage() {
         }
         return true;
     }, [game?.white?.id, game?.black?.id, game?.white?.username, game?.black?.username, user?.id, user?.username]);
+    const premoveFen = useMemo(() => {
+        if (!isUserPlayer || !displayFen) return null;
+        try {
+            const parts = displayFen.split(' ');
+            if (parts.length < 2) return displayFen;
+            const turnToken = isUserWhite ? 'w' : 'b';
+            if (parts[1] === turnToken) return displayFen;
+            return [parts[0], turnToken, ...parts.slice(2)].join(' ');
+        } catch (err) {
+            return displayFen;
+        }
+    }, [displayFen, isUserPlayer, isUserWhite]);
+    const premoveMoveData = useMemo(() => {
+        if (!premoveFen || !isUserPlayer) return { uci: [], san: [] };
+        try {
+            const chess = new Chess(premoveFen);
+            const moves = chess.moves({ verbose: true });
+            return {
+                uci: moves.map((move) => `${move.from}${move.to}${move.promotion || ''}`),
+                san: moves.map((move) => move.san),
+            };
+        } catch (err) {
+            return { uci: [], san: [] };
+        }
+    }, [premoveFen, isUserPlayer]);
+    const premoveMovesByFrom = useMemo(() => {
+        const map = {};
+        premoveMoveData.uci.forEach((uci) => {
+            const from = uci.slice(0, 2);
+            if (!map[from]) map[from] = [];
+            map[from].push(uci);
+        });
+        return map;
+    }, [premoveMoveData.uci]);
     const isCreator = Boolean(game?.creator?.id && user?.id && String(game.creator.id) === String(user.id));
     const opponentName = isUserPlayer
         ? (isUserWhite ? game?.black?.username : game?.white?.username)
@@ -404,15 +487,15 @@ export default function GamePage() {
     ]);
     const fenTurn = baseFen.split(' ')[1] === 'w' ? 'white' : 'black';
     const currentTurn = state?.turn || fenTurn;
-    const currentStatus = (game?.status && game.status !== 'active')
-        ? game.status
-        : (state?.status || game?.status);
+    const currentStatus = state?.status || game?.status;
     const isGameOver = currentStatus === 'finished' || currentStatus === 'aborted';
     const displayError = !isGameOver ? (error || syncError) : null;
     const isUserTurn = isUserPlayer
         && ((isUserWhite && currentTurn === 'white') || (!isUserWhite && currentTurn === 'black'));
     const canInteract = isAuthenticated && isUserPlayer && !spectate && currentStatus === 'active' && isUserTurn && !pendingMove && !isPreviewing;
-    const drawOfferBy = state?.draw_offer_by ?? game?.draw_offer_by ?? null;
+    const drawOfferBy = state && Object.prototype.hasOwnProperty.call(state, 'draw_offer_by')
+        ? state.draw_offer_by
+        : (game?.draw_offer_by ?? null);
     const canOfferDraw = isAuthenticated && isUserPlayer && currentStatus === 'active' && !drawOfferBy;
     const canResign = isAuthenticated && isUserPlayer && currentStatus === 'active';
     const canAbort = isAuthenticated && isUserPlayer && currentStatus === 'active' && moveCount < 2;
@@ -473,8 +556,23 @@ export default function GamePage() {
         return isUserWhite ? isWhitePiece : !isWhitePiece;
     };
     const resolveTargets = (fromSquare) => (movesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
+    const resolvePremoveTargets = (fromSquare) => (premoveMovesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
+    const getPromotionOptions = (fromSquare, toSquare, usePremove = false) => {
+        const source = usePremove ? premoveMovesByFrom : movesByFrom;
+        const candidates = (source[fromSquare] || [])
+            .filter((uci) => uci.slice(2, 4) === toSquare && uci.length === 5);
+        if (!candidates.length) return [];
+        const order = ['q', 'r', 'b', 'n'];
+        return order.filter((piece) => candidates.some((uci) => uci.endsWith(piece)));
+    };
     const resolveMoveUci = (fromSquare, toSquare) => {
         const candidates = (movesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
+        if (!candidates.length) return null;
+        const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
+        return queenPromotion || candidates[0];
+    };
+    const resolvePremoveUci = (fromSquare, toSquare) => {
+        const candidates = (premoveMovesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
         if (!candidates.length) return null;
         const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
         return queenPromotion || candidates[0];
@@ -491,6 +589,18 @@ export default function GamePage() {
             to: activeMoveUci.slice(2, 4),
         };
     }, [activeMoveUci]);
+    const checkSquare = useMemo(() => {
+        try {
+            const fen = isPreviewing ? previewFen : displayFen;
+            const chess = new Chess(fen || DEFAULT_FEN);
+            if (!chess.in_check()) return null;
+            const color = chess.turn();
+            return chess.king(color);
+        } catch (err) {
+            return null;
+        }
+    }, [displayFen, previewFen, isPreviewing]);
+    const drawerOpen = leftDrawerOpen || rightDrawerOpen;
 
     useEffect(() => {
         setSelectedSquare(null);
@@ -507,8 +617,17 @@ export default function GamePage() {
             setDragFrom(null);
             setDragPiece(null);
             setDragPosition(null);
+            setPendingPromotion(null);
         }
     }, [canInteract]);
+    useEffect(() => {
+        if (currentStatus !== 'active') {
+            setPremove(null);
+        }
+    }, [currentStatus]);
+    useEffect(() => {
+        setPendingPromotion(null);
+    }, [displayFen]);
 
     useEffect(() => {
         if (!optimisticState) return;
@@ -562,6 +681,11 @@ export default function GamePage() {
         const timeout = setTimeout(() => setDrawNotice(null), 3500);
         return () => clearTimeout(timeout);
     }, [drawNotice]);
+    useEffect(() => {
+        if (!premoveNotice) return;
+        const timeout = setTimeout(() => setPremoveNotice(null), 2500);
+        return () => clearTimeout(timeout);
+    }, [premoveNotice]);
     useEffect(() => {
         if (!game?.id) return;
         if (isUserPlayer) {
@@ -783,6 +907,17 @@ export default function GamePage() {
         const key = fieldMap[control] || 'rating_blitz';
         return player[key] ?? player.rating ?? player.rating_blitz ?? '--';
     };
+    const formatRatingDelta = (delta) => {
+        if (delta == null) return null;
+        const value = Number(delta);
+        if (!Number.isFinite(value) || value === 0) return null;
+        return {
+            text: value > 0 ? `+${value}` : `${value}`,
+            className: value > 0 ? 'text-emerald-500' : 'text-rose-500',
+        };
+    };
+    const whiteDelta = formatRatingDelta(game?.white_rating_delta);
+    const blackDelta = formatRatingDelta(game?.black_rating_delta);
     const topMeta = topPlayer
         ? `${resolveRating(topPlayer)} • ${topPlayer.country || 'INT'}`
         : '-- • --';
@@ -810,6 +945,10 @@ export default function GamePage() {
                 ? 'First move timed out'
                 : reason === 'challenge_expired'
                     ? 'Challenge expired'
+                    : reason === 'challenge_rejected'
+                        ? 'Challenge rejected'
+                        : reason === 'challenge_aborted'
+                            ? 'Challenge aborted'
                     : 'Game aborted';
             return { label: 'Game aborted', sublabel: reasonLabel, tone: 'warning' };
         }
@@ -1188,8 +1327,83 @@ export default function GamePage() {
         }
     };
 
+    useEffect(() => {
+        if (!premove || !isUserPlayer || !isUserTurn || pendingMove || isPreviewing || currentStatus !== 'active') return;
+        const uci = `${premove.from}${premove.to}${premove.promotion || ''}`;
+        if (effectiveLegalMovesUci.includes(uci)) {
+            setPremove(null);
+            submitMoveFromUci(uci);
+            return;
+        }
+        setPremove(null);
+        setPremoveNotice('Premove canceled.');
+    }, [currentStatus, effectiveLegalMovesUci, isPreviewing, isUserPlayer, isUserTurn, pendingMove, premove, submitMoveFromUci]);
+
+    const handlePromotionSelect = async (promotion) => {
+        if (!pendingPromotion) return;
+        const { from, to, mode } = pendingPromotion;
+        setPendingPromotion(null);
+        if (mode === 'premove') {
+            setPremove({ from, to, promotion });
+            setPremoveNotice('Premove set.');
+            return;
+        }
+        await submitMoveFromUci(`${from}${to}${promotion}`);
+    };
+
     const handleSquareClick = async (squareCoord) => {
-        if (!canInteract) return;
+        if (pendingPromotion) return;
+        if (premove) {
+            setPremove(null);
+            setPremoveNotice('Premove canceled.');
+            return;
+        }
+        if (!canInteract) {
+            if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
+                const piece = squareMap[squareCoord];
+                if (!selectedSquare) {
+                    if (piece && isOwnPiece(piece)) {
+                        setSelectedSquare(squareCoord);
+                        setLegalTargets(resolvePremoveTargets(squareCoord));
+                    }
+                    return;
+                }
+                if (selectedSquare === squareCoord) {
+                    setSelectedSquare(null);
+                    setLegalTargets([]);
+                    return;
+                }
+                if (legalTargets.includes(squareCoord)) {
+                    setSelectedSquare(null);
+                    setLegalTargets([]);
+                    const promotionOptions = getPromotionOptions(selectedSquare, squareCoord, true);
+                    if (promotionOptions.length && !autoQueenEnabled) {
+                        const premovePiece = squareMap[selectedSquare];
+                        const premoveIsWhite = premovePiece === premovePiece?.toUpperCase();
+                        setPendingPromotion({
+                            from: selectedSquare,
+                            to: squareCoord,
+                            options: promotionOptions,
+                            color: premoveIsWhite ? 'w' : 'b',
+                            mode: 'premove',
+                        });
+                        return;
+                    }
+                    const uci = resolvePremoveUci(selectedSquare, squareCoord);
+                    if (uci) {
+                        const promotion = uci.length === 5 ? uci[4] : undefined;
+                        setPremove({ from: selectedSquare, to: squareCoord, promotion });
+                        setPremoveNotice('Premove set.');
+                    }
+                    return;
+                }
+                if (piece && isOwnPiece(piece)) {
+                    setSelectedSquare(squareCoord);
+                    setLegalTargets(resolvePremoveTargets(squareCoord));
+                }
+            }
+            return;
+        }
         const piece = squareMap[squareCoord];
         if (!selectedSquare) {
             if (piece && isOwnPiece(piece)) {
@@ -1204,9 +1418,21 @@ export default function GamePage() {
             return;
         }
         if (legalTargets.includes(squareCoord)) {
-            const uciMove = resolveMoveUci(selectedSquare, squareCoord);
             setSelectedSquare(null);
             setLegalTargets([]);
+            const promotionOptions = getPromotionOptions(selectedSquare, squareCoord);
+            if (promotionOptions.length && !autoQueenEnabled) {
+                const piece = squareMap[selectedSquare];
+                const isWhitePiece = piece === piece?.toUpperCase();
+                setPendingPromotion({
+                    from: selectedSquare,
+                    to: squareCoord,
+                    options: promotionOptions,
+                    color: isWhitePiece ? 'w' : 'b',
+                });
+                return;
+            }
+            const uciMove = resolveMoveUci(selectedSquare, squareCoord);
             if (uciMove) {
                 await submitMoveFromUci(uciMove);
             }
@@ -1243,7 +1469,15 @@ export default function GamePage() {
     }, [isUserWhite]);
 
     const handlePiecePointerDown = (event, squareCoord) => {
-        if (!canInteract) return;
+        if (pendingPromotion) return;
+        if (premove) {
+            setPremove(null);
+            setPremoveNotice('Premove canceled.');
+            return;
+        }
+        if (!canInteract) {
+            if (isUserTurn || !isUserPlayer || currentStatus !== 'active' || isPreviewing) return;
+        }
         const piece = squareMap[squareCoord];
         if (!piece || !isOwnPiece(piece)) return;
         event.preventDefault();
@@ -1258,7 +1492,11 @@ export default function GamePage() {
         setDragPiece(piece);
         updateDragPosition(x, y);
         setSelectedSquare(squareCoord);
-        setLegalTargets(resolveTargets(squareCoord));
+        if (canInteract) {
+            setLegalTargets(resolveTargets(squareCoord));
+        } else {
+            setLegalTargets(resolvePremoveTargets(squareCoord));
+        }
         if (event.currentTarget?.setPointerCapture) {
             event.currentTarget.setPointerCapture(event.pointerId);
         }
@@ -1298,11 +1536,48 @@ export default function GamePage() {
             dragStartRef.current = null;
             dragMovedRef.current = false;
             if (moved && fromSquare && targetSquare) {
-                const targets = resolveTargets(fromSquare);
-                if (targets.includes(targetSquare)) {
-                    const uciMove = resolveMoveUci(fromSquare, targetSquare);
-                    if (uciMove) {
-                        await submitMoveFromUci(uciMove);
+                if (canInteract) {
+                    const targets = resolveTargets(fromSquare);
+                    if (targets.includes(targetSquare)) {
+                        const promotionOptions = getPromotionOptions(fromSquare, targetSquare);
+                        if (promotionOptions.length && !autoQueenEnabled) {
+                            const piece = squareMap[fromSquare];
+                            const isWhitePiece = piece === piece?.toUpperCase();
+                            setPendingPromotion({
+                                from: fromSquare,
+                                to: targetSquare,
+                                options: promotionOptions,
+                                color: isWhitePiece ? 'w' : 'b',
+                            });
+                            return;
+                        }
+                        const uciMove = resolveMoveUci(fromSquare, targetSquare);
+                        if (uciMove) {
+                            await submitMoveFromUci(uciMove);
+                        }
+                    }
+                    } else if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
+                    const targets = resolvePremoveTargets(fromSquare);
+                    if (targets.includes(targetSquare)) {
+                        const promotionOptions = getPromotionOptions(fromSquare, targetSquare, true);
+                        if (promotionOptions.length && !autoQueenEnabled) {
+                            const piece = squareMap[fromSquare];
+                            const isWhitePiece = piece === piece?.toUpperCase();
+                            setPendingPromotion({
+                                from: fromSquare,
+                                to: targetSquare,
+                                options: promotionOptions,
+                                color: isWhitePiece ? 'w' : 'b',
+                                mode: 'premove',
+                            });
+                            return;
+                        }
+                            const uciMove = resolvePremoveUci(fromSquare, targetSquare);
+                        if (uciMove) {
+                            const promotion = uciMove.length === 5 ? uciMove[4] : undefined;
+                            setPremove({ from: fromSquare, to: targetSquare, promotion });
+                            setPremoveNotice('Premove set.');
+                        }
                     }
                 }
             }
@@ -1330,6 +1605,89 @@ export default function GamePage() {
     const handleFirstMove = () => clampPreviewIndex(0);
     const handleLastMove = () => clampPreviewIndex(maxPreviewIndex);
 
+    const openLeftDrawer = useCallback(() => {
+        setLeftDrawerOpen(true);
+        setRightDrawerOpen(false);
+    }, []);
+
+    const openRightDrawer = useCallback(() => {
+        setRightDrawerOpen(true);
+        setLeftDrawerOpen(false);
+    }, []);
+
+    const closeDrawers = useCallback(() => {
+        setLeftDrawerOpen(false);
+        setRightDrawerOpen(false);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileLayout) return;
+        const node = pageRef.current;
+        if (!node) return;
+        const EDGE_PX = 28;
+        const SWIPE_TRIGGER = 60;
+        const MAX_VERTICAL = 50;
+
+        const handleTouchStart = (event) => {
+            if (pendingPromotion || dragFrom) return;
+            if (!event.touches || event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+            const boardRect = boardRef.current?.getBoundingClientRect();
+            if (boardRect
+                && startX >= boardRect.left
+                && startX <= boardRect.right
+                && startY >= boardRect.top
+                && startY <= boardRect.bottom) {
+                return;
+            }
+            const width = window.innerWidth || 0;
+            let mode = null;
+            if (startX <= EDGE_PX) {
+                mode = 'open-left';
+            } else if (startX >= width - EDGE_PX) {
+                mode = 'open-right';
+            } else if (leftDrawerOpen && startX < width * 0.65) {
+                mode = 'close-left';
+            } else if (rightDrawerOpen && startX > width * 0.35) {
+                mode = 'close-right';
+            }
+            if (!mode) return;
+            touchStateRef.current = { startX, startY, mode };
+        };
+
+        const handleTouchEnd = (event) => {
+            const state = touchStateRef.current;
+            touchStateRef.current = null;
+            if (!state) return;
+            if (!event.changedTouches || event.changedTouches.length !== 1) return;
+            const touch = event.changedTouches[0];
+            const dx = touch.clientX - state.startX;
+            const dy = touch.clientY - state.startY;
+            if (Math.abs(dy) > MAX_VERTICAL && Math.abs(dy) > Math.abs(dx)) return;
+            if (state.mode === 'open-left' && dx > SWIPE_TRIGGER) {
+                openLeftDrawer();
+            }
+            if (state.mode === 'open-right' && dx < -SWIPE_TRIGGER) {
+                openRightDrawer();
+            }
+            if (state.mode === 'close-left' && dx < -SWIPE_TRIGGER) {
+                setLeftDrawerOpen(false);
+            }
+            if (state.mode === 'close-right' && dx > SWIPE_TRIGGER) {
+                setRightDrawerOpen(false);
+            }
+        };
+
+        node.addEventListener('touchstart', handleTouchStart, { passive: true });
+        node.addEventListener('touchend', handleTouchEnd, { passive: true });
+        return () => {
+            node.removeEventListener('touchstart', handleTouchStart);
+            node.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [dragFrom, isMobileLayout, leftDrawerOpen, openLeftDrawer, openRightDrawer, pendingPromotion, rightDrawerOpen]);
+
     const handleSendChat = () => {
         const message = chatInput.trim();
         if (!message || chatNotice) return;
@@ -1354,7 +1712,12 @@ export default function GamePage() {
 
     return (
         <Layout showHeader={false} showBottomNav={false}>
-            <div className="flex-1 flex flex-col min-h-[100dvh] md:h-[100dvh] overflow-y-auto md:overflow-hidden bg-background-light dark:bg-background-dark relative">
+            <div
+                ref={pageRef}
+                className={`flex-1 flex flex-col min-h-[100dvh] md:h-[100dvh] ${
+                    drawerOpen ? 'overflow-hidden' : 'overflow-y-auto'
+                } md:overflow-hidden bg-background-light dark:bg-background-dark relative`}
+            >
                 {!game ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-sm text-slate-500 gap-3">
                         <div>{displayError || 'Loading game...'}</div>
@@ -1370,6 +1733,19 @@ export default function GamePage() {
                     </div>
                 ) : (
                     <>
+                        {isMobileLayout && drawerOpen ? (
+                            <div
+                                className="fixed inset-0 bg-black/30 z-40"
+                                role="button"
+                                tabIndex={-1}
+                                onClick={closeDrawers}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Escape') {
+                                        closeDrawers();
+                                    }
+                                }}
+                            />
+                        ) : null}
                         {displayError ? (
                             <div className="px-4 pt-2 text-sm text-red-500">
                                 {displayError}
@@ -1409,8 +1785,12 @@ export default function GamePage() {
                             </div>
                         ) : null}
 
-                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-4 pb-4 min-h-0 overflow-hidden">
-                            <aside className="lg:w-72 w-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
+                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-3 sm:px-4 pb-4 min-h-0 overflow-hidden relative">
+                            <aside
+                                className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 left-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                    leftDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+                                } lg:translate-x-0`}
+                            >
                                 <div className="flex items-center mb-2">
                                     <button
                                         className="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700"
@@ -1509,6 +1889,11 @@ export default function GamePage() {
                                     {drawNotice ? (
                                         <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2 py-1">
                                             {drawNotice}
+                                        </div>
+                                    ) : null}
+                                    {premoveNotice ? (
+                                        <div className="text-xs text-slate-500 bg-slate-500/10 border border-slate-500/20 rounded-lg px-2 py-1">
+                                            {premoveNotice}
                                         </div>
                                     ) : null}
                                     {drawOfferBy && currentStatus === 'active' && isUserPlayer ? (
@@ -1639,6 +2024,12 @@ export default function GamePage() {
                                     <div
                                         ref={boardRef}
                                         className="aspect-square w-[min(92vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[78vw] sm:max-h-[70vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        onContextMenu={(event) => {
+                                            if (!premove) return;
+                                            event.preventDefault();
+                                            setPremove(null);
+                                            setPremoveNotice('Premove canceled.');
+                                        }}
                                     >
                                     <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
                                         {Array.from({ length: 8 }).flatMap((_, displayRow) => (
@@ -1653,7 +2044,16 @@ export default function GamePage() {
                                                 const isCaptureTarget = isTarget && Boolean(squareMap[coord]);
                                                 const isLastMove = lastMoveSquares
                                                     && (lastMoveSquares.from === coord || lastMoveSquares.to === coord);
-                                                const canDrag = canInteract && square && isOwnPiece(square);
+                                                const isCheckSquare = checkSquare === coord;
+                                                const isPremoveSquare = premove
+                                                    && (premove.from === coord || premove.to === coord);
+                                                const canDrag = Boolean(square)
+                                                    && isOwnPiece(square)
+                                                    && (canInteract
+                                                        || (isUserPlayer
+                                                            && !isUserTurn
+                                                            && currentStatus === 'active'
+                                                            && !isPreviewing));
                                                 const isDragging = dragFrom === coord;
                                                 const squareStyle = {
                                                     backgroundColor: isDark ? boardTheme.dark : boardTheme.light,
@@ -1675,6 +2075,12 @@ export default function GamePage() {
                                                     >
                                                         {isLastMove ? (
                                                             <span className="absolute inset-0 bg-yellow-300/30" />
+                                                        ) : null}
+                                                        {isPremoveSquare ? (
+                                                            <span className="absolute inset-0 bg-blue-400/30" />
+                                                        ) : null}
+                                                        {isCheckSquare ? (
+                                                            <span className="absolute inset-0 bg-red-400/30" />
                                                         ) : null}
                                                         {isSelected ? (
                                                             <span className="absolute inset-0 bg-blue-400/25" />
@@ -1704,6 +2110,37 @@ export default function GamePage() {
                                             })
                                         ))}
                                     </div>
+                                    {pendingPromotion ? (
+                                        <div className="absolute inset-0 z-50 bg-black/40 flex items-center justify-center">
+                                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 shadow-xl space-y-2">
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                    Choose promotion
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {pendingPromotion.options.map((opt) => {
+                                                        const piece = pendingPromotion.color === 'w' ? opt.toUpperCase() : opt;
+                                                        return (
+                                                            <button
+                                                                key={opt}
+                                                                type="button"
+                                                                className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center"
+                                                                onClick={() => handlePromotionSelect(opt)}
+                                                            >
+                                                                <ChessPiece piece={piece} size={Math.max(28, Math.floor(pieceSize * 0.5))} pieceSet={pieceSet} />
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="w-full text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                                                    onClick={() => setPendingPromotion(null)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                     {showFirstMoveCountdown && (
                                         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40">
                                             <div className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide border shadow-lg ${
@@ -1776,7 +2213,11 @@ export default function GamePage() {
                             </main>
 
                             {currentStatus === 'active' ? (
-                                <aside className="lg:w-72 w-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
+                                <aside
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                        rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+                                    } lg:translate-x-0`}
+                                >
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-sm font-semibold">
@@ -1828,6 +2269,18 @@ export default function GamePage() {
                                                         </option>
                                                     ))}
                                                 </select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-xs font-semibold text-slate-500">Auto queen</div>
+                                                <button
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                                        autoQueenEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+                                                    }`}
+                                                    type="button"
+                                                    onClick={() => setAutoQueenEnabled((prev) => !prev)}
+                                                >
+                                                    {autoQueenEnabled ? 'Enabled' : 'Disabled'}
+                                                </button>
                                             </div>
                                         </div>
                                     ) : null}
@@ -1918,18 +2371,128 @@ export default function GamePage() {
                                                 disabled={Boolean(chatNotice)}
                                             />
                                             <button
-                                                className="px-3 py-2 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-60"
+                                                className="h-10 w-10 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center shrink-0"
                                                 type="button"
                                                 onClick={handleSendChat}
                                                 disabled={Boolean(chatNotice) || !chatInput.trim()}
+                                                aria-label="Send message"
                                             >
-                                                Send
+                                                <span className="material-symbols-outlined text-base">send</span>
                                             </button>
                                         </div>
                                     </div>
                                 </aside>
+                            ) : currentStatus === 'pending' ? (
+                                <aside
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                        rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+                                    } lg:translate-x-0`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-semibold">Challenge Pending</h3>
+                                        <button
+                                            className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
+                                            type="button"
+                                            onClick={() => setShowSettings((prev) => !prev)}
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+                                        </button>
+                                    </div>
+                                    {showSettings ? (
+                                        <div className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-3 space-y-3">
+                                            <div>
+                                                <div className="text-xs font-semibold text-slate-500 mb-2">Board theme</div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="grid grid-cols-2 grid-rows-2 w-8 h-8 rounded overflow-hidden border border-slate-200 dark:border-slate-700">
+                                                        <div style={{ backgroundColor: boardTheme.light }} />
+                                                        <div style={{ backgroundColor: boardTheme.dark }} />
+                                                        <div style={{ backgroundColor: boardTheme.dark }} />
+                                                        <div style={{ backgroundColor: boardTheme.light }} />
+                                                    </div>
+                                                    <select
+                                                        value={boardThemeIndex}
+                                                        onChange={(e) => setBoardThemeIndex(Number(e.target.value))}
+                                                        className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                                    >
+                                                        {BOARD_THEMES.map((theme, idx) => (
+                                                            <option key={theme.name} value={idx}>
+                                                                {theme.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-semibold text-slate-500 mb-2">Piece set</div>
+                                                <select
+                                                    value={pieceSet}
+                                                    onChange={(e) => setPieceSet(e.target.value)}
+                                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                                >
+                                                    {PIECE_SETS.map((set) => (
+                                                        <option key={set.value} value={set.value}>
+                                                            {set.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-xs font-semibold text-slate-500">Auto queen</div>
+                                                <button
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                                        autoQueenEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+                                                    }`}
+                                                    type="button"
+                                                    onClick={() => setAutoQueenEnabled((prev) => !prev)}
+                                                >
+                                                    {autoQueenEnabled ? 'Enabled' : 'Disabled'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 p-3 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                                        <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                            {isCreator ? 'Challenge sent' : 'Game challenge pending'}
+                                        </div>
+                                        <div className="text-slate-500 dark:text-slate-400">
+                                            {isCreator
+                                                ? `Waiting for ${opponentName || 'opponent'} to respond.`
+                                                : 'Accept to start the game.'}
+                                        </div>
+                                        {!isCreator ? (
+                                            <div className="mt-2 flex gap-2">
+                                                <button
+                                                    className="px-2 py-1 rounded-lg bg-primary text-white text-xs font-semibold"
+                                                    type="button"
+                                                    onClick={handleAccept}
+                                                >
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold"
+                                                    type="button"
+                                                    onClick={handleReject}
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                className="mt-2 px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold"
+                                                type="button"
+                                                onClick={handleCancelChallenge}
+                                            >
+                                                Cancel challenge
+                                            </button>
+                                        )}
+                                    </div>
+                                </aside>
                             ) : (
-                                <aside className="lg:w-72 w-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
+                                <aside
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                        rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+                                    } lg:translate-x-0`}
+                                >
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-sm font-semibold">Game Summary</h3>
                                         <button
@@ -1978,20 +2541,40 @@ export default function GamePage() {
                                                     ))}
                                                 </select>
                                             </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-xs font-semibold text-slate-500">Auto queen</div>
+                                                <button
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                                        autoQueenEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+                                                    }`}
+                                                    type="button"
+                                                    onClick={() => setAutoQueenEnabled((prev) => !prev)}
+                                                >
+                                                    {autoQueenEnabled ? 'Enabled' : 'Disabled'}
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : null}
                                     <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
                                         <div>
-                                            Result: <span className="font-semibold text-slate-800 dark:text-slate-200">{outcome?.label || 'Finished'}</span>
+                                            Result: <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                {outcome?.label || (currentStatus === 'aborted' ? 'Game aborted' : currentStatus === 'finished' ? 'Finished' : 'Pending')}
+                                            </span>
                                         </div>
-                                        <div>White: {game?.white?.username || 'White'} ({resolveRating(game?.white)})</div>
-                                        <div>Black: {game?.black?.username || 'Black'} ({resolveRating(game?.black)})</div>
-                                        {quickEvalMeta?.bestMove ? (
-                                            <div>Best move: {quickEvalMeta.bestMove}</div>
-                                        ) : null}
-                                        {quickEvalMeta?.mate != null ? (
-                                            <div>Mate in {quickEvalMeta.mate}</div>
-                                        ) : null}
+                                        <div>
+                                            White: {game?.white?.username || 'White'} ({resolveRating(game?.white)}
+                                            {whiteDelta ? (
+                                                <span className={`ml-1 font-semibold ${whiteDelta.className}`}>{whiteDelta.text}</span>
+                                            ) : null}
+                                            )
+                                        </div>
+                                        <div>
+                                            Black: {game?.black?.username || 'Black'} ({resolveRating(game?.black)}
+                                            {blackDelta ? (
+                                                <span className={`ml-1 font-semibold ${blackDelta.className}`}>{blackDelta.text}</span>
+                                            ) : null}
+                                            )
+                                        </div>
                                     </div>
                                     {currentStatus === 'finished' ? (
                                         <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 p-3 space-y-2 text-xs">

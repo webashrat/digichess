@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import MiniChessBoard from '../components/chess/MiniChessBoard';
-import { acceptGame, cancelMatchmaking, enqueueMatchmaking, fetchPublicAccount, fetchPublicGames, rejectGame, respondFriendRequest } from '../api';
+import { acceptGame, cancelMatchmaking, createGame, enqueueMatchmaking, fetchPublicAccount, fetchPublicGames, rejectGame, respondFriendRequest, searchPublicUsers } from '../api';
 import { useAuth } from '../context/AuthContext';
 import useNotifications from '../hooks/useNotifications';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
@@ -15,8 +15,24 @@ const quickPlayCards = [
     { id: 'classical', label: 'Classical', time: '30+0', icon: 'hourglass_empty', color: 'text-blue-400' },
 ];
 
+const customFormatOptions = [
+    { id: 'bullet', label: 'Bullet' },
+    { id: 'blitz', label: 'Blitz' },
+    { id: 'rapid', label: 'Rapid' },
+    { id: 'classical', label: 'Classical' },
+    { id: 'custom', label: 'Custom' },
+];
+
+const customFormatPresets = {
+    bullet: { minutes: 1, increment: 0 },
+    blitz: { minutes: 3, increment: 2 },
+    rapid: { minutes: 10, increment: 0 },
+    classical: { minutes: 30, increment: 0 },
+};
+
 
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
+const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 
 const getRatingForControl = (user, control) => {
     if (!user) return null;
@@ -40,6 +56,7 @@ const getEvalSplit = (game) => {
 
 export default function HomePage() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user, isAuthenticated, logout } = useAuth();
     const [queueingControl, setQueueingControl] = useState(null);
     const [queueLoading, setQueueLoading] = useState(false);
@@ -67,6 +84,7 @@ export default function HomePage() {
     const [error, setError] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [notificationError, setNotificationError] = useState(null);
     const [boardThemeIndex, setBoardThemeIndex] = useState(() => {
         if (typeof window === 'undefined') return 6;
         const stored = Number(localStorage.getItem('boardTheme'));
@@ -81,7 +99,26 @@ export default function HomePage() {
         const stored = localStorage.getItem(LOCAL_STORAGE_SOUND);
         return stored ? stored === 'true' : true;
     });
+    const [autoQueenEnabled, setAutoQueenEnabled] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const stored = localStorage.getItem(LOCAL_STORAGE_AUTO_QUEEN);
+        return stored ? stored === 'true' : true;
+    });
     const [activeGameId, setActiveGameId] = useState(null);
+    const [showCustomForm, setShowCustomForm] = useState(false);
+    const [customOpponentQuery, setCustomOpponentQuery] = useState('');
+    const [customOpponent, setCustomOpponent] = useState(null);
+    const [customSearchLoading, setCustomSearchLoading] = useState(false);
+    const [customSearchResults, setCustomSearchResults] = useState([]);
+    const [customSearchError, setCustomSearchError] = useState(null);
+    const [customFormat, setCustomFormat] = useState('blitz');
+    const [customMinutes, setCustomMinutes] = useState(3);
+    const [customIncrement, setCustomIncrement] = useState(2);
+    const [customRated, setCustomRated] = useState(true);
+    const [customColor, setCustomColor] = useState('auto');
+    const [customSubmitting, setCustomSubmitting] = useState(false);
+    const [customError, setCustomError] = useState(null);
+    const prefillAppliedRef = useRef(false);
 
     const stats = useMemo(() => ([
         { label: 'Bullet', value: user?.rating_bullet || 800, icon: 'local_fire_department', color: 'text-orange-400' },
@@ -128,6 +165,78 @@ export default function HomePage() {
     }, [user?.username]);
 
     useEffect(() => {
+        if (prefillAppliedRef.current) return;
+        const challenge = searchParams.get('challenge');
+        const usernameParam = searchParams.get('username');
+        const opponentParam = searchParams.get('opponent');
+        if (!challenge && !usernameParam && !opponentParam) return;
+        prefillAppliedRef.current = true;
+        setShowCustomForm(true);
+        if (usernameParam) {
+            setCustomOpponentQuery(usernameParam);
+            fetchPublicAccount(usernameParam)
+                .then((data) => {
+                    if (data?.id) {
+                        setCustomOpponent(data);
+                        setCustomSearchResults([]);
+                        setCustomSearchError(null);
+                    }
+                })
+                .catch(() => {
+                    // ignore
+                });
+        }
+        setSearchParams({});
+    }, [searchParams, setSearchParams]);
+
+    useEffect(() => {
+        if (!showCustomForm) return;
+        const query = customOpponentQuery.trim();
+        if (customOpponent && query && customOpponent.username?.toLowerCase() !== query.toLowerCase()) {
+            setCustomOpponent(null);
+        }
+        if (!query || query.length < 2) {
+            setCustomSearchResults([]);
+            setCustomSearchError(null);
+            setCustomSearchLoading(false);
+            return;
+        }
+        let active = true;
+        setCustomSearchLoading(true);
+        setCustomSearchError(null);
+        const timeout = setTimeout(async () => {
+            try {
+                const data = await searchPublicUsers(query, { page_size: 6, sort: 'username' });
+                if (!active) return;
+                const results = (data?.results || []).filter((item) => item.id !== user?.id);
+                setCustomSearchResults(results);
+            } catch (err) {
+                if (!active) return;
+                setCustomSearchResults([]);
+                setCustomSearchError('No users found.');
+            } finally {
+                if (active) setCustomSearchLoading(false);
+            }
+        }, 250);
+        return () => {
+            active = false;
+            clearTimeout(timeout);
+        };
+    }, [customOpponentQuery, customOpponent, showCustomForm, user?.id]);
+
+    useEffect(() => {
+        if (customFormat === 'custom') {
+            setCustomRated(false);
+            return;
+        }
+        const preset = customFormatPresets[customFormat];
+        if (preset) {
+            setCustomMinutes(preset.minutes);
+            setCustomIncrement(preset.increment);
+        }
+    }, [customFormat]);
+
+    useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem('boardTheme', String(boardThemeIndex));
         }
@@ -144,6 +253,18 @@ export default function HomePage() {
             localStorage.setItem(LOCAL_STORAGE_SOUND, String(soundEnabled));
         }
     }, [soundEnabled]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(LOCAL_STORAGE_AUTO_QUEEN, String(autoQueenEnabled));
+        }
+    }, [autoQueenEnabled]);
+
+    useEffect(() => {
+        if (showNotifications) {
+            setNotificationError(null);
+        }
+    }, [showNotifications]);
 
     const handleQuickPlay = async (timeControl) => {
         if (!isAuthenticated) {
@@ -178,6 +299,77 @@ export default function HomePage() {
         }
     };
 
+    const handleCreateCustomGame = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        if (!customOpponent?.id) {
+            setCustomError('Select an opponent first.');
+            return;
+        }
+        const minutes = Number(customMinutes);
+        const increment = Number(customIncrement);
+        if (!Number.isFinite(minutes) || minutes <= 0) {
+            setCustomError('Initial time must be greater than 0.');
+            return;
+        }
+        if (!Number.isFinite(increment) || increment < 0 || increment > 60) {
+            setCustomError('Increment must be between 0 and 60 seconds.');
+            return;
+        }
+        const initialSeconds = Math.round(minutes * 60);
+        if (initialSeconds < 1 || initialSeconds > 7200) {
+            setCustomError('Initial time must be between 1 and 120 minutes.');
+            return;
+        }
+        if (customFormat !== 'custom') {
+            if (customFormat === 'bullet' && !(initialSeconds > 0 && initialSeconds < 180)) {
+                setCustomError('Bullet requires less than 3 minutes.');
+                return;
+            }
+            if (customFormat === 'blitz' && !(initialSeconds >= 180 && initialSeconds < 600)) {
+                setCustomError('Blitz requires 3 to 9 minutes.');
+                return;
+            }
+            if (customFormat === 'rapid' && !(initialSeconds >= 600 && initialSeconds <= 1500)) {
+                setCustomError('Rapid requires 10 to 25 minutes.');
+                return;
+            }
+            if (customFormat === 'classical' && !(initialSeconds > 1500 && initialSeconds <= 7200)) {
+                setCustomError('Classical requires more than 25 minutes.');
+                return;
+            }
+        }
+        setCustomSubmitting(true);
+        setCustomError(null);
+        try {
+            const payload = {
+                opponent_id: customOpponent.id,
+                time_control: customFormat,
+                preferred_color: customColor,
+                rated: customFormat === 'custom' ? false : customRated,
+            };
+            if (customFormat === 'custom') {
+                payload.white_time_seconds = initialSeconds;
+                payload.black_time_seconds = initialSeconds;
+                payload.white_increment_seconds = increment;
+                payload.black_increment_seconds = increment;
+            } else {
+                payload.initial_time_seconds = initialSeconds;
+                payload.increment_seconds = increment;
+            }
+            const game = await createGame(payload);
+            if (game?.id) {
+                navigate(`/game/${game.id}`);
+            }
+        } catch (err) {
+            setCustomError(err.message || 'Failed to create game.');
+        } finally {
+            setCustomSubmitting(false);
+        }
+    };
+
     const handleNotificationAction = async (notification, decision) => {
         if (!notification) return;
         try {
@@ -199,7 +391,9 @@ export default function HomePage() {
                 }
             }
         } catch (err) {
-            // ignore for now
+            if (notification.notification_type === 'game_challenge' && decision === 'accept' && err?.status === 400) {
+                setNotificationError('Challenge is no longer available.');
+            }
         } finally {
             removeNotification(notification.id);
         }
@@ -361,6 +555,18 @@ export default function HomePage() {
                                     {soundEnabled ? 'Enabled' : 'Muted'}
                                 </button>
                             </div>
+                            <div className="flex items-center justify-between">
+                                <div className="text-xs font-semibold text-slate-500">Auto queen</div>
+                                <button
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                        autoQueenEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+                                    }`}
+                                    type="button"
+                                    onClick={() => setAutoQueenEnabled((prev) => !prev)}
+                                >
+                                    {autoQueenEnabled ? 'Enabled' : 'Disabled'}
+                                </button>
+                            </div>
                         </div>
                     ) : null}
                     {showNotifications ? (
@@ -375,6 +581,9 @@ export default function HomePage() {
                                     <span className="material-symbols-outlined text-base">close</span>
                                 </button>
                             </div>
+                            {notificationError ? (
+                                <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>
+                            ) : null}
                             {notifications.length ? (
                                 <div className="space-y-2 max-h-64 overflow-y-auto">
                                     {notifications.map((note) => (
@@ -535,13 +744,169 @@ export default function HomePage() {
                         ))}
                     </div>
                     <button
-                        onClick={() => navigate('/play')}
+                        onClick={() => setShowCustomForm((prev) => !prev)}
                         className="mt-4 w-full py-3 rounded-xl bg-gradient-to-r from-primary/80 to-blue-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
                         type="button"
                     >
                         <span className="material-symbols-outlined">add_circle</span>
                         Create Custom Game
+                        <span className="material-symbols-outlined text-base">
+                            {showCustomForm ? 'expand_less' : 'expand_more'}
+                        </span>
                     </button>
+                    {showCustomForm ? (
+                        <div className="mt-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 p-4 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-base font-bold">Custom Challenge</h3>
+                                <button
+                                    type="button"
+                                    className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                    onClick={() => setShowCustomForm(false)}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <div className="text-xs font-semibold text-slate-500">Opponent</div>
+                                    <input
+                                        value={customOpponentQuery}
+                                        onChange={(event) => setCustomOpponentQuery(event.target.value)}
+                                        placeholder="Search username"
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                    />
+                                    {customOpponentQuery.trim().length >= 2 ? (
+                                        <div className="mt-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 max-h-40 overflow-y-auto">
+                                            {customSearchLoading ? (
+                                                <div className="px-3 py-2 text-[11px] text-slate-500">Searching...</div>
+                                            ) : customSearchResults.length ? (
+                                                customSearchResults.map((result) => (
+                                                    <button
+                                                        key={result.id}
+                                                        type="button"
+                                                        className="w-full px-3 py-2 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between"
+                                                        onClick={() => {
+                                                            setCustomOpponent(result);
+                                                            setCustomOpponentQuery(result.username || '');
+                                                            setCustomSearchResults([]);
+                                                            setCustomSearchError(null);
+                                                        }}
+                                                    >
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                                            {result.username}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {result.rating_blitz ?? '--'}
+                                                        </span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-2 text-[11px] text-slate-500">
+                                                    {customSearchError || 'No users found.'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                    {customOpponent ? (
+                                        <div className="text-[11px] text-slate-500 flex items-center justify-between">
+                                            <span>Selected: {customOpponent.username}</span>
+                                            <button
+                                                type="button"
+                                                className="text-[11px] text-slate-400 hover:text-slate-700"
+                                                onClick={() => {
+                                                    setCustomOpponent(null);
+                                                    setCustomOpponentQuery('');
+                                                }}
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="text-xs font-semibold text-slate-500">Color</div>
+                                    <select
+                                        value={customColor}
+                                        onChange={(event) => setCustomColor(event.target.value)}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        <option value="auto">Random</option>
+                                        <option value="white">White</option>
+                                        <option value="black">Black</option>
+                                    </select>
+                                    <div className="text-xs font-semibold text-slate-500 mt-4">Rated</div>
+                                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                            checked={customRated}
+                                            onChange={(event) => {
+                                                if (customFormat === 'custom') return;
+                                                setCustomRated(event.target.checked);
+                                            }}
+                                            disabled={customFormat === 'custom'}
+                                        />
+                                        {customFormat === 'custom' ? 'Custom games are unrated' : 'Rated'}
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="text-xs font-semibold text-slate-500">Format type</div>
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                    {customFormatOptions.map((option) => (
+                                        <button
+                                            key={option.id}
+                                            type="button"
+                                            onClick={() => setCustomFormat(option.id)}
+                                            className={`px-3 py-2 rounded-lg text-xs font-semibold border ${
+                                                customFormat === option.id
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            <div className="text-xs font-semibold">{option.label}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-1">
+                                    <div className="text-xs font-semibold text-slate-500">Initial time (minutes)</div>
+                                    <input
+                                        type="number"
+                                        min={0.5}
+                                        step={0.5}
+                                        value={customMinutes}
+                                        onChange={(event) => setCustomMinutes(event.target.value)}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="text-xs font-semibold text-slate-500">Increment (seconds)</div>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={60}
+                                        step={1}
+                                        value={customIncrement}
+                                        onChange={(event) => setCustomIncrement(event.target.value)}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                    />
+                                </div>
+                            </div>
+                            {customError ? (
+                                <div className="text-xs text-red-500">{customError}</div>
+                            ) : null}
+                            <button
+                                type="button"
+                                className="w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25 disabled:opacity-60"
+                                onClick={handleCreateCustomGame}
+                                disabled={customSubmitting}
+                            >
+                                {customSubmitting ? 'Creating...' : 'Send Challenge'}
+                            </button>
+                        </div>
+                    ) : null}
                     {queueingControl ? (
                         <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                             <div className="text-xs text-slate-600 dark:text-slate-300">
