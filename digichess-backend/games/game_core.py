@@ -59,17 +59,68 @@ def _release_lock(r, key: str, token: str) -> None:
         pass
 
 
-def _evaluate_result(board: chess.Board) -> Tuple[Optional[str], Optional[str]]:
+def build_board_from_moves(moves_raw: Optional[str], start_fen: Optional[str] = None) -> Optional[chess.Board]:
+    try:
+        board = chess.Board(start_fen or chess.STARTING_FEN)
+    except Exception:
+        board = chess.Board()
+    if not moves_raw:
+        return board
+    moves = [move.strip() for move in moves_raw.split() if move.strip()]
+    for move_san in moves:
+        try:
+            move = board.parse_san(move_san)
+        except Exception:
+            try:
+                move = board.parse_uci(move_san)
+            except Exception:
+                return None
+        board.push(move)
+    return board
+
+
+def is_insufficient_material(board: chess.Board) -> bool:
+    if not board:
+        return False
+    counts = {
+        chess.WHITE: {"p": 0, "n": 0, "b": 0, "r": 0, "q": 0},
+        chess.BLACK: {"p": 0, "n": 0, "b": 0, "r": 0, "q": 0},
+    }
+    for piece in board.piece_map().values():
+        symbol = piece.symbol().lower()
+        if symbol in counts[piece.color]:
+            counts[piece.color][symbol] += 1
+    for color in (chess.WHITE, chess.BLACK):
+        if counts[color]["p"] or counts[color]["r"] or counts[color]["q"]:
+            return False
+    allowed = {(0, 0), (1, 0), (0, 1), (0, 2)}
+    white_minors = (counts[chess.WHITE]["b"], counts[chess.WHITE]["n"])
+    black_minors = (counts[chess.BLACK]["b"], counts[chess.BLACK]["n"])
+    return white_minors in allowed and black_minors in allowed
+
+
+def _evaluate_result(
+    board: chess.Board,
+    moves_raw: Optional[str] = None,
+    start_fen: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str]]:
     if board.is_checkmate():
         winner_is_white = board.turn is chess.BLACK
         return (Game.RESULT_WHITE if winner_is_white else Game.RESULT_BLACK), "checkmate"
     if board.is_stalemate():
         return Game.RESULT_DRAW, "stalemate"
-    if board.can_claim_threefold_repetition():
-        return Game.RESULT_DRAW, "threefold_repetition"
-    if board.is_insufficient_material():
+    if is_insufficient_material(board):
         return Game.RESULT_DRAW, "insufficient_material"
-    if board.can_claim_fifty_moves():
+    history_board = board
+    if moves_raw:
+        history_board = build_board_from_moves(moves_raw, start_fen) or board
+    if history_board.is_fivefold_repetition():
+        return Game.RESULT_DRAW, "fivefold_repetition"
+    if history_board.is_seventyfive_moves():
+        return Game.RESULT_DRAW, "seventyfive_moves"
+    if history_board.is_repetition(3):
+        return Game.RESULT_DRAW, "threefold_repetition"
+    if history_board.halfmove_clock >= 100:
         return Game.RESULT_DRAW, "fifty_moves"
     return None, None
 
@@ -255,6 +306,10 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                         timeout_result = Game.RESULT_WHITE
 
             if timeout_result:
+                timeout_reason = "timeout"
+                if is_insufficient_material(board):
+                    timeout_result = Game.RESULT_DRAW
+                    timeout_reason = "timeout_insufficient_material"
                 game.status = Game.STATUS_FINISHED
                 game.result = timeout_result
                 game.finished_at = now
@@ -290,7 +345,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                     state=state,
                     seq=seq,
                     finished=True,
-                    finish_reason="timeout",
+                    finish_reason=timeout_reason,
                     timeout=True,
                 )
 
@@ -315,7 +370,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
 
             # Track first move time for the black grace period; main clock starts after both moves
             game.last_move_at = now
-            result, reason = _evaluate_result(board)
+            result, reason = _evaluate_result(board, game.moves, game.START_FEN)
             finished = False
             if result:
                 game.status = Game.STATUS_FINISHED

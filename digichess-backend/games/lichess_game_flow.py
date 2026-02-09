@@ -9,6 +9,7 @@ import requests
 from typing import Optional, Dict, Any, Tuple
 from django.conf import settings
 import logging
+from .game_core import is_insufficient_material
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,14 @@ def get_game_state_export(fen: str, moves: str, variant: str = "standard") -> Op
             "is_check": board.is_check(),
             "is_checkmate": board.is_checkmate(),
             "is_stalemate": board.is_stalemate(),
-            "is_draw": board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.can_claim_threefold_repetition(),
+            "is_draw": (
+                board.is_stalemate()
+                or is_insufficient_material(board)
+                or board.can_claim_fifty_moves()
+                or board.can_claim_threefold_repetition()
+                or board.is_seventyfive_moves()
+                or board.is_fivefold_repetition()
+            ),
         }
     except Exception as e:
         logger.error(f"Error generating game state export: {e}")
