@@ -37,6 +37,7 @@ def update_ratings_async(game_id: int, result: str):
 def store_daily_rating_snapshots():
     """Store a daily UTC snapshot of each user's ratings."""
     snapshot_date = timezone.localdate()
+    snapshot_time = timezone.now()
     rating_fields = {
         "bullet": "rating_bullet",
         "blitz": "rating_blitz",
@@ -45,9 +46,15 @@ def store_daily_rating_snapshots():
     }
 
     entries = []
+    existing = set(
+        RatingHistory.objects.filter(date=snapshot_date, source="daily")
+        .values_list("user_id", "mode")
+    )
     users = User.objects.all().only("id", *rating_fields.values())
     for user in users.iterator(chunk_size=1000):
         for mode, field in rating_fields.items():
+            if (user.id, mode) in existing:
+                continue
             rating = getattr(user, field, None)
             if rating is None:
                 continue
@@ -57,11 +64,13 @@ def store_daily_rating_snapshots():
                     mode=mode,
                     rating=rating,
                     date=snapshot_date,
+                    recorded_at=snapshot_time,
+                    source="daily",
                 )
             )
 
     if entries:
-        RatingHistory.objects.bulk_create(entries, ignore_conflicts=True, batch_size=1000)
+        RatingHistory.objects.bulk_create(entries, batch_size=1000)
 
 
 @shared_task

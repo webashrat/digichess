@@ -60,6 +60,8 @@ class Game(models.Model):
     white_time_left = models.IntegerField(default=300)
     black_time_left = models.IntegerField(default=300)
     last_move_at = models.DateTimeField(null=True, blank=True)
+    white_rating_delta = models.IntegerField(null=True, blank=True)
+    black_rating_delta = models.IntegerField(null=True, blank=True)
     draw_offer_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="draw_offers_made"
     )

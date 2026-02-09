@@ -39,24 +39,89 @@ const RatingChart = ({ history }) => {
             <div className="text-sm text-slate-500">Not enough data to show chart.</div>
         );
     }
-    const values = history.map((point) => point.rating);
+    const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const values = sorted.map((point) => point.rating);
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const range = max - min || 1;
-    const points = history.map((point, index) => {
-        const x = (index / (history.length - 1)) * 100;
-        const y = 50 - ((point.rating - min) / range) * 45;
-        return `${x},${y}`;
+    const range = Math.max(1, max - min);
+    const paddingY = 8;
+    const chartHeight = 100 - paddingY * 2;
+    const coords = sorted.map((point, index) => {
+        const x = (index / (sorted.length - 1)) * 100;
+        const normalized = (point.rating - min) / range;
+        const y = paddingY + (1 - normalized) * chartHeight;
+        return { x, y };
     });
+    const linePath = coords.map((point, index) => (
+        `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+    )).join(' ');
+    const areaPath = `${linePath} L ${coords[coords.length - 1].x} 100 L ${coords[0].x} 100 Z`;
+
+    const roundStep = 50;
+    const topLabel = Math.ceil(max / roundStep) * roundStep;
+    const bottomLabel = Math.floor(min / roundStep) * roundStep;
+    const midLabel = Math.round((topLabel + bottomLabel) / 2);
+
+    const formatDateLabel = (value) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }).toUpperCase();
+    };
+    const firstLabel = formatDateLabel(sorted[0]?.date);
+    const midLabelDate = formatDateLabel(sorted[Math.floor(sorted.length / 2)]?.date);
+    const lastLabel = formatDateLabel(sorted[sorted.length - 1]?.date);
+    const uniqueLabels = [...new Set([firstLabel, midLabelDate, lastLabel].filter(Boolean))];
+    let xAxisLabels = [];
+    if (uniqueLabels.length === 1) {
+        xAxisLabels = [uniqueLabels[0]];
+    } else if (uniqueLabels.length === 2) {
+        xAxisLabels = [uniqueLabels[0], uniqueLabels[1]];
+    } else {
+        const midUnique = uniqueLabels[Math.floor(uniqueLabels.length / 2)];
+        xAxisLabels = [uniqueLabels[0], midUnique, uniqueLabels[uniqueLabels.length - 1]];
+    }
+
     return (
-        <svg className="w-full h-40" viewBox="0 0 100 50" preserveAspectRatio="none">
-            <polyline
-                fill="none"
-                stroke="#135bec"
-                strokeWidth="2"
-                points={points.join(' ')}
-            />
-        </svg>
+        <div className="relative h-full w-full">
+            <div className="absolute inset-y-0 left-0 w-12 flex flex-col justify-between text-[11px] text-slate-400 font-mono">
+                <span>{topLabel}</span>
+                <span>{midLabel}</span>
+                <span>{bottomLabel}</span>
+            </div>
+            <div className="absolute inset-0 pl-12 pr-2 pt-2 pb-8">
+                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="ratingFill" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(79, 209, 197, 0.5)" />
+                            <stop offset="100%" stopColor="rgba(79, 209, 197, 0.1)" />
+                        </linearGradient>
+                    </defs>
+                    <line x1="0" y1={paddingY} x2="100" y2={paddingY} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="0.5" />
+                    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="0.5" />
+                    <line x1="0" y1={100 - paddingY} x2="100" y2={100 - paddingY} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="0.5" />
+                    <path d={areaPath} fill="url(#ratingFill)" />
+                    <path
+                        d={linePath}
+                        fill="none"
+                        stroke="#4fd1c5"
+                        strokeWidth="0.8"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            </div>
+            <div className={`absolute left-12 right-2 bottom-1 text-[11px] text-slate-400 font-mono flex ${
+                xAxisLabels.length === 1 ? 'justify-center' : 'justify-between'
+            }`}>
+                {xAxisLabels.map((label, index) => (
+                    <span key={`${label}-${index}`}>{label}</span>
+                ))}
+            </div>
+        </div>
     );
 };
 
@@ -145,12 +210,20 @@ export default function ProfilePage() {
         () => recentGames.filter((game) => ['1-0', '0-1', '1/2-1/2'].includes(game.result)),
         [recentGames]
     );
+    const completedNonBotGames = useMemo(
+        () => completedGames.filter((game) => !(game.white?.is_bot || game.black?.is_bot)),
+        [completedGames]
+    );
+    const visibleCompletedGames = useMemo(
+        () => (isSelf ? completedGames : completedNonBotGames),
+        [completedGames, completedNonBotGames, isSelf]
+    );
 
     const modeStats = useMemo(() => {
         if (!displayUser?.username) {
             return { total: 0, winPct: 0, winPctWhite: 0, winPctBlack: 0 };
         }
-        const modeGames = completedGames.filter((game) => game.time_control === mode);
+        const modeGames = completedNonBotGames.filter((game) => game.time_control === mode);
         const total = modeGames.length;
         const wins = modeGames.filter((game) => formatResult(game, displayUser.username) === 'Win').length;
         const winPct = total ? Math.round((wins / total) * 100) : 0;
@@ -163,14 +236,14 @@ export default function ProfilePage() {
         return { total, winPct, winPctWhite, winPctBlack };
     }, [completedGames, mode, displayUser]);
 
-    const recentPreview = useMemo(() => completedGames.slice(0, RECENT_LIMIT), [completedGames]);
+    const recentPreview = useMemo(() => visibleCompletedGames.slice(0, RECENT_LIMIT), [visibleCompletedGames]);
 
     const filteredGames = useMemo(() => {
         if (!displayUser?.username) return [];
-        if (gamesFilter === 'all') return completedGames;
+        if (gamesFilter === 'all') return visibleCompletedGames;
         const desired = gamesFilter === 'win' ? 'Win' : gamesFilter === 'loss' ? 'Loss' : 'Draw';
-        return completedGames.filter((game) => formatResult(game, displayUser.username) === desired);
-    }, [completedGames, gamesFilter, displayUser]);
+        return visibleCompletedGames.filter((game) => formatResult(game, displayUser.username) === desired);
+    }, [visibleCompletedGames, gamesFilter, displayUser]);
 
     const totalPages = useMemo(() => {
         return Math.max(1, Math.ceil(filteredGames.length / RECENT_PAGE_SIZE));
@@ -318,7 +391,7 @@ export default function ProfilePage() {
             setChallengeError('Player is already in a live game.');
             return;
         }
-        navigate(`/play?opponent=${displayUser.id}&username=${encodeURIComponent(displayUser.username || '')}`);
+        navigate(`/?challenge=1&opponent=${displayUser.id}&username=${encodeURIComponent(displayUser.username || '')}`);
     };
 
     return (
@@ -516,13 +589,7 @@ export default function ProfilePage() {
                             ) : error ? (
                                 <div className="text-sm text-red-500">{error}</div>
                             ) : (
-                                <div className="relative h-48 w-full mt-4">
-                                    <div className="absolute inset-0 flex flex-col justify-between text-xs text-slate-400 dark:text-slate-600 font-mono pointer-events-none">
-                                        <div className="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
-                                        <div className="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
-                                        <div className="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
-                                        <div className="w-full border-b border-dashed border-border-light dark:border-slate-700/50"></div>
-                                    </div>
+                                <div className="relative h-52 w-full mt-4 rounded-xl bg-slate-900/40 dark:bg-slate-900/70">
                                     <RatingChart history={history} />
                                 </div>
                             )}

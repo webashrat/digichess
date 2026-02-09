@@ -55,8 +55,8 @@ class UserRatingHistoryView(APIView):
                 except ValueError:
                     pass
 
-            # Order by date ascending (oldest first)
-            qs = qs.order_by('date')
+            # Order by snapshot time ascending (oldest first)
+            qs = qs.order_by('recorded_at', 'created_at')
 
             # Format response
             history = []
@@ -64,6 +64,7 @@ class UserRatingHistoryView(APIView):
                 history.append({
                     'date': entry.date.isoformat(),
                     'rating': entry.rating,
+                    'recorded_at': entry.recorded_at.isoformat() if entry.recorded_at else None,
                     'created_at': entry.created_at.isoformat()
                 })
 
@@ -73,6 +74,7 @@ class UserRatingHistoryView(APIView):
                 history.append({
                     'date': today.isoformat(),
                     'rating': current_rating,
+                    'recorded_at': timezone.now().isoformat(),
                     'created_at': timezone.now().isoformat()
                 })
 
@@ -83,6 +85,7 @@ class UserRatingHistoryView(APIView):
             history.append({
                 'date': today.isoformat(),
                 'rating': current_rating,
+                'recorded_at': timezone.now().isoformat(),
                 'created_at': timezone.now().isoformat()
             })
         

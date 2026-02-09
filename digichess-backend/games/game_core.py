@@ -39,6 +39,7 @@ class MoveResult:
     finished: bool = False
     finish_reason: Optional[str] = None
     timeout: bool = False
+    draw_offer_cleared: bool = False
 
 
 def _acquire_lock(r, key: str) -> Optional[str]:
@@ -303,7 +304,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             game.moves = " ".join(move_list)
             game.current_fen = extra.get("fen", board.fen())
             draw_offer_cleared = False
-            if game.draw_offer_by and game.draw_offer_by != player:
+            if game.draw_offer_by:
                 game.draw_offer_by = None
                 draw_offer_cleared = True
 
@@ -359,6 +360,17 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                         "reason": reason if finished else None,
                     },
                 )
+                if draw_offer_cleared:
+                    _append_event(
+                        r,
+                        game,
+                        now,
+                        {
+                            "type": "draw_response",
+                            "game_id": game.id,
+                            "decision": "auto_decline",
+                        },
+                    )
             else:
                 seq = None
 
@@ -377,6 +389,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                 seq=seq,
                 finished=finished,
                 finish_reason=reason,
+                draw_offer_cleared=draw_offer_cleared,
             )
     finally:
         if r and lock_token:

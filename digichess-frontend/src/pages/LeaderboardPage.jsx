@@ -29,6 +29,7 @@ export default function LeaderboardPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [notificationError, setNotificationError] = useState(null);
     const [friends, setFriends] = useState([]);
     const [friendsError, setFriendsError] = useState(null);
     const [friendsLoading, setFriendsLoading] = useState(false);
@@ -168,7 +169,9 @@ export default function LeaderboardPage() {
                 }
             }
         } catch (err) {
-            // ignore
+            if (notification.notification_type === 'game_challenge' && decision === 'accept' && err?.status === 400) {
+                setNotificationError('Challenge is no longer available.');
+            }
         } finally {
             removeNotification(notification.id);
         }
@@ -214,7 +217,10 @@ export default function LeaderboardPage() {
                                 onClick={() => {
                                     setShowNotifications((prev) => {
                                         const next = !prev;
-                                        if (next) setNotificationsPage(1);
+                                        if (next) {
+                                            setNotificationsPage(1);
+                                            setNotificationError(null);
+                                        }
                                         return next;
                                     });
                                     markAllRead();
@@ -266,6 +272,9 @@ export default function LeaderboardPage() {
                                         <span className="material-symbols-outlined text-base">close</span>
                                     </button>
                                 </div>
+                                {notificationError ? (
+                                    <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>
+                                ) : null}
                                 {notifications.length ? (
                                     <div className="space-y-2 max-h-64 overflow-y-auto">
                                         {notifications.map((note) => (

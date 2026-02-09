@@ -120,6 +120,23 @@ class GameMoveView(APIView):
         result = apply_move(game_id, player, move_san)
         if result.state and result.game:
             self._broadcast_game_state(result.game, result.state, result.legal_moves or [])
+            if result.draw_offer_cleared:
+                try:
+                    channel_layer = get_channel_layer()
+                    if channel_layer:
+                        async_to_sync(channel_layer.group_send)(
+                            f"game_{result.game.id}",
+                            {
+                                "type": "game.event",
+                                "payload": {
+                                    "type": "draw_response",
+                                    "game_id": result.game.id,
+                                    "decision": "auto_decline",
+                                },
+                            },
+                        )
+                except Exception:
+                    pass
         if result.game and result.finished:
             result.game.refresh_from_db()
             if result.game.rated and result.game.result in {
@@ -336,7 +353,8 @@ class FinishGameView(APIView):
             Game.TIME_CLASSICAL: "classical",
         }
         mode_key = mode_map.get(game.time_control)
-        snapshot_date = timezone.localdate(game.finished_at)
+        snapshot_time = game.finished_at or timezone.now()
+        snapshot_date = timezone.localdate(snapshot_time)
         
         # Refresh users from database to get latest ratings
         game.white.refresh_from_db()
@@ -362,6 +380,8 @@ class FinishGameView(APIView):
         new_b_r, new_b_rd, new_b_vol = glicko2_update(
             black_rating, black_rd, black_vol, white_rating, white_rd, black_score
         )
+        white_delta = new_w_r - white_rating
+        black_delta = new_b_r - black_rating
         
         # Update and save white player ratings
         try:
@@ -372,11 +392,12 @@ class FinishGameView(APIView):
             print(f"[rating] Successfully updated white player ({game.white.username or game.white.id}) ratings: {white_rating} -> {new_w_r}", file=sys.stderr)
             if mode_key:
                 from accounts.models_rating_history import RatingHistory
-                RatingHistory.objects.update_or_create(
+                RatingHistory.objects.get_or_create(
                     user_id=game.white.id,
                     mode=mode_key,
-                    date=snapshot_date,
-                    defaults={"rating": new_w_r},
+                    recorded_at=snapshot_time,
+                    source="game",
+                    defaults={"rating": new_w_r, "date": snapshot_date},
                 )
         except Exception as e:
             print(f"[rating] Error updating white player ratings: {e}", file=sys.stderr)
@@ -392,16 +413,24 @@ class FinishGameView(APIView):
             print(f"[rating] Successfully updated black player ({game.black.username or game.black.id}) ratings: {black_rating} -> {new_b_r}", file=sys.stderr)
             if mode_key:
                 from accounts.models_rating_history import RatingHistory
-                RatingHistory.objects.update_or_create(
+                RatingHistory.objects.get_or_create(
                     user_id=game.black.id,
                     mode=mode_key,
-                    date=snapshot_date,
-                    defaults={"rating": new_b_r},
+                    recorded_at=snapshot_time,
+                    source="game",
+                    defaults={"rating": new_b_r, "date": snapshot_date},
                 )
         except Exception as e:
             print(f"[rating] Error updating black player ratings: {e}", file=sys.stderr)
             import traceback
             traceback.print_exc()
+
+        try:
+            game.white_rating_delta = white_delta
+            game.black_rating_delta = black_delta
+            game.save(update_fields=["white_rating_delta", "black_rating_delta"])
+        except Exception:
+            pass
         
         print(f"[rating] Rating update complete for game {game.id}", file=sys.stderr)
 
@@ -551,6 +580,23 @@ class AbortGameView(APIView):
             game.finished_at = timezone.now()
             game.result = Game.RESULT_NONE
             game.save(update_fields=["status", "finished_at", "result"])
+            try:
+                from notifications.views import create_notification
+                opponent = game.black if request.user == game.white else game.white
+                if opponent:
+                    create_notification(
+                        user=opponent,
+                        notification_type="challenge_aborted",
+                        title="Challenge Aborted",
+                        message=f"{request.user.username or request.user.email} aborted the challenge.",
+                        data={
+                            "game_id": game.id,
+                            "opponent_id": request.user.id,
+                            "opponent_username": request.user.username,
+                        },
+                    )
+            except Exception:
+                pass
             channel_layer = get_channel_layer()
             if channel_layer:
                 game_data = GameSerializer(game).data
