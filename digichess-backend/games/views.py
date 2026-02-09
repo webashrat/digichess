@@ -18,7 +18,13 @@ from utils.redis_client import get_redis
 
 from .models import Game
 from .serializers import GameSerializer, MoveSerializer
-from .game_core import apply_move, MoveResult, CHALLENGE_EXPIRY_MINUTES
+from .game_core import (
+    apply_move,
+    MoveResult,
+    CHALLENGE_EXPIRY_MINUTES,
+    build_board_from_moves,
+    is_insufficient_material,
+)
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
 
 
@@ -876,12 +882,19 @@ class GameResignView(APIView):
             return Response({"detail": "Game is not active."}, status=status.HTTP_400_BAD_REQUEST)
         if request.user == game.white:
             result = Game.RESULT_BLACK
-            game.finish(result)
         elif request.user == game.black:
             result = Game.RESULT_WHITE
-            game.finish(result)
         else:
             raise PermissionDenied("You are not part of this game.")
+        try:
+            board = chess.Board(game.current_fen or chess.STARTING_FEN)
+        except Exception:
+            board = build_board_from_moves(game.moves, game.START_FEN) or chess.Board()
+        reason = "resignation"
+        if is_insufficient_material(board):
+            result = Game.RESULT_DRAW
+            reason = "resignation_insufficient_material"
+        game.finish(result)
         
         # Refresh game from database to get updated rated status
         game.refresh_from_db()
@@ -905,7 +918,7 @@ class GameResignView(APIView):
                     "type": "game_finished",
                     "game_id": game.id,
                     "result": result,
-                    "reason": "resignation",
+                    "reason": reason,
                     "game": game_data,
                 },
             },
@@ -922,8 +935,18 @@ class GameClaimDrawView(APIView):
             return Response({"detail": "Game is not active."}, status=status.HTTP_400_BAD_REQUEST)
         if request.user not in [game.white, game.black]:
             raise PermissionDenied("You are not part of this game.")
-        board = chess.Board(game.current_fen or chess.STARTING_FEN)
-        claimable = board.can_claim_fifty_moves() or board.can_claim_threefold_repetition() or board.is_insufficient_material()
+        history_board = build_board_from_moves(game.moves, game.START_FEN)
+        if not history_board:
+            history_board = chess.Board(game.current_fen or chess.STARTING_FEN)
+        try:
+            current_board = chess.Board(game.current_fen or chess.STARTING_FEN)
+        except Exception:
+            current_board = history_board
+        claimable = (
+            history_board.can_claim_fifty_moves()
+            or history_board.can_claim_threefold_repetition()
+            or is_insufficient_material(current_board)
+        )
         if not claimable:
             return Response({"detail": "Draw cannot be claimed now."}, status=status.HTTP_400_BAD_REQUEST)
         result = Game.RESULT_DRAW

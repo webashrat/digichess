@@ -14,7 +14,12 @@ from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
 from .game_proxy import GameProxy
-from .game_core import compute_clock_snapshot, FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
+from .game_core import (
+    compute_clock_snapshot,
+    FIRST_MOVE_GRACE_SECONDS,
+    CHALLENGE_EXPIRY_MINUTES,
+    is_insufficient_material,
+)
 from .move_optimizer import process_move_optimized, latency_monitor
 from accounts.models_rating_history import RatingHistory
 from .analysis_service import run_full_analysis
@@ -285,6 +290,10 @@ def check_game_timeouts():
             result = Game.RESULT_WHITE
         if not result:
             continue
+        reason = "timeout"
+        if is_insufficient_material(board):
+            result = Game.RESULT_DRAW
+            reason = "timeout_insufficient_material"
 
         game.white_time_left = snapshot["white_time_left"]
         game.black_time_left = snapshot["black_time_left"]
@@ -313,7 +322,7 @@ def check_game_timeouts():
                         "type": "game_finished",
                         "game_id": game.id,
                         "result": result,
-                        "reason": "timeout",
+                        "reason": reason,
                         "game": game_data,
                     },
                 },

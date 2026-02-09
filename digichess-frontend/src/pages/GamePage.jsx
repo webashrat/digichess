@@ -556,14 +556,137 @@ export default function GamePage() {
         return isUserWhite ? isWhitePiece : !isWhitePiece;
     };
     const resolveTargets = (fromSquare) => (movesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
-    const resolvePremoveTargets = (fromSquare) => (premoveMovesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
+    const resolvePseudoTargets = useCallback((fromSquare) => {
+        if (!fromSquare || !board?.length) return [];
+        const file = fromSquare[0];
+        const rank = Number(fromSquare[1]);
+        const col = FILES.indexOf(file);
+        const row = 8 - rank;
+        if (col < 0 || row < 0 || row > 7) return [];
+        const piece = board?.[row]?.[col];
+        if (!piece) return [];
+        const isWhitePiece = piece === piece.toUpperCase();
+        const targets = [];
+        const addTarget = (r, c) => {
+            if (r < 0 || r > 7 || c < 0 || c > 7) return false;
+            const targetPiece = board?.[r]?.[c];
+            if (targetPiece) {
+                const targetIsWhite = targetPiece === targetPiece.toUpperCase();
+                if (targetIsWhite === isWhitePiece) return false;
+                targets.push(`${FILES[c]}${8 - r}`);
+                return false;
+            }
+            targets.push(`${FILES[c]}${8 - r}`);
+            return true;
+        };
+        const slide = (dr, dc) => {
+            let r = row + dr;
+            let c = col + dc;
+            while (r >= 0 && r <= 7 && c >= 0 && c <= 7) {
+                if (!addTarget(r, c)) break;
+                r += dr;
+                c += dc;
+            }
+        };
+        switch (piece.toLowerCase()) {
+        case 'p': {
+            const dir = isWhitePiece ? -1 : 1;
+            const startRow = isWhitePiece ? 6 : 1;
+            const oneRow = row + dir;
+            if (oneRow >= 0 && oneRow <= 7) {
+                if (!board?.[oneRow]?.[col]) {
+                    addTarget(oneRow, col);
+                    const twoRow = row + dir * 2;
+                    if (row === startRow && !board?.[twoRow]?.[col]) {
+                        addTarget(twoRow, col);
+                    }
+                }
+                [-1, 1].forEach((dc) => {
+                    const c = col + dc;
+                    if (c < 0 || c > 7) return;
+                    const targetPiece = board?.[oneRow]?.[c];
+                    if (!targetPiece) return;
+                    const targetIsWhite = targetPiece === targetPiece.toUpperCase();
+                    if (targetIsWhite !== isWhitePiece) {
+                        targets.push(`${FILES[c]}${8 - oneRow}`);
+                    }
+                });
+            }
+            break;
+        }
+        case 'n': {
+            const jumps = [
+                [-2, -1],
+                [-2, 1],
+                [-1, -2],
+                [-1, 2],
+                [1, -2],
+                [1, 2],
+                [2, -1],
+                [2, 1],
+            ];
+            jumps.forEach(([dr, dc]) => addTarget(row + dr, col + dc));
+            break;
+        }
+        case 'b':
+            slide(-1, -1);
+            slide(-1, 1);
+            slide(1, -1);
+            slide(1, 1);
+            break;
+        case 'r':
+            slide(-1, 0);
+            slide(1, 0);
+            slide(0, -1);
+            slide(0, 1);
+            break;
+        case 'q':
+            slide(-1, -1);
+            slide(-1, 1);
+            slide(1, -1);
+            slide(1, 1);
+            slide(-1, 0);
+            slide(1, 0);
+            slide(0, -1);
+            slide(0, 1);
+            break;
+        case 'k': {
+            for (let dr = -1; dr <= 1; dr += 1) {
+                for (let dc = -1; dc <= 1; dc += 1) {
+                    if (dr === 0 && dc === 0) continue;
+                    addTarget(row + dr, col + dc);
+                }
+            }
+            break;
+        }
+        default:
+            break;
+        }
+        return targets;
+    }, [board]);
+    const resolvePremoveTargets = (fromSquare) => {
+        const premoveTargets = (premoveMovesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
+        const pseudoTargets = resolvePseudoTargets(fromSquare);
+        if (!pseudoTargets.length) return premoveTargets;
+        const merged = new Set([...premoveTargets, ...pseudoTargets]);
+        return Array.from(merged);
+    };
     const getPromotionOptions = (fromSquare, toSquare, usePremove = false) => {
         const source = usePremove ? premoveMovesByFrom : movesByFrom;
         const candidates = (source[fromSquare] || [])
             .filter((uci) => uci.slice(2, 4) === toSquare && uci.length === 5);
-        if (!candidates.length) return [];
-        const order = ['q', 'r', 'b', 'n'];
-        return order.filter((piece) => candidates.some((uci) => uci.endsWith(piece)));
+        if (candidates.length) {
+            const order = ['q', 'r', 'b', 'n'];
+            return order.filter((piece) => candidates.some((uci) => uci.endsWith(piece)));
+        }
+        if (usePremove) {
+            const piece = squareMap[fromSquare];
+            const rank = Number(toSquare[1]);
+            if (piece && piece.toLowerCase() === 'p' && (rank === 1 || rank === 8)) {
+                return ['q', 'r', 'b', 'n'];
+            }
+        }
+        return [];
     };
     const resolveMoveUci = (fromSquare, toSquare) => {
         const candidates = (movesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
@@ -573,9 +696,16 @@ export default function GamePage() {
     };
     const resolvePremoveUci = (fromSquare, toSquare) => {
         const candidates = (premoveMovesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
-        if (!candidates.length) return null;
-        const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
-        return queenPromotion || candidates[0];
+        if (candidates.length) {
+            const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
+            return queenPromotion || candidates[0];
+        }
+        const piece = squareMap[fromSquare];
+        const rank = Number(toSquare[1]);
+        if (piece && piece.toLowerCase() === 'p' && (rank === 1 || rank === 8)) {
+            return `${fromSquare}${toSquare}q`;
+        }
+        return `${fromSquare}${toSquare}`;
     };
     const resolveMoveSan = (uci) => moveMap.get(uci) || null;
     const activeMoveIndex = isPreviewing ? previewIndex - 1 : navigation.uciList.length - 1;
@@ -1634,15 +1764,19 @@ export default function GamePage() {
             const touch = event.touches[0];
             const startX = touch.clientX;
             const startY = touch.clientY;
+            const width = window.innerWidth || 0;
+            const isEdge = startX <= EDGE_PX || startX >= width - EDGE_PX;
             const boardRect = boardRef.current?.getBoundingClientRect();
-            if (boardRect
+            const isOnBoard = Boolean(
+                boardRect
                 && startX >= boardRect.left
                 && startX <= boardRect.right
                 && startY >= boardRect.top
-                && startY <= boardRect.bottom) {
+                && startY <= boardRect.bottom
+            );
+            if (isOnBoard && !isEdge && !leftDrawerOpen && !rightDrawerOpen) {
                 return;
             }
-            const width = window.innerWidth || 0;
             let mode = null;
             if (startX <= EDGE_PX) {
                 mode = 'open-left';
@@ -2015,7 +2149,7 @@ export default function GamePage() {
                                     </div>
                                 </div>
 
-                                <div className="flex-1 flex items-start justify-center px-2 pt-2 pb-3 gap-3 md:gap-6 min-h-0">
+                                <div className="flex-none md:flex-1 flex items-start justify-center px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
                                     {showEvalBar ? (
                                         <div className="h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
                                             <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
@@ -2023,7 +2157,7 @@ export default function GamePage() {
                                     ) : null}
                                     <div
                                         ref={boardRef}
-                                        className="aspect-square w-[min(92vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[78vw] sm:max-h-[70vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        className="aspect-square w-[min(92vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[92vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
                                         onContextMenu={(event) => {
                                             if (!premove) return;
                                             event.preventDefault();
