@@ -127,10 +127,13 @@ export default function GamePage() {
     const [pendingPromotion, setPendingPromotion] = useState(null);
     const [premove, setPremove] = useState(null);
     const [premoveNotice, setPremoveNotice] = useState(null);
+    const [mobileBoardSize, setMobileBoardSize] = useState(null);
     const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
     const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
     const [isMobileLayout, setIsMobileLayout] = useState(false);
     const touchStateRef = useRef(null);
+    const topBarRef = useRef(null);
+    const bottomBarRef = useRef(null);
     const pageRef = useRef(null);
 
     const { game, state, chat, connected, sendChat, syncEvents, error: syncError } = useGameSync({
@@ -164,6 +167,29 @@ export default function GamePage() {
             localStorage.setItem(LOCAL_STORAGE_AUTO_QUEEN, String(autoQueenEnabled));
         }
     }, [autoQueenEnabled]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (!isMobileLayout) {
+            setMobileBoardSize(null);
+            return;
+        }
+        const computeSize = () => {
+            const topHeight = topBarRef.current?.getBoundingClientRect().height || 0;
+            const bottomHeight = bottomBarRef.current?.getBoundingClientRect().height || 0;
+            const verticalPadding = 16;
+            const availableHeight = window.innerHeight - topHeight - bottomHeight - verticalPadding;
+            const size = Math.floor(Math.min(window.innerWidth, availableHeight));
+            setMobileBoardSize(size > 0 ? size : null);
+        };
+        computeSize();
+        window.addEventListener('resize', computeSize);
+        window.addEventListener('orientationchange', computeSize);
+        return () => {
+            window.removeEventListener('resize', computeSize);
+            window.removeEventListener('orientationchange', computeSize);
+        };
+    }, [isMobileLayout]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -1919,7 +1945,7 @@ export default function GamePage() {
                             </div>
                         ) : null}
 
-                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-3 sm:px-4 pb-4 min-h-0 overflow-hidden relative">
+                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-0 sm:px-4 pb-4 min-h-0 overflow-hidden relative">
                             <aside
                                 className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 left-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                     leftDrawerOpen ? 'translate-x-0' : '-translate-x-full'
@@ -2108,7 +2134,7 @@ export default function GamePage() {
                             </aside>
 
                             <main className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
-                                <div className="px-2 py-2 flex items-center justify-between shrink-0">
+                                <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2149,15 +2175,16 @@ export default function GamePage() {
                                     </div>
                                 </div>
 
-                                <div className="flex-none md:flex-1 flex items-start justify-center px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
+                                <div className="flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
                                     {showEvalBar ? (
-                                        <div className="h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
+                                        <div className="hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex flex-col border border-gray-700 shrink-0 relative shadow-inner">
                                             <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
                                         </div>
                                     ) : null}
                                     <div
                                         ref={boardRef}
-                                        className="aspect-square w-[min(92vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[720px] max-h-[92vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        className="aspect-square w-[min(100vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[100vw] md:max-w-[720px] max-h-[100vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        style={isMobileLayout && mobileBoardSize ? { width: mobileBoardSize, height: mobileBoardSize } : undefined}
                                         onContextMenu={(event) => {
                                             if (!premove) return;
                                             event.preventDefault();
@@ -2304,7 +2331,7 @@ export default function GamePage() {
                                     </div>
                                 </div>
 
-                                <div className="px-2 py-2 flex items-center justify-between shrink-0">
+                                <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
