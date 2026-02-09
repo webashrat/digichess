@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import MiniChessBoard from '../components/chess/MiniChessBoard';
@@ -132,21 +132,33 @@ export default function HomePage() {
     const blitzTag = getBlitzTag(user?.rating_blitz);
     const boardTheme = BOARD_THEMES[boardThemeIndex] || BOARD_THEMES[6] || BOARD_THEMES[0];
 
-    useEffect(() => {
-        const load = async () => {
+    const loadLiveGames = useCallback(async (showSpinner = false) => {
+        if (showSpinner) {
             setLoading(true);
+        }
+        try {
+            const gamesRes = await fetchPublicGames({ status: 'active', page_size: 6 });
+            setLiveGames(gamesRes?.results || []);
             setError(null);
-            try {
-                const gamesRes = await fetchPublicGames({ status: 'active', page_size: 6 });
-                setLiveGames(gamesRes?.results || []);
-            } catch (err) {
+        } catch (err) {
+            if (showSpinner) {
                 setError('Failed to load dashboard data.');
-            } finally {
+            }
+        } finally {
+            if (showSpinner) {
                 setLoading(false);
             }
-        };
-        load();
+        }
     }, []);
+
+    useEffect(() => {
+        loadLiveGames(true);
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return;
+            loadLiveGames(false);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [loadLiveGames]);
 
     useEffect(() => {
         if (!user?.username) {
