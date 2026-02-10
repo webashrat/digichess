@@ -733,6 +733,32 @@ export default function GamePage() {
         }
         return `${fromSquare}${toSquare}`;
     };
+    const queuePremove = (fromSquare, toSquare) => {
+        setSelectedSquare(null);
+        setLegalTargets([]);
+        const piece = squareMap[fromSquare];
+        if (!piece) return;
+        const isPawn = piece.toLowerCase() === 'p';
+        const isPromotion = isPawn && (toSquare[1] === '1' || toSquare[1] === '8');
+        if (isPromotion) {
+            if (!autoQueenEnabled) {
+                const isWhitePiece = piece === piece?.toUpperCase();
+                setPendingPromotion({
+                    from: fromSquare,
+                    to: toSquare,
+                    options: ['q', 'r', 'b', 'n'],
+                    color: isWhitePiece ? 'w' : 'b',
+                    mode: 'premove',
+                });
+                return;
+            }
+            setPremove({ from: fromSquare, to: toSquare, promotion: 'q' });
+            setPremoveNotice('Premove set.');
+            return;
+        }
+        setPremove({ from: fromSquare, to: toSquare });
+        setPremoveNotice('Premove set.');
+    };
     const resolveMoveSan = (uci) => moveMap.get(uci) || null;
     const activeMoveIndex = isPreviewing ? previewIndex - 1 : navigation.uciList.length - 1;
     const activeMoveUci = (activeMoveIndex >= 0 && navigation.uciList[activeMoveIndex])
@@ -749,13 +775,38 @@ export default function GamePage() {
         try {
             const fen = isPreviewing ? previewFen : displayFen;
             const chess = new Chess(fen || DEFAULT_FEN);
-            if (!chess.in_check()) return null;
+            const isInCheck = typeof chess.in_check === 'function'
+                ? chess.in_check()
+                : typeof chess.isCheck === 'function'
+                    ? chess.isCheck()
+                    : typeof chess.inCheck === 'function'
+                        ? chess.inCheck()
+                        : false;
+            if (!isInCheck) return null;
             const color = chess.turn();
-            return chess.king(color);
+            if (isUserPlayer) {
+                const userColor = isUserWhite ? 'w' : 'b';
+                if (color !== userColor) return null;
+            }
+            if (typeof chess.king === 'function') {
+                return chess.king(color);
+            }
+            const boardState = chess.board?.();
+            if (Array.isArray(boardState)) {
+                for (let row = 0; row < boardState.length; row += 1) {
+                    for (let col = 0; col < boardState[row].length; col += 1) {
+                        const piece = boardState[row][col];
+                        if (piece && piece.type === 'k' && piece.color === color) {
+                            return `${FILES[col]}${8 - row}`;
+                        }
+                    }
+                }
+            }
+            return null;
         } catch (err) {
             return null;
         }
-    }, [displayFen, previewFen, isPreviewing]);
+    }, [displayFen, previewFen, isPreviewing, isUserPlayer, isUserWhite]);
     const drawerOpen = leftDrawerOpen || rightDrawerOpen;
 
     useEffect(() => {
@@ -1183,9 +1234,9 @@ export default function GamePage() {
         if (!soundEnabled) return;
         playTone(
             isCapture ? 190 : 260,
-            isCapture ? 0.09 : 0.05,
+            isCapture ? 0.1 : 0.06,
             isCapture ? 'sine' : 'triangle',
-            isCapture ? 0.08 : 0.05
+            isCapture ? 0.12 : 0.08
         );
     }, [playTone, soundEnabled]);
 
@@ -1533,25 +1584,7 @@ export default function GamePage() {
                     return;
                 }
                 if (selectedSquare && selectedSquare !== squareCoord) {
-                    const premovePiece = squareMap[selectedSquare];
-                    if (premovePiece && premovePiece.toLowerCase() === 'p' && (squareCoord[1] === '1' || squareCoord[1] === '8')) {
-                        if (!autoQueenEnabled) {
-                            const premoveIsWhite = premovePiece === premovePiece?.toUpperCase();
-                            setPendingPromotion({
-                                from: selectedSquare,
-                                to: squareCoord,
-                                options: ['q', 'r', 'b', 'n'],
-                                color: premoveIsWhite ? 'w' : 'b',
-                                mode: 'premove',
-                            });
-                            return;
-                        }
-                        setPremove({ from: selectedSquare, to: squareCoord, promotion: 'q' });
-                        setPremoveNotice('Premove set.');
-                        return;
-                    }
-                    setPremove({ from: selectedSquare, to: squareCoord });
-                    setPremoveNotice('Premove set.');
+                    queuePremove(selectedSquare, squareCoord);
                     return;
                 }
                 if (piece && isOwnPiece(piece)) {
@@ -1715,25 +1748,7 @@ export default function GamePage() {
                     }
                 } else if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
                     if (targetSquare && fromSquare && targetSquare !== fromSquare) {
-                        const piece = squareMap[fromSquare];
-                        if (piece && piece.toLowerCase() === 'p' && (targetSquare[1] === '1' || targetSquare[1] === '8')) {
-                            if (!autoQueenEnabled) {
-                                const isWhitePiece = piece === piece?.toUpperCase();
-                                setPendingPromotion({
-                                    from: fromSquare,
-                                    to: targetSquare,
-                                    options: ['q', 'r', 'b', 'n'],
-                                    color: isWhitePiece ? 'w' : 'b',
-                                    mode: 'premove',
-                                });
-                                return;
-                            }
-                            setPremove({ from: fromSquare, to: targetSquare, promotion: 'q' });
-                            setPremoveNotice('Premove set.');
-                            return;
-                        }
-                        setPremove({ from: fromSquare, to: targetSquare });
-                        setPremoveNotice('Premove set.');
+                        queuePremove(fromSquare, targetSquare);
                     }
                 }
             }
@@ -2235,13 +2250,13 @@ export default function GamePage() {
                                                         }}
                                                     >
                                                         {isLastMove ? (
-                                                            <span className="absolute inset-0 bg-yellow-300/30" />
+                                                            <span className="absolute inset-0 bg-yellow-500/40" />
                                                         ) : null}
                                                         {isPremoveSquare ? (
                                                             <span className="absolute inset-0 bg-blue-400/30" />
                                                         ) : null}
                                                         {isCheckSquare ? (
-                                                            <span className="absolute inset-0 bg-red-400/30" />
+                                                            <span className="absolute inset-0 bg-red-600/40" />
                                                         ) : null}
                                                         {isSelected ? (
                                                             <span className="absolute inset-0 bg-blue-400/25" />
