@@ -193,6 +193,18 @@ def _append_event(r, game: Game, now, payload: Dict[str, Any]) -> Optional[int]:
         return None
 
 
+def append_game_event(game: Game, payload: Dict[str, Any], now=None) -> Optional[int]:
+    """Append a non-move event to the game's Redis event stream."""
+    try:
+        r = get_redis()
+    except Exception:
+        r = None
+    if not r:
+        return None
+    timestamp = now or timezone.now()
+    return _append_event(r, game, timestamp, payload)
+
+
 def _build_state(
     game: Game,
     board: chess.Board,

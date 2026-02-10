@@ -53,6 +53,36 @@ export default function useGameSync({ gameId, spectate = false, token }) {
     const syncRef = useRef(null);
     const eventsUnsupportedRef = useRef(false);
     const recentChatsRef = useRef([]);
+    const activeGameIdRef = useRef(gameId);
+
+    useEffect(() => {
+        activeGameIdRef.current = gameId;
+        setConnected(false);
+        setGame(null);
+        setState(null);
+        setChat([]);
+        setLastSeq(0);
+        setError(null);
+        lastSeqRef.current = 0;
+        eventsUnsupportedRef.current = false;
+        recentChatsRef.current = [];
+        if (wsRef.current) {
+            try {
+                wsRef.current.close();
+            } catch (err) {
+                // ignore
+            }
+            wsRef.current = null;
+        }
+        if (reconnectRef.current) {
+            clearTimeout(reconnectRef.current);
+            reconnectRef.current = null;
+        }
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    }, [gameId]);
 
     const updateSeq = (seq) => {
         if (!seq) return false;
@@ -65,6 +95,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
     const mergeState = (payload) => {
         const hasDrawOffer = Object.prototype.hasOwnProperty.call(payload, 'draw_offer_by');
         const hasGameDrawOffer = payload.game && Object.prototype.hasOwnProperty.call(payload.game, 'draw_offer_by');
+        const hasRematchBy = Object.prototype.hasOwnProperty.call(payload, 'rematch_requested_by');
+        const hasRematchAt = Object.prototype.hasOwnProperty.call(payload, 'rematch_requested_at');
+        const hasGameRematchBy = payload.game && Object.prototype.hasOwnProperty.call(payload.game, 'rematch_requested_by');
+        const hasGameRematchAt = payload.game && Object.prototype.hasOwnProperty.call(payload.game, 'rematch_requested_at');
         setState((prev) => {
             const nextLegalMoves = payload.legal_moves
                 ?? payload.game_state?.legal_moves?.san
@@ -88,6 +122,14 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 ?? prev?.turn;
             const nextLastMove = payload.last_move_at ?? prev?.last_move_at;
             const nextServerTime = payload.server_time ?? prev?.server_time;
+            const nextRematchBy = hasRematchBy
+                ? payload.rematch_requested_by
+                : (hasGameRematchBy ? payload.game?.rematch_requested_by : prev?.rematch_requested_by);
+            const nextRematchAt = hasRematchAt
+                ? payload.rematch_requested_at
+                : (hasGameRematchAt ? payload.game?.rematch_requested_at : prev?.rematch_requested_at);
+            const nextRematchStatus = payload.rematch_status ?? prev?.rematch_status;
+            const nextRematchGameId = payload.rematch_game_id ?? prev?.rematch_game_id;
             if (
                 prev
                 && nextFen === prev.fen
@@ -102,6 +144,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 && nextTurn === prev.turn
                 && nextLastMove === prev.last_move_at
                 && nextServerTime === prev.server_time
+                && nextRematchBy === prev.rematch_requested_by
+                && nextRematchAt === prev.rematch_requested_at
+                && nextRematchStatus === prev.rematch_status
+                && nextRematchGameId === prev.rematch_game_id
             ) {
                 return prev;
             }
@@ -117,6 +163,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 legal_moves: nextLegalMoves,
                 legal_moves_uci: nextLegalMovesUci,
                 draw_offer_by: nextDrawOffer,
+                rematch_requested_by: nextRematchBy,
+                rematch_requested_at: nextRematchAt,
+                rematch_status: nextRematchStatus,
+                rematch_game_id: nextRematchGameId,
                 white_time_left: nextWhite,
                 black_time_left: nextBlack,
                 move_count: payload.move_count ?? payload.game?.move_count ?? prev?.move_count,
@@ -149,6 +199,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 first_move_color: payload.first_move_color ?? prev?.first_move_color,
                 legal_moves_uci: payload.legal_moves_uci ?? payload.game_state?.legal_moves?.uci ?? prev?.legal_moves_uci,
                 draw_offer_by: hasDrawOffer ? payload.draw_offer_by : prev?.draw_offer_by,
+                rematch_requested_by: hasRematchBy ? payload.rematch_requested_by : prev?.rematch_requested_by,
+                rematch_requested_at: hasRematchAt ? payload.rematch_requested_at : prev?.rematch_requested_at,
+                rematch_status: payload.rematch_status ?? prev?.rematch_status,
+                rematch_game_id: payload.rematch_game_id ?? prev?.rematch_game_id,
                 started_at: payload.started_at ?? prev?.started_at,
                 created_at: payload.created_at ?? prev?.created_at,
             }));
@@ -195,6 +249,28 @@ export default function useGameSync({ gameId, spectate = false, token }) {
             setGame((prev) => ({ ...prev, draw_offer_by: null }));
             return;
         }
+        if (payload.type && payload.type.startsWith('rematch_')) {
+            const nextStatus = payload.rematch_status ?? payload.type;
+            const nextGameId = payload.type === 'rematch_accepted'
+                ? (payload.rematch_game_id ?? payload.game_id)
+                : undefined;
+            const hasRematchBy = Object.prototype.hasOwnProperty.call(payload, 'rematch_requested_by');
+            const hasRematchAt = Object.prototype.hasOwnProperty.call(payload, 'rematch_requested_at');
+            setState((prev) => ({
+                ...prev,
+                rematch_requested_by: hasRematchBy ? payload.rematch_requested_by : prev?.rematch_requested_by,
+                rematch_requested_at: hasRematchAt ? payload.rematch_requested_at : prev?.rematch_requested_at,
+                rematch_status: nextStatus,
+                rematch_game_id: nextGameId ?? prev?.rematch_game_id,
+            }));
+            if (payload.game) {
+                setGame((prev) => ({
+                    ...prev,
+                    ...payload.game,
+                }));
+            }
+            return;
+        }
         if (payload.type === 'clock') {
             mergeState({
                 white_time_left: payload.white_time_left,
@@ -238,7 +314,9 @@ export default function useGameSync({ gameId, spectate = false, token }) {
 
     const refreshSnapshot = useCallback(async () => {
         if (!gameId) return;
-        const data = spectate ? await spectateGame(gameId) : await getGame(gameId);
+        const targetGameId = gameId;
+        const data = spectate ? await spectateGame(targetGameId) : await getGame(targetGameId);
+        if (activeGameIdRef.current !== targetGameId) return;
         setGame(data);
         setState((prev) => ({
             ...prev,
@@ -252,13 +330,15 @@ export default function useGameSync({ gameId, spectate = false, token }) {
 
     const syncEvents = useCallback(async (force = false) => {
         if (!gameId) return;
+        const targetGameId = gameId;
         try {
             if (force || eventsUnsupportedRef.current) {
                 await refreshSnapshot();
                 setError(null);
                 return;
             }
-            const data = await fetchGameEvents(gameId, lastSeqRef.current || undefined);
+            const data = await fetchGameEvents(targetGameId, lastSeqRef.current || undefined);
+            if (activeGameIdRef.current !== targetGameId) return;
             (data.events || []).forEach((event) => {
                 handleEvent(event);
             });
@@ -272,8 +352,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
             }
             try {
                 await refreshSnapshot();
+                if (activeGameIdRef.current !== targetGameId) return;
                 setError(null);
             } catch (refreshErr) {
+                if (activeGameIdRef.current !== targetGameId) return;
                 setError('Live sync is unavailable.');
             }
         }
@@ -286,8 +368,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
     useEffect(() => {
         if (!gameId) return;
         const loadGame = async () => {
+            const targetGameId = gameId;
             try {
-                const data = spectate ? await spectateGame(gameId) : await getGame(gameId);
+                const data = spectate ? await spectateGame(targetGameId) : await getGame(targetGameId);
+                if (activeGameIdRef.current !== targetGameId) return;
                 setGame(data);
                 setState((prev) => ({
                     ...prev,
@@ -298,6 +382,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                     legal_moves_uci: data.legal_moves_uci,
                 }));
             } catch (err) {
+                if (activeGameIdRef.current !== targetGameId) return;
                 setError(err.message || 'Failed to load game.');
             }
         };
@@ -310,14 +395,21 @@ export default function useGameSync({ gameId, spectate = false, token }) {
         const wsPath = spectate ? `/ws/spectate/${gameId}/` : `/ws/game/${gameId}/`;
 
         const connect = () => {
+            const targetGameId = gameId;
+            if (!targetGameId || activeGameIdRef.current !== targetGameId) return;
             const ws = new WebSocket(buildWsUrl(wsPath, authToken));
             wsRef.current = ws;
 
             ws.onopen = () => {
+                if (activeGameIdRef.current !== targetGameId) {
+                    ws.close();
+                    return;
+                }
                 setConnected(true);
                 setError(null);
             };
             ws.onmessage = (event) => {
+                if (activeGameIdRef.current !== targetGameId) return;
                 try {
                     const payload = JSON.parse(event.data);
                     handleEvent(payload);
@@ -326,15 +418,18 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 }
             };
             ws.onclose = () => {
+                if (activeGameIdRef.current !== targetGameId) return;
                 setConnected(false);
                 if (!reconnectRef.current) {
                     reconnectRef.current = setTimeout(() => {
                         reconnectRef.current = null;
+                        if (activeGameIdRef.current !== targetGameId) return;
                         connect();
                     }, 2000);
                 }
             };
             ws.onerror = () => {
+                if (activeGameIdRef.current !== targetGameId) return;
                 setConnected(false);
             };
         };
@@ -366,8 +461,10 @@ export default function useGameSync({ gameId, spectate = false, token }) {
     useEffect(() => {
         if (!gameId || game?.status !== 'active') return;
         const clockInterval = setInterval(async () => {
+            const targetGameId = gameId;
             try {
-                const clock = await fetchClock(gameId);
+                const clock = await fetchClock(targetGameId);
+                if (activeGameIdRef.current !== targetGameId) return;
                 mergeState({
                     white_time_left: clock.white_time_left,
                     black_time_left: clock.black_time_left,

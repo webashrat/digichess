@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import clsx from 'clsx';
 import useNotifications from '../../hooks/useNotifications';
-import { acceptGame, rejectGame, respondFriendRequest } from '../../api';
+import { acceptGame, acceptRematch, rejectGame, rejectRematch, respondFriendRequest } from '../../api';
 import { useNavigate } from 'react-router-dom';
 
 const defaultSegments = [
@@ -59,6 +59,19 @@ export default function Header({
                         navigate(`/game/${gameId}`);
                     } else {
                         await rejectGame(gameId);
+                    }
+                }
+            }
+            if (notification.notification_type === 'rematch_requested') {
+                const gameId = notification.data?.original_game_id || notification.data?.game_id;
+                if (gameId) {
+                    if (decision === 'accept') {
+                        const response = await acceptRematch(gameId);
+                        if (response?.id) {
+                            navigate(`/game/${response.id}`);
+                        }
+                    } else {
+                        await rejectRematch(gameId);
                     }
                 }
             }
@@ -144,6 +157,24 @@ export default function Header({
                                             </button>
                                         </div>
                                         {note.notification_type === 'game_challenge' ? (
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    className="px-2 py-1 rounded bg-primary text-white text-[10px] font-semibold"
+                                                    type="button"
+                                                    onClick={() => handleNotificationAction(note, 'accept')}
+                                                >
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-semibold"
+                                                    type="button"
+                                                    onClick={() => handleNotificationAction(note, 'decline')}
+                                                >
+                                                    Decline
+                                                </button>
+                                            </div>
+                                        ) : null}
+                                        {note.notification_type === 'rematch_requested' ? (
                                             <div className="flex gap-2 mt-2">
                                                 <button
                                                     className="px-2 py-1 rounded bg-primary text-white text-[10px] font-semibold"

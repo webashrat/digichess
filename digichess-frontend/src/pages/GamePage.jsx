@@ -11,6 +11,10 @@ import {
     acceptGame,
     rejectGame,
     respondDraw,
+    requestRematch,
+    acceptRematch,
+    rejectRematch,
+    cancelRematch,
     fetchGameAnalysis,
     fetchGameAnalysisStatus,
     requestGameAnalysis,
@@ -59,7 +63,7 @@ const parseFen = (fen) => {
 export default function GamePage() {
     const { gameId } = useParams();
     const navigate = useNavigate();
-    const { isAuthenticated, token, user } = useAuth();
+    const { isAuthenticated, token, user, loading: authLoading } = useAuth();
     const [error, setError] = useState(null);
     const [spectate, setSpectate] = useState(!isAuthenticated);
     const [pendingMove, setPendingMove] = useState(false);
@@ -72,6 +76,8 @@ export default function GamePage() {
     const [dragPosition, setDragPosition] = useState(null);
     const [lastMoveUci, setLastMoveUci] = useState(null);
     const [drawNotice, setDrawNotice] = useState(null);
+    const [rematchNotice, setRematchNotice] = useState(null);
+    const [rematchLoading, setRematchLoading] = useState(false);
     const [analysisStatus, setAnalysisStatus] = useState(null);
     const [analysisData, setAnalysisData] = useState(null);
     const [analysisError, setAnalysisError] = useState(null);
@@ -884,10 +890,25 @@ export default function GamePage() {
         drawOfferRef.current = drawOfferBy;
     }, [drawOfferBy, currentStatus, game?.result, state?.result, user?.id]);
     useEffect(() => {
+        if (!state?.rematch_status) return;
+        if (state.rematch_status === 'rematch_rejected') {
+            setRematchNotice('Rematch offer rejected.');
+        } else if (state.rematch_status === 'rematch_cancelled') {
+            setRematchNotice('Rematch offer cancelled.');
+        } else if (state.rematch_status === 'rematch_expired') {
+            setRematchNotice('Rematch offer expired.');
+        }
+    }, [state?.rematch_status]);
+    useEffect(() => {
         if (!drawNotice) return;
         const timeout = setTimeout(() => setDrawNotice(null), 3500);
         return () => clearTimeout(timeout);
     }, [drawNotice]);
+    useEffect(() => {
+        if (!rematchNotice) return;
+        const timeout = setTimeout(() => setRematchNotice(null), 3500);
+        return () => clearTimeout(timeout);
+    }, [rematchNotice]);
     useEffect(() => {
         if (!premoveNotice) return;
         const timeout = setTimeout(() => setPremoveNotice(null), 2500);
@@ -967,7 +988,8 @@ export default function GamePage() {
     }, [game?.status, loadAnalysisStatus, stopAnalysisPolling]);
 
     useEffect(() => {
-        const canQuickAnalyze = game?.id && (!isUserPlayer || currentStatus !== 'active');
+        const canQuickAnalyze = game?.id
+            && (!isAuthenticated || (!authLoading && user && (!isUserPlayer || currentStatus !== 'active')));
         if (!canQuickAnalyze) {
             setQuickEval(null);
             setQuickEvalMeta(null);
@@ -1098,6 +1120,48 @@ export default function GamePage() {
     const showEvalBar = showAnalysis && effectiveEval != null;
     const evalBarFlip = isUserWhite;
     const activeClock = liveClock.turn === 'white' ? liveClock.white : liveClock.black;
+    const rematchBy = state?.rematch_requested_by ?? game?.rematch_requested_by ?? null;
+    const rematchAt = state?.rematch_requested_at ?? game?.rematch_requested_at ?? null;
+    const rematchStatus = state?.rematch_status ?? game?.rematch_status ?? null;
+    const rematchGameId = state?.rematch_game_id ?? game?.rematch_game_id ?? null;
+    const rematchRequestedAtMs = rematchAt ? new Date(rematchAt).getTime() : null;
+    const rematchExpired = rematchRequestedAtMs
+        ? Date.now() > rematchRequestedAtMs + 5 * 60 * 1000
+        : false;
+    const rematchExpiredDisplay = rematchExpired || rematchStatus === 'rematch_expired';
+    const rematchActive = Boolean(rematchBy)
+        && !rematchExpiredDisplay
+        && !['rematch_cancelled', 'rematch_rejected'].includes(rematchStatus || '');
+    const isRematchRequester = rematchBy && user?.id && String(rematchBy) === String(user.id);
+    const rematchWindowEndMs = game?.finished_at
+        ? new Date(game.finished_at).getTime() + 10 * 60 * 1000
+        : null;
+    const rematchWindowExpired = rematchWindowEndMs ? Date.now() > rematchWindowEndMs : false;
+    const showRematchActions = isUserPlayer
+        && (currentStatus === 'finished' || currentStatus === 'aborted')
+        && !rematchWindowExpired;
+
+    useEffect(() => {
+        if (!rematchWindowEndMs) return;
+        const remaining = rematchWindowEndMs - Date.now();
+        if (remaining <= 0) return;
+        const timeout = setTimeout(() => {
+            setRematchNotice(null);
+        }, remaining + 50);
+        return () => clearTimeout(timeout);
+    }, [rematchWindowEndMs]);
+
+    useEffect(() => {
+        if (!rematchStatus) return;
+        if (rematchWindowExpired) return;
+        if (rematchStatus === 'rematch_rejected') {
+            setRematchNotice('Rematch offer declined.');
+        } else if (rematchStatus === 'rematch_cancelled') {
+            setRematchNotice('Rematch offer cancelled.');
+        } else if (rematchStatus === 'rematch_expired') {
+            setRematchNotice('Rematch offer expired.');
+        }
+    }, [rematchStatus, rematchWindowExpired]);
 
     const topAvatar = topPlayer?.profile_pic || topPlayer?.avatar || topPlayer?.image || '';
     const bottomAvatar = bottomPlayer?.profile_pic || bottomPlayer?.avatar || bottomPlayer?.image || '';
@@ -1184,6 +1248,12 @@ export default function GamePage() {
         }
         return null;
     }, [game, state?.status, state?.result, state?.reason, state?.finish_reason, isUserWhite, isUserPlayer]);
+    useEffect(() => {
+        if (state?.rematch_status !== 'rematch_accepted') return;
+        if (!rematchGameId) return;
+        if (String(rematchGameId) === String(gameId)) return;
+        navigate(`/game/${rematchGameId}`);
+    }, [gameId, navigate, rematchGameId, state?.rematch_status]);
 
     const formatClock = (seconds) => {
         if (seconds == null) return '--:--';
@@ -1356,6 +1426,70 @@ export default function GamePage() {
             await respondDraw(gameId, decision);
         } catch (err) {
             setError(err.message || 'Failed to respond to draw.');
+        }
+    };
+
+    const handleRequestRematch = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setRematchLoading(true);
+        try {
+            await requestRematch(gameId);
+        } catch (err) {
+            setRematchNotice(err.message || 'Failed to request rematch.');
+        } finally {
+            setRematchLoading(false);
+        }
+    };
+
+    const handleAcceptRematch = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setRematchLoading(true);
+        try {
+            const response = await acceptRematch(gameId);
+            if (response?.id) {
+                navigate(`/game/${response.id}`);
+            }
+        } catch (err) {
+            setRematchNotice(err.message || 'Failed to accept rematch.');
+        } finally {
+            setRematchLoading(false);
+        }
+    };
+
+    const handleRejectRematch = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setRematchLoading(true);
+        try {
+            await rejectRematch(gameId);
+        } catch (err) {
+            setRematchNotice(err.message || 'Failed to reject rematch.');
+        } finally {
+            setRematchLoading(false);
+        }
+    };
+
+    const handleCancelRematch = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setRematchLoading(true);
+        try {
+            await cancelRematch(gameId);
+            setRematchNotice('Rematch offer cancelled.');
+        } catch (err) {
+            setRematchNotice(err.message || 'Failed to cancel rematch.');
+        } finally {
+            setRematchLoading(false);
         }
     };
 
@@ -1884,6 +2018,23 @@ export default function GamePage() {
         if (!player?.username) return;
         navigate(`/profile/${player.username}`);
     }, [navigate]);
+    const handleBack = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            const referrer = document.referrer || '';
+            if (referrer && referrer.startsWith(window.location.origin)) {
+                try {
+                    const refPath = new URL(referrer).pathname || '';
+                    if (refPath && !refPath.startsWith('/game/')) {
+                        navigate(-1);
+                        return;
+                    }
+                } catch (err) {
+                    // ignore invalid referrer
+                }
+            }
+        }
+        navigate('/play');
+    }, [navigate]);
 
     return (
         <Layout showHeader={false} showBottomNav={false}>
@@ -1970,7 +2121,7 @@ export default function GamePage() {
                                     <button
                                         className="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700"
                                         type="button"
-                                        onClick={() => navigate(-1)}
+                                        onClick={handleBack}
                                     >
                                         <span className="material-symbols-outlined text-[22px]">arrow_back</span>
                                     </button>
@@ -2752,6 +2903,72 @@ export default function GamePage() {
                                             )
                                         </div>
                                     </div>
+                                    {showRematchActions ? (
+                                        <div className="mt-3 space-y-2">
+                                            {rematchExpiredDisplay ? (
+                                                <div className="w-full rounded-lg bg-slate-200/70 dark:bg-slate-800/70 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 text-center">
+                                                    Rematch option expired.
+                                                </div>
+                                            ) : rematchActive ? (
+                                                isRematchRequester ? (
+                                                    <div className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-3 py-2 text-xs">
+                                                        <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                                            Rematch requested.
+                                                        </div>
+                                                        <div className="mt-1 text-slate-500 dark:text-slate-400">
+                                                            Waiting for opponent response...
+                                                        </div>
+                                                        <button
+                                                            className="mt-2 w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold disabled:opacity-60"
+                                                            type="button"
+                                                            onClick={handleCancelRematch}
+                                                            disabled={rematchLoading}
+                                                        >
+                                                            Cancel request
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-3 py-2 text-xs">
+                                                        <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                                            Rematch requested.
+                                                        </div>
+                                                        <div className="mt-2 flex gap-2">
+                                                            <button
+                                                                className="flex-1 px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60"
+                                                                type="button"
+                                                                onClick={handleAcceptRematch}
+                                                                disabled={rematchLoading}
+                                                            >
+                                                                Accept
+                                                            </button>
+                                                            <button
+                                                                className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold disabled:opacity-60"
+                                                                type="button"
+                                                                onClick={handleRejectRematch}
+                                                                disabled={rematchLoading}
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <button
+                                                    className="w-full px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60"
+                                                    type="button"
+                                                    onClick={handleRequestRematch}
+                                                    disabled={rematchLoading}
+                                                >
+                                                    {rematchLoading ? 'Requesting...' : 'Rematch'}
+                                                </button>
+                                            )}
+                                            {rematchNotice ? (
+                                                <div className="text-xs text-slate-500 bg-slate-500/10 border border-slate-500/20 rounded-lg px-2 py-1">
+                                                    {rematchNotice}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
                                     {currentStatus === 'finished' ? (
                                         <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 p-3 space-y-2 text-xs">
                                             <div className="flex items-center justify-between">

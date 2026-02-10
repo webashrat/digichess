@@ -84,7 +84,23 @@ export function AuthProvider({ children }) {
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) {
-        throw new Error('useAuth must be used within AuthProvider');
+        if (typeof window !== 'undefined') {
+            // eslint-disable-next-line no-console
+            console.warn('useAuth called without AuthProvider; returning guest context.');
+        }
+        return {
+            token: null,
+            user: null,
+            isAuthenticated: false,
+            loading: false,
+            error: 'AuthProvider missing',
+            login: async () => {
+                throw new Error('AuthProvider missing');
+            },
+            logout: async () => {},
+            setUser: () => {},
+            applyAuth: () => {},
+        };
     }
     return ctx;
 }
