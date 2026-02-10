@@ -24,6 +24,7 @@ from .game_core import (
     CHALLENGE_EXPIRY_MINUTES,
     build_board_from_moves,
     is_insufficient_material,
+    append_game_event,
 )
 from .stockfish_utils import ensure_stockfish_works, get_stockfish_path
 
@@ -968,10 +969,45 @@ class GameClaimDrawView(APIView):
 class GameRematchView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _broadcast_rematch(self, original: Game, payload: dict) -> None:
+        rematch_requested_at = payload.get("rematch_requested_at")
+        if hasattr(rematch_requested_at, "isoformat"):
+            rematch_requested_at = rematch_requested_at.isoformat()
+        append_game_event(original, {
+            "type": payload.get("type"),
+            "game_id": payload.get("game_id") or original.id,
+            "rematch_status": payload.get("rematch_status"),
+            "rematch_requested_by": payload.get("rematch_requested_by"),
+            "rematch_requested_at": rematch_requested_at,
+            "rematch_game_id": payload.get("rematch_game_id"),
+            "original_game_id": payload.get("original_game_id"),
+        })
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"game_{original.id}",
+                {"type": "game.event", "payload": payload},
+            )
+            for player in [original.white, original.black]:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{player.id}",
+                    {"type": "game.event", "payload": payload},
+                )
+        except Exception:
+            pass
+
     def post(self, request, pk: int):
         original = get_object_or_404(Game, id=pk)
         if original.status not in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
             return Response({"detail": "Game must be finished or aborted to rematch."}, status=status.HTTP_400_BAD_REQUEST)
+        if original.finished_at and timezone.now() - original.finished_at > timedelta(minutes=10):
+            if original.rematch_requested_by or original.rematch_requested_at:
+                original.rematch_requested_by = None
+                original.rematch_requested_at = None
+                original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            return Response({"detail": "Rematch window expired."}, status=status.HTTP_400_BAD_REQUEST)
         requester = request.user
         if requester != original.white and requester != original.black:
             raise PermissionDenied("You are not part of this game.")
@@ -986,6 +1022,16 @@ class GameRematchView(APIView):
             (models.Q(white=opponent) | models.Q(black=opponent))
         )
         if active_conflict.exists():
+            original.rematch_requested_by = None
+            original.rematch_requested_at = None
+            original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            payload = {
+                "type": "rematch_cancelled",
+                "game_id": original.id,
+                "rematch_status": "rematch_cancelled",
+                "game": GameSerializer(original).data,
+            }
+            self._broadcast_rematch(original, payload)
             return Response({"detail": "One of the players is already in an active game."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if rematch already requested
@@ -1003,7 +1049,8 @@ class GameRematchView(APIView):
 
         # Request rematch (don't create game yet)
         original.rematch_requested_by = requester
-        original.save(update_fields=['rematch_requested_by'])
+        original.rematch_requested_at = timezone.now()
+        original.save(update_fields=['rematch_requested_by', 'rematch_requested_at'])
 
         # Send notification to opponent
         from notifications.views import create_notification
@@ -1020,9 +1067,21 @@ class GameRematchView(APIView):
             }
         )
 
+        game_data = GameSerializer(original).data
+        payload = {
+            "type": "rematch_requested",
+            "game_id": original.id,
+            "rematch_status": "rematch_requested",
+            "rematch_requested_by": requester.id,
+            "rematch_requested_at": original.rematch_requested_at.isoformat() if original.rematch_requested_at else None,
+            "game": game_data,
+        }
+        self._broadcast_rematch(original, payload)
+
         return Response({
             "status": "rematch_requested",
-            "rematch_requested_by": requester.id
+            "rematch_requested_by": requester.id,
+            "rematch_requested_at": original.rematch_requested_at,
         }, status=status.HTTP_200_OK)
 
     def _accept_rematch(self, original, accepter):
@@ -1043,27 +1102,61 @@ class GameRematchView(APIView):
             (models.Q(white=new_black) | models.Q(black=new_black))
         )
         if active_conflict.exists():
+            original.rematch_requested_by = None
+            original.rematch_requested_at = None
+            original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            append_game_event(original, {
+                "type": "rematch_cancelled",
+                "game_id": original.id,
+                "rematch_status": "rematch_cancelled",
+            })
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                payload = {
+                    "type": "rematch_cancelled",
+                    "game_id": original.id,
+                    "rematch_status": "rematch_cancelled",
+                    "game": GameSerializer(original).data,
+                }
+                for player in [requester, opponent]:
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{player.id}",
+                        {"type": "game.event", "payload": payload},
+                    )
+                async_to_sync(channel_layer.group_send)(
+                    f"game_{original.id}",
+                    {"type": "game.event", "payload": payload},
+                )
             return Response({"detail": "One of the players is already in an active game."}, status=status.HTTP_400_BAD_REQUEST)
 
+        white_time = original.white_time_seconds or original.initial_time_seconds
+        black_time = original.black_time_seconds or original.initial_time_seconds
+        white_inc = original.white_increment_seconds if original.white_increment_seconds is not None else original.increment_seconds
+        black_inc = original.black_increment_seconds if original.black_increment_seconds is not None else original.increment_seconds
+        initial_time = max(white_time, black_time)
+        increment = max(white_inc or 0, black_inc or 0)
         game = Game.objects.create(
             creator=requester,
             white=new_white,
             black=new_black,
             time_control=original.time_control,
             rated=original.rated,
-            initial_time_seconds=original.initial_time_seconds,
-            increment_seconds=original.increment_seconds,
-            white_time_seconds=original.white_time_seconds,
-            black_time_seconds=original.black_time_seconds,
-            white_increment_seconds=original.white_increment_seconds,
-            black_increment_seconds=original.black_increment_seconds,
+            initial_time_seconds=initial_time,
+            increment_seconds=increment,
+            white_time_seconds=white_time,
+            black_time_seconds=black_time,
+            white_increment_seconds=white_inc,
+            black_increment_seconds=black_inc,
+            white_time_left=white_time,
+            black_time_left=black_time,
             current_fen=chess.STARTING_FEN,
             rematch_of=original,
         )
 
         # Clear rematch request
         original.rematch_requested_by = None
-        original.save(update_fields=['rematch_requested_by'])
+        original.rematch_requested_at = None
+        original.save(update_fields=['rematch_requested_by', 'rematch_requested_at'])
 
         # Start the game
         game.start()
@@ -1077,7 +1170,18 @@ class GameRematchView(APIView):
                 import sys
                 print(f"[rematch] Error making initial bot move: {e}", file=sys.stderr)
 
-        return Response(GameSerializer(game).data, status=status.HTTP_201_CREATED)
+        game_data = GameSerializer(game).data
+        payload = {
+            "type": "rematch_accepted",
+            "game_id": game.id,
+            "original_game_id": original.id,
+            "rematch_game_id": game.id,
+            "rematch_status": "rematch_accepted",
+            "game": game_data,
+        }
+        self._broadcast_rematch(original, payload)
+
+        return Response(game_data, status=status.HTTP_201_CREATED)
 
 
 class GameRematchAcceptView(APIView):
@@ -1087,6 +1191,12 @@ class GameRematchAcceptView(APIView):
         original = get_object_or_404(Game, id=pk)
         if original.status not in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
             return Response({"detail": "Game must be finished or aborted."}, status=status.HTTP_400_BAD_REQUEST)
+        if original.finished_at and timezone.now() - original.finished_at > timedelta(minutes=10):
+            if original.rematch_requested_by or original.rematch_requested_at:
+                original.rematch_requested_by = None
+                original.rematch_requested_at = None
+                original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            return Response({"detail": "Rematch window expired."}, status=status.HTTP_400_BAD_REQUEST)
         if request.user != original.white and request.user != original.black:
             raise PermissionDenied("You are not part of this game.")
         if not original.rematch_requested_by:
@@ -1105,69 +1215,102 @@ class GameRematchAcceptView(APIView):
             (models.Q(white=opponent) | models.Q(black=opponent))
         )
         if active_conflict.exists():
+            original.rematch_requested_by = None
+            original.rematch_requested_at = None
+            original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            append_game_event(original, {
+                "type": "rematch_cancelled",
+                "game_id": original.id,
+                "rematch_status": "rematch_cancelled",
+            })
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                payload = {
+                    "type": "rematch_cancelled",
+                    "game_id": original.id,
+                    "rematch_status": "rematch_cancelled",
+                    "game": GameSerializer(original).data,
+                }
+                for player in [requester, opponent]:
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{player.id}",
+                        {"type": "game.event", "payload": payload},
+                    )
+                async_to_sync(channel_layer.group_send)(
+                    f"game_{original.id}",
+                    {"type": "game.event", "payload": payload},
+                )
             return Response({"detail": "One of the players is already in an active game."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Determine new colors (swap)
         new_white = original.black
         new_black = original.white
 
+        white_time = original.white_time_seconds or original.initial_time_seconds
+        black_time = original.black_time_seconds or original.initial_time_seconds
+        white_inc = original.white_increment_seconds if original.white_increment_seconds is not None else original.increment_seconds
+        black_inc = original.black_increment_seconds if original.black_increment_seconds is not None else original.increment_seconds
+        initial_time = max(white_time, black_time)
+        increment = max(white_inc or 0, black_inc or 0)
         game = Game.objects.create(
             creator=requester,
             white=new_white,
             black=new_black,
             time_control=original.time_control,
             rated=original.rated,
-            initial_time_seconds=original.initial_time_seconds,
-            increment_seconds=original.increment_seconds,
-            white_time_seconds=original.white_time_seconds,
-            black_time_seconds=original.black_time_seconds,
-            white_increment_seconds=original.white_increment_seconds,
-            black_increment_seconds=original.black_increment_seconds,
+            initial_time_seconds=initial_time,
+            increment_seconds=increment,
+            white_time_seconds=white_time,
+            black_time_seconds=black_time,
+            white_increment_seconds=white_inc,
+            black_increment_seconds=black_inc,
+            white_time_left=white_time,
+            black_time_left=black_time,
             current_fen=chess.STARTING_FEN,
             rematch_of=original,
         )
 
         # Clear rematch request
         original.rematch_requested_by = None
-        original.save(update_fields=['rematch_requested_by'])
+        original.rematch_requested_at = None
+        original.save(update_fields=['rematch_requested_by', 'rematch_requested_at'])
 
         # Start the game
         game.start()
 
+        append_game_event(original, {
+            "type": "rematch_accepted",
+            "game_id": game.id,
+            "original_game_id": original.id,
+            "rematch_game_id": game.id,
+            "rematch_status": "rematch_accepted",
+        })
+
         # Send WebSocket notifications to both players to redirect them to the new game
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        
         channel_layer = get_channel_layer()
         if channel_layer:
             game_data = GameSerializer(game).data
+            payload = {
+                "type": "rematch_accepted",
+                "game_id": game.id,
+                "original_game_id": original.id,
+                "rematch_game_id": game.id,
+                "rematch_status": "rematch_accepted",
+                "game": game_data,
+            }
             # Notify both players via their user channels
             for player in [requester, opponent]:
                 async_to_sync(channel_layer.group_send)(
                     f"user_{player.id}",
-                    {
-                        "type": "game.event",
-                        "payload": {
-                            "type": "rematch_accepted",
-                            "game_id": game.id,
-                            "game": game_data,
-                        },
-                    },
+                    {"type": "game.event", "payload": payload},
                 )
             # Also notify the game group (in case users are still on the old game page)
             async_to_sync(channel_layer.group_send)(
                 f"game_{original.id}",
-                {
-                    "type": "game.event",
-                    "payload": {
-                        "type": "rematch_accepted",
-                        "game_id": game.id,
-                        "game": game_data,
-                    },
-                },
+                {"type": "game.event", "payload": payload},
             )
 
-        return Response(GameSerializer(game).data, status=status.HTTP_201_CREATED)
+        return Response(game_data, status=status.HTTP_201_CREATED)
 
 
 class GameRematchRejectView(APIView):
@@ -1177,6 +1320,12 @@ class GameRematchRejectView(APIView):
         original = get_object_or_404(Game, id=pk)
         if original.status not in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
             return Response({"detail": "Game must be finished or aborted."}, status=status.HTTP_400_BAD_REQUEST)
+        if original.finished_at and timezone.now() - original.finished_at > timedelta(minutes=10):
+            if original.rematch_requested_by or original.rematch_requested_at:
+                original.rematch_requested_by = None
+                original.rematch_requested_at = None
+                original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            return Response({"detail": "Rematch window expired."}, status=status.HTTP_400_BAD_REQUEST)
         if request.user != original.white and request.user != original.black:
             raise PermissionDenied("You are not part of this game.")
         if not original.rematch_requested_by:
@@ -1184,9 +1333,71 @@ class GameRematchRejectView(APIView):
 
         # Clear rematch request
         original.rematch_requested_by = None
-        original.save(update_fields=['rematch_requested_by'])
+        original.rematch_requested_at = None
+        original.save(update_fields=['rematch_requested_by', 'rematch_requested_at'])
+
+        append_game_event(original, {
+            "type": "rematch_rejected",
+            "game_id": original.id,
+            "rematch_status": "rematch_rejected",
+        })
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            game_data = GameSerializer(original).data
+            payload = {
+                "type": "rematch_rejected",
+                "game_id": original.id,
+                "rematch_status": "rematch_rejected",
+                "game": game_data,
+            }
+            for player in [original.white, original.black]:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{player.id}",
+                    {"type": "game.event", "payload": payload},
+                )
+            async_to_sync(channel_layer.group_send)(
+                f"game_{original.id}",
+                {"type": "game.event", "payload": payload},
+            )
 
         return Response({"status": "rematch_rejected"}, status=status.HTTP_200_OK)
+
+
+class GameRematchCancelView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk: int):
+        original = get_object_or_404(Game, id=pk)
+        if original.status not in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
+            return Response({"detail": "Game must be finished or aborted."}, status=status.HTTP_400_BAD_REQUEST)
+        if original.finished_at and timezone.now() - original.finished_at > timedelta(minutes=10):
+            if original.rematch_requested_by or original.rematch_requested_at:
+                original.rematch_requested_by = None
+                original.rematch_requested_at = None
+                original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            return Response({"detail": "Rematch window expired."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user != original.white and request.user != original.black:
+            raise PermissionDenied("You are not part of this game.")
+        if not original.rematch_requested_by:
+            return Response({"detail": "No rematch request found."}, status=status.HTTP_400_BAD_REQUEST)
+        if original.rematch_requested_by != request.user:
+            return Response({"detail": "Only the requester can cancel the rematch."}, status=status.HTTP_400_BAD_REQUEST)
+
+        original.rematch_requested_by = None
+        original.rematch_requested_at = None
+        original.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+
+        payload = {
+            "type": "rematch_cancelled",
+            "game_id": original.id,
+            "rematch_status": "rematch_cancelled",
+            "rematch_requested_by": None,
+            "rematch_requested_at": None,
+            "game": GameSerializer(original).data,
+        }
+        GameRematchView()._broadcast_rematch(original, payload)
+
+        return Response({"status": "rematch_cancelled"}, status=status.HTTP_200_OK)
 
 
 class GamePlayerStatusView(APIView):

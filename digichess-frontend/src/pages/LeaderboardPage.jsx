@@ -3,7 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Podium from '../components/leaderboard/Podium';
 import PlayerList from '../components/leaderboard/PlayerList';
-import { acceptGame, createThread, fetchDigiQuizLeaderboard, fetchLeaderboard, fetchPublicAccount, getFriends, rejectGame, respondFriendRequest } from '../api';
+import {
+    acceptGame,
+    acceptRematch,
+    createThread,
+    fetchDigiQuizLeaderboard,
+    fetchLeaderboard,
+    fetchPublicAccount,
+    getFriends,
+    rejectGame,
+    rejectRematch,
+    respondFriendRequest,
+} from '../api';
 import { useAuth } from '../context/AuthContext';
 import useNotifications from '../hooks/useNotifications';
 import { flagFor } from '../utils/countries';
@@ -162,6 +173,19 @@ export default function LeaderboardPage() {
                     }
                 }
             }
+            if (notification.notification_type === 'rematch_requested') {
+                const gameId = notification.data?.original_game_id || notification.data?.game_id;
+                if (gameId) {
+                    if (decision === 'accept') {
+                        const response = await acceptRematch(gameId);
+                        if (response?.id) {
+                            navigate(`/game/${response.id}`);
+                        }
+                    } else {
+                        await rejectRematch(gameId);
+                    }
+                }
+            }
             if (notification.notification_type === 'friend_request') {
                 const requestId = notification.data?.friend_request_id;
                 if (requestId) {
@@ -311,6 +335,24 @@ export default function LeaderboardPage() {
                                                         </button>
                                                     </div>
                                                 ) : null}
+                                    {note.notification_type === 'rematch_requested' ? (
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                className="px-2 py-1 rounded bg-primary text-white text-[10px] font-semibold"
+                                                type="button"
+                                                onClick={() => handleNotificationAction(note, 'accept')}
+                                            >
+                                                Accept
+                                            </button>
+                                            <button
+                                                className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-semibold"
+                                                type="button"
+                                                onClick={() => handleNotificationAction(note, 'decline')}
+                                            >
+                                                Decline
+                                            </button>
+                                        </div>
+                                    ) : null}
                                                 {note.notification_type === 'friend_request' ? (
                                                     <div className="flex gap-2 mt-2">
                                                         <button

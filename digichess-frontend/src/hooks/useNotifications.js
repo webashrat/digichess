@@ -3,20 +3,33 @@ import { deleteNotification, fetchNotifications, fetchUnreadNotifications, markA
 import { tokenStorage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-const buildWsUrl = (path, token) => {
-    const base = import.meta.env.VITE_WS_BASE_URL;
-    if (base) {
-        return `${base.replace(/\/$/, '')}${path}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    }
+const resolveWsBase = () => {
+    const explicit = import.meta.env.VITE_WS_BASE_URL;
+    if (explicit) return explicit.replace(/\/$/, '');
     const apiBase = import.meta.env.VITE_API_BASE_URL;
     if (apiBase && apiBase.startsWith('http')) {
         try {
             const url = new URL(apiBase);
             const protocol = url.protocol === 'https:' ? 'wss' : 'ws';
-            return `${protocol}://${url.host}${path}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+            return `${protocol}://${url.host}`;
         } catch (err) {
             // ignore invalid API base
         }
+    }
+    if (typeof window !== 'undefined') {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            return `${protocol}://${window.location.hostname}:8000`;
+        }
+    }
+    return null;
+};
+
+const buildWsUrl = (path, token) => {
+    const base = resolveWsBase();
+    if (base) {
+        return `${base}${path}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     }
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     return `${protocol}://${window.location.host}${path}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
@@ -98,6 +111,35 @@ export default function useNotifications(options = {}) {
                     setUnreadCount((prev) => prev + 1);
                     setTotal((prev) => prev + 1);
                     return;
+                }
+                if (data?.type) {
+                    const rematchType = data.type;
+                    if (rematchType === 'rematch_accepted' || rematchType === 'rematch_rejected') {
+                        const originalId = data.original_game_id ?? data.game_id ?? null;
+                        if (originalId != null) {
+                            setNotifications((prev) => {
+                                const idsToRemove = new Set(
+                                    prev
+                                        .filter((note) => (
+                                            note.notification_type === 'rematch_requested'
+                                            && String(note.data?.original_game_id ?? note.data?.game_id) === String(originalId)
+                                        ))
+                                        .map((note) => note.id)
+                                );
+                                if (!idsToRemove.size) return prev;
+                                const removedUnread = prev.filter(
+                                    (note) => idsToRemove.has(note.id) && !note.read
+                                ).length;
+                                idsToRemove.forEach((id) => {
+                                    deleteNotification(id).catch(() => {});
+                                });
+                                setUnreadCount((current) => Math.max(0, current - removedUnread));
+                                setTotal((current) => Math.max(0, current - idsToRemove.size));
+                                return prev.filter((note) => !idsToRemove.has(note.id));
+                            });
+                        }
+                        return;
+                    }
                 }
                 if (data?.type === 'match_found') {
                     handlersRef.current.onMatchFound?.(data.game_id, data);

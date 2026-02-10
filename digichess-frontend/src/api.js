@@ -63,6 +63,8 @@ export const acceptRematch = (gameId) => api.post(`/games/${gameId}/rematch/acce
 
 export const rejectRematch = (gameId) => api.post(`/games/${gameId}/rematch/reject/`);
 
+export const cancelRematch = (gameId) => api.post(`/games/${gameId}/rematch/cancel/`);
+
 export const fetchClock = (gameId) => api.get(`/games/${gameId}/clock/`);
 
 export const fetchGameAnalysis = (gameId) => api.get(`/games/${gameId}/analysis/`);

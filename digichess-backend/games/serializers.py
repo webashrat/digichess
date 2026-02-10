@@ -46,6 +46,7 @@ class GameSerializer(serializers.ModelSerializer):
     black_rating_delta = serializers.IntegerField(read_only=True)
 
     rematch_requested_by = serializers.SerializerMethodField()
+    rematch_requested_at = serializers.DateTimeField(read_only=True)
     draw_offer_by = serializers.SerializerMethodField()
     
     class Meta:
@@ -74,6 +75,7 @@ class GameSerializer(serializers.ModelSerializer):
             "legal_moves",
             "legal_moves_uci",
             "rematch_requested_by",
+            "rematch_requested_at",
             "draw_offer_by",
             "created_at",
             "started_at",
@@ -98,6 +100,7 @@ class GameSerializer(serializers.ModelSerializer):
             "move_count",
             "white_rating_delta",
             "black_rating_delta",
+            "rematch_requested_at",
         )
 
     def get_legal_moves(self, obj):

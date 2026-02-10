@@ -1,5 +1,6 @@
 from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from datetime import timedelta
@@ -19,6 +20,7 @@ from .game_core import (
     FIRST_MOVE_GRACE_SECONDS,
     CHALLENGE_EXPIRY_MINUTES,
     is_insufficient_material,
+    append_game_event,
 )
 from .move_optimizer import process_move_optimized, latency_monitor
 from accounts.models_rating_history import RatingHistory
@@ -326,6 +328,56 @@ def check_game_timeouts():
                         "game": game_data,
                     },
                 },
+            )
+
+    # Clear expired or cancelled rematch requests
+    pending_rematches = Game.objects.filter(
+        rematch_requested_by__isnull=False,
+        status__in=[Game.STATUS_FINISHED, Game.STATUS_ABORTED],
+    ).select_related("white", "black", "rematch_requested_by")
+    for game in pending_rematches:
+        if game.finished_at and game.finished_at + timedelta(minutes=10) < now:
+            game.rematch_requested_by = None
+            game.rematch_requested_at = None
+            game.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+            continue
+        if not game.rematch_requested_at:
+            game.rematch_requested_at = now
+            game.save(update_fields=["rematch_requested_at"])
+        expired = game.rematch_requested_at and (game.rematch_requested_at + timedelta(minutes=5) < now)
+        active_conflict = Game.objects.filter(
+            status=Game.STATUS_ACTIVE
+        ).filter(
+            (models.Q(white=game.white) | models.Q(black=game.white)) |
+            (models.Q(white=game.black) | models.Q(black=game.black))
+        ).exclude(id=game.id).exists()
+        if not expired and not active_conflict:
+            continue
+        reason = "rematch_expired" if expired else "rematch_cancelled"
+        game.rematch_requested_by = None
+        game.rematch_requested_at = None
+        game.save(update_fields=["rematch_requested_by", "rematch_requested_at"])
+        append_game_event(game, {
+            "type": reason,
+            "game_id": game.id,
+            "rematch_status": reason,
+        })
+        if channel_layer:
+            game_data = GameSerializer(game).data
+            payload = {
+                "type": reason,
+                "game_id": game.id,
+                "rematch_status": reason,
+                "game": game_data,
+            }
+            for player in [game.white, game.black]:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{player.id}",
+                    {"type": "game.event", "payload": payload},
+                )
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {"type": "game.event", "payload": payload},
             )
 
 

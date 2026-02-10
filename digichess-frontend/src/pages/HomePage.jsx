@@ -2,7 +2,19 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import MiniChessBoard from '../components/chess/MiniChessBoard';
-import { acceptGame, cancelMatchmaking, createGame, enqueueMatchmaking, fetchPublicAccount, fetchPublicGames, rejectGame, respondFriendRequest, searchPublicUsers } from '../api';
+import {
+    acceptGame,
+    acceptRematch,
+    cancelMatchmaking,
+    createGame,
+    enqueueMatchmaking,
+    fetchPublicAccount,
+    fetchPublicGames,
+    rejectGame,
+    rejectRematch,
+    respondFriendRequest,
+    searchPublicUsers,
+} from '../api';
 import { useAuth } from '../context/AuthContext';
 import useNotifications from '../hooks/useNotifications';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
@@ -396,6 +408,19 @@ export default function HomePage() {
                     }
                 }
             }
+            if (notification.notification_type === 'rematch_requested') {
+                const gameId = notification.data?.original_game_id || notification.data?.game_id;
+                if (gameId) {
+                    if (decision === 'accept') {
+                        const response = await acceptRematch(gameId);
+                        if (response?.id) {
+                            navigate(`/game/${response.id}`);
+                        }
+                    } else {
+                        await rejectRematch(gameId);
+                    }
+                }
+            }
             if (notification.notification_type === 'friend_request') {
                 const requestId = notification.data?.friend_request_id;
                 if (requestId) {
@@ -583,16 +608,16 @@ export default function HomePage() {
                     ) : null}
                     {showNotifications ? (
                         <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(92vw,24rem)] sm:w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-sm font-semibold">Notifications</h4>
-                                <button
-                                    className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
-                                    type="button"
-                                    onClick={() => setShowNotifications(false)}
-                                >
-                                    <span className="material-symbols-outlined text-base">close</span>
-                                </button>
-                            </div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-semibold">Notifications</h4>
+                                    <button
+                                        className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+                                        type="button"
+                                        onClick={() => setShowNotifications(false)}
+                                    >
+                                        <span className="material-symbols-outlined text-base">close</span>
+                                    </button>
+                                </div>
                             {notificationError ? (
                                 <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>
                             ) : null}
@@ -615,6 +640,24 @@ export default function HomePage() {
                                                 </button>
                                             </div>
                                             {note.notification_type === 'game_challenge' ? (
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        className="px-2 py-1 rounded bg-primary text-white text-[10px] font-semibold"
+                                                        type="button"
+                                                        onClick={() => handleNotificationAction(note, 'accept')}
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-semibold"
+                                                        type="button"
+                                                        onClick={() => handleNotificationAction(note, 'decline')}
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                </div>
+                                            ) : null}
+                                            {note.notification_type === 'rematch_requested' ? (
                                                 <div className="flex gap-2 mt-2">
                                                     <button
                                                         className="px-2 py-1 rounded bg-primary text-white text-[10px] font-semibold"

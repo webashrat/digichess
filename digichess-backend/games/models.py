@@ -68,6 +68,7 @@ class Game(models.Model):
     rematch_requested_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="rematch_requests_made"
     )
+    rematch_requested_at = models.DateTimeField(null=True, blank=True)
     rematch_of = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.SET_NULL, related_name="rematches"
     )
