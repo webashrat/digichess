@@ -1118,7 +1118,7 @@ class GameRematchView(APIView):
                     "rematch_status": "rematch_cancelled",
                     "game": GameSerializer(original).data,
                 }
-                for player in [requester, opponent]:
+                for player in [requester, accepter]:
                     async_to_sync(channel_layer.group_send)(
                         f"user_{player.id}",
                         {"type": "game.event", "payload": payload},
