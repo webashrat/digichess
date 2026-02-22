@@ -18,9 +18,9 @@ const Avatar = ({ player, sizeClass, ringClass }) => {
 };
 
 export default function Podium({ players = [] }) {
+    const navigate = useNavigate();
     if (players.length < 3) return null;
     const [first, second, third] = players;
-    const navigate = useNavigate();
     const resolveTag = (player) => (player?.is_bot ? null : getBlitzTag(player?.rating_blitz ?? player?.rating));
 
     return (

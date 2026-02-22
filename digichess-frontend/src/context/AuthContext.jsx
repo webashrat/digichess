@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { tokenStorage } from '../api/client';
 import { fetchMe, login as loginRequest, logout as logoutRequest } from '../api';
@@ -25,7 +26,7 @@ export function AuthProvider({ children }) {
             try {
                 const me = await fetchMe();
                 setUser(me);
-            } catch (err) {
+            } catch {
                 tokenStorage.clear();
                 setToken(null);
                 setUser(null);
@@ -36,7 +37,7 @@ export function AuthProvider({ children }) {
         hydrate();
     }, [token]);
 
-    const login = async (identifier, password) => {
+    const login = useCallback(async (identifier, password) => {
         setLoading(true);
         setError(null);
         try {
@@ -49,14 +50,14 @@ export function AuthProvider({ children }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [applyAuth]);
 
-    const logout = async () => {
+    const logout = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             await logoutRequest();
-        } catch (err) {
+        } catch {
             // ignore API errors on logout
         } finally {
             tokenStorage.clear();
@@ -64,7 +65,7 @@ export function AuthProvider({ children }) {
             setUser(null);
             setLoading(false);
         }
-    };
+    }, []);
 
     const value = useMemo(() => ({
         token,
@@ -76,7 +77,7 @@ export function AuthProvider({ children }) {
         logout,
         setUser,
         applyAuth,
-    }), [token, user, loading, error, applyAuth]);
+    }), [token, user, loading, error, login, logout, applyAuth]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

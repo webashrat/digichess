@@ -765,7 +765,6 @@ export default function GamePage() {
         setPremove({ from: fromSquare, to: toSquare });
         setPremoveNotice('Premove set.');
     };
-    const resolveMoveSan = (uci) => moveMap.get(uci) || null;
     const activeMoveIndex = isPreviewing ? previewIndex - 1 : navigation.uciList.length - 1;
     const activeMoveUci = (activeMoveIndex >= 0 && navigation.uciList[activeMoveIndex])
         || lastMoveUci
@@ -996,7 +995,7 @@ export default function GamePage() {
             return;
         }
         loadQuickAnalysis();
-    }, [game?.id, currentStatus, isUserPlayer, loadQuickAnalysis]);
+    }, [game?.id, authLoading, currentStatus, isAuthenticated, isUserPlayer, loadQuickAnalysis, user]);
     const topPlayer = isUserWhite ? game?.black : game?.white;
     const bottomPlayer = isUserWhite ? game?.white : game?.black;
     const liveClock = useMemo(() => {
@@ -1031,7 +1030,7 @@ export default function GamePage() {
     }, [clockNow, clockSource, clockTurn, currentStatus, moveCount, serverOffsetMs]);
     const topClock = isUserWhite ? liveClock.black : liveClock.white;
     const bottomClock = isUserWhite ? liveClock.white : liveClock.black;
-    const analysisMoves = analysisData?.analysis?.moves || [];
+    const analysisMoves = useMemo(() => analysisData?.analysis?.moves ?? [], [analysisData]);
     const analysisSummary = analysisData?.analysis?.summary || null;
     const analyzedMovesCount = analysisSummary?.analyzed_moves
         ?? analysisMoves.filter((move) => typeof move?.eval === 'number').length;
@@ -1598,7 +1597,7 @@ export default function GamePage() {
         }
     };
 
-    const applyLocalMove = (move, format = 'san') => {
+    const applyLocalMove = useCallback((move, format = 'san') => {
         try {
             const chess = new Chess(displayFen);
             let applied;
@@ -1630,9 +1629,9 @@ export default function GamePage() {
         } catch (err) {
             return null;
         }
-    };
+    }, [displayFen, displayMoves, playMoveSound]);
 
-    const submitMoveFromUci = async (uciMove) => {
+    const submitMoveFromUci = useCallback(async (uciMove) => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
@@ -1655,7 +1654,7 @@ export default function GamePage() {
                 });
                 setLastMoveUci(local.uci);
             }
-            const sanMove = local?.san || resolveMoveSan(uciMove);
+            const sanMove = local?.san || moveMap.get(uciMove);
             if (!sanMove) {
                 throw new Error('Move not available yet. Please try again.');
             }
@@ -1669,7 +1668,7 @@ export default function GamePage() {
         } finally {
             setPendingMove(false);
         }
-    };
+    }, [applyLocalMove, canInteract, currentStatus, gameId, isAuthenticated, moveMap, navigate]);
 
     useEffect(() => {
         if (!premove || !isUserPlayer || !isUserTurn || pendingMove || isPreviewing || currentStatus !== 'active') return;
@@ -1898,7 +1897,23 @@ export default function GamePage() {
             window.removeEventListener('pointermove', handleMove);
             window.removeEventListener('pointerup', handleUp);
         };
-    }, [dragFrom, resolveCoordFromPoint, resolveTargets, resolveMoveUci, submitMoveFromUci, updateDragPosition]);
+    }, [
+        autoQueenEnabled,
+        canInteract,
+        currentStatus,
+        dragFrom,
+        getPromotionOptions,
+        isPreviewing,
+        isUserPlayer,
+        isUserTurn,
+        queuePremove,
+        resolveCoordFromPoint,
+        resolveMoveUci,
+        resolveTargets,
+        squareMap,
+        submitMoveFromUci,
+        updateDragPosition,
+    ]);
 
     const clampPreviewIndex = useCallback((value) => {
         const next = Math.max(0, Math.min(maxPreviewIndex, value));
