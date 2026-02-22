@@ -12,7 +12,7 @@ const resolveWsBase = () => {
             const url = new URL(apiBase);
             const protocol = url.protocol === 'https:' ? 'wss' : 'ws';
             return `${protocol}://${url.host}`;
-        } catch (err) {
+        } catch {
             // ignore invalid API base
         }
     }
@@ -87,7 +87,7 @@ export default function useNotifications(options = {}) {
                 setTotal(Math.max(0, baseTotal - filteredOut));
             })
             .catch(() => {});
-    }, [isAuthenticated, page, pageSize, user?.id]);
+    }, [isAuthenticated, page, pageSize, user?.id, user?.email, user?.username]);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) return;
@@ -151,7 +151,7 @@ export default function useNotifications(options = {}) {
                 if (data?.type === 'mm_status') {
                     handlersRef.current.onMmStatus?.(data);
                 }
-            } catch (err) {
+            } catch {
                 // ignore parse errors
             }
         };
@@ -161,7 +161,7 @@ export default function useNotifications(options = {}) {
         return () => {
             if (wsRef.current) wsRef.current.close();
         };
-    }, [isAuthenticated, token, user?.id]);
+    }, [isAuthenticated, token, user?.id, user?.email, user?.username]);
 
     const markAllRead = useCallback(async () => {
         if (!isAuthenticated) return;
@@ -169,7 +169,7 @@ export default function useNotifications(options = {}) {
             await markAllNotificationsRead();
             setUnreadCount(0);
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        } catch (err) {
+        } catch {
             // ignore
         }
     }, [isAuthenticated]);
@@ -179,7 +179,7 @@ export default function useNotifications(options = {}) {
         const target = notifications.find((n) => n.id === notificationId);
         try {
             await deleteNotification(notificationId);
-        } catch (err) {
+        } catch {
             // ignore delete errors
         } finally {
             setNotifications((prev) => prev.filter((n) => n.id !== notificationId));

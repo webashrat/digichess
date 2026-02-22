@@ -69,7 +69,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
         if (wsRef.current) {
             try {
                 wsRef.current.close();
-            } catch (err) {
+            } catch {
                 // ignore
             }
             wsRef.current = null;
@@ -354,7 +354,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 await refreshSnapshot();
                 if (activeGameIdRef.current !== targetGameId) return;
                 setError(null);
-            } catch (refreshErr) {
+            } catch {
                 if (activeGameIdRef.current !== targetGameId) return;
                 setError('Live sync is unavailable.');
             }
@@ -413,7 +413,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                 try {
                     const payload = JSON.parse(event.data);
                     handleEvent(payload);
-                } catch (err) {
+                } catch {
                     // ignore malformed payloads
                 }
             };
@@ -472,7 +472,7 @@ export default function useGameSync({ gameId, spectate = false, token }) {
                     turn: clock.turn,
                     server_time: clock.server_time ?? Math.floor(Date.now() / 1000),
                 });
-            } catch (err) {
+            } catch {
                 // ignore clock failures
             }
         }, 1000);

@@ -21,7 +21,7 @@ const PlayerRow = ({ player, rank }) => {
             if (thread?.id) {
                 navigate(`/messages?thread=${thread.id}`);
             }
-        } catch (err) {
+        } catch {
             // ignore for now
         }
     };
@@ -33,7 +33,7 @@ const PlayerRow = ({ player, rank }) => {
         try {
             await sendFriendRequest(player.id);
             setFriendState('sent');
-        } catch (err) {
+        } catch {
             setFriendState('idle');
         }
     };

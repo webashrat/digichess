@@ -140,7 +140,8 @@ jobs:
         working-directory: digichess-frontend
         run: |
           npm install --save-dev eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-react || true
-          npx eslint src --ext .ts,.tsx --max-warnings 0 || echo "ESLint check completed (non-blocking)"
+          npx eslint "src/**/*.{js,jsx,ts,tsx}" --format json --output-file eslint-report.json || true
+          node -e "const fs=require('fs');const p='eslint-report.json';if(!fs.existsSync(p)){console.log('ESLint report missing');process.exit(0);}const report=JSON.parse(fs.readFileSync(p,'utf8'));const totals=report.reduce((acc,file)=>({errors:acc.errors+file.errorCount,warnings:acc.warnings+file.warningCount}),{errors:0,warnings:0});console.log(`ESLint issues: ${totals.errors} errors, ${totals.warnings} warnings (non-blocking)`);"
         continue-on-error: true
 
       - name: Build frontend

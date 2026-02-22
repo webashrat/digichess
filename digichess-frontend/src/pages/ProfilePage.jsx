@@ -234,7 +234,7 @@ export default function ProfilePage() {
         const winPctWhite = whiteGames.length ? Math.round((whiteWins / whiteGames.length) * 100) : 0;
         const winPctBlack = blackGames.length ? Math.round((blackWins / blackGames.length) * 100) : 0;
         return { total, winPct, winPctWhite, winPctBlack };
-    }, [completedGames, mode, displayUser]);
+    }, [completedNonBotGames, mode, displayUser]);
 
     const recentPreview = useMemo(() => visibleCompletedGames.slice(0, RECENT_LIMIT), [visibleCompletedGames]);
 
