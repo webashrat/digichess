@@ -1,33 +1,30 @@
-name: Deploy Main (Frontend GCS)
+name: Deploy Backend (VM)
 
 on:
   push:
     branches:
       - main
     paths:
-      - "digichess-frontend/**"
-      - ".github/workflows/deploy-main.yml"
+      - "digichess-backend/**"
+      - ".github/workflows/deploy-backend-vm.yml"
   workflow_dispatch:
 
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
-
 concurrency:
-  group: deploy-main
+  group: deploy-backend-vm
   cancel-in-progress: true
 
 jobs:
-  deploy-frontend:
-    name: Build + Deploy Frontend (GCS)
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Validate deploy secrets
+        run: |
+          test -n "${{ secrets.VM_HOST }}" || (echo "Missing secret: VM_HOST" && exit 1)
+          test -n "${{ secrets.VM_USER }}" || (echo "Missing secret: VM_USER" && exit 1)
+          test -n "${{ secrets.VM_SSH_KEY }}" || (echo "Missing secret: VM_SSH_KEY" && exit 1)
 
       - name: Wait for CI/CD Pipeline success
         if: github.event_name == 'push'
@@ -61,38 +58,29 @@ jobs:
           echo "Timed out waiting for CI/CD Pipeline completion."
           exit 1
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Deploy backend on VM via SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
 
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
+            APP_DIR="${{ secrets.VM_APP_DIR }}"
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR="$HOME/digichess/digichess-backend"
+            fi
 
-      - name: Set gcloud project
-        run: gcloud config set project $PROJECT_ID
+            cd "$APP_DIR"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: digichess-frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: digichess-frontend
-        run: npm ci
-
-      - name: Build frontend
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_WS_BASE_URL: ${{ secrets.VITE_WS_BASE_URL }}
-        working-directory: digichess-frontend
-        run: npm run build
-
-      - name: Sync to GCS bucket
-        run: |
-          gsutil -m rsync -R digichess-frontend/dist gs://$GCS_BUCKET
-          gsutil web set -m index.html -e index.html gs://$GCS_BUCKET
-          gsutil iam ch allUsers:objectViewer gs://$GCS_BUCKET
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build backend celery celery-beat
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
