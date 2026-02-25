@@ -25,6 +25,13 @@ from .game_core import (
 from .move_optimizer import process_move_optimized, latency_monitor
 from accounts.models_rating_history import RatingHistory
 from .analysis_service import run_full_analysis
+from .tournament_lifecycle import (
+    advance_tournament,
+    finish_tournament,
+    generate_swiss_pairings,
+    pair_idle_arena_players as pair_idle_arena_players_for_tournament,
+    start_tournament,
+)
 
 User = get_user_model()
 
@@ -247,9 +254,68 @@ def broadcast_clock_updates():
 
 @shared_task
 def swiss_pairings(tournament_id: int):
-    """Swiss tournament pairings task"""
-    # Placeholder - implement if needed
-    pass
+    """Generate the next Swiss round pairings for an active tournament."""
+    try:
+        tournament = Tournament.objects.get(id=tournament_id)
+    except Tournament.DoesNotExist:
+        return []
+    if tournament.status != Tournament.STATUS_ACTIVE:
+        return []
+    if tournament.type != Tournament.TYPE_SWISS:
+        return []
+    return generate_swiss_pairings(tournament, round_number=tournament.current_round or 1)
+
+
+@shared_task
+def check_tournament_start():
+    """Auto-start pending tournaments when their start time is reached."""
+    now = timezone.now()
+    pending = Tournament.objects.filter(
+        status=Tournament.STATUS_PENDING,
+        start_at__lte=now,
+    )
+    started_ids = []
+    cancelled_ids = []
+    for tournament in pending:
+        try:
+            start_tournament(tournament)
+            started_ids.append(tournament.id)
+        except ValueError:
+            finish_tournament(tournament, winners=[], finished_at=now)
+            cancelled_ids.append(tournament.id)
+    return {"started": started_ids, "cancelled": cancelled_ids}
+
+
+@shared_task
+def check_tournament_finish():
+    """
+    Progress active tournaments and finish those that satisfy their end conditions.
+    """
+    active = Tournament.objects.filter(status=Tournament.STATUS_ACTIVE)
+    completed_ids = []
+    pairing_counts = {}
+    for tournament in active:
+        outcome = advance_tournament(tournament, pair_idle_for_arena=False)
+        if outcome.get("completed"):
+            completed_ids.append(tournament.id)
+        if outcome.get("pairings"):
+            pairing_counts[tournament.id] = len(outcome["pairings"])
+    return {"completed": completed_ids, "pairings": pairing_counts}
+
+
+@shared_task
+def pair_arena_idle_players():
+    """Pair idle players in active arena tournaments."""
+    active_arenas = Tournament.objects.filter(
+        status=Tournament.STATUS_ACTIVE,
+        type=Tournament.TYPE_ARENA,
+    )
+    created = {}
+    for tournament in active_arenas:
+        game_ids = pair_idle_arena_players_for_tournament(tournament)
+        if game_ids:
+            created[tournament.id] = game_ids
+    return created
 
 
 @shared_task

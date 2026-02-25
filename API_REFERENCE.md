@@ -81,9 +81,11 @@ Auth: Token auth unless stated. Null allowed = field may be omitted/empty; defau
   Defaults: initial_time_seconds per format; increment defaults 0. Arena requires duration>0, Swiss requires rounds>0.
 - **GET /api/games/tournaments/** `?status=&type=&page=&page_size=`; **GET /api/games/tournaments/{id}/**.
 - **POST /api/games/tournaments/{id}/register/** (pending + before start_at).
+- **POST /api/games/tournaments/{id}/unregister/** removes the current user from the participant list.
+- **GET /api/games/tournaments/{id}/my-game/** returns `{is_registered, game_id}` for quick client routing.
 - **POST /api/games/tournaments/{id}/start/**: locks registration; knockout trims to 2^n; arena sets end; swiss sets current_round.
 - **POST /api/games/tournaments/{id}/pairings/**: creator only; swiss triggers async pairings; others create simple pairings; returns `{pairings:[game_ids]}`.
-- **GET /api/games/tournaments/{id}/standings/**: arena scoring 3/1/0; swiss includes Buchholz/Median; others 1/0.5.
+- **GET /api/games/tournaments/{id}/standings/**: arena scoring 2/1/0 with win-streak bonus; swiss includes Buchholz/Median; others 1/0.5.
 - **POST /api/games/tournaments/{id}/finish/** body `{winners:[u1,u2,u3,...]}` sets completed.
 
 ## Leaderboards (public)

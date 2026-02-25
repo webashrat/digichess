@@ -1,0 +1,84 @@
+services:
+  backend:
+    environment:
+      TOURNAMENT_CHECK_START_INTERVAL: "${TOURNAMENT_CHECK_START_INTERVAL:-2}"
+      TOURNAMENT_CHECK_FINISH_INTERVAL: "${TOURNAMENT_CHECK_FINISH_INTERVAL:-2}"
+      TOURNAMENT_PAIR_ARENA_INTERVAL: "${TOURNAMENT_PAIR_ARENA_INTERVAL:-1}"
+
+  backend-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: digichess-backend-2
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-digichess}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      SKIP_DB_SETUP: "true"
+      TOURNAMENT_CHECK_START_INTERVAL: "${TOURNAMENT_CHECK_START_INTERVAL:-2}"
+      TOURNAMENT_CHECK_FINISH_INTERVAL: "${TOURNAMENT_CHECK_FINISH_INTERVAL:-2}"
+      TOURNAMENT_PAIR_ARENA_INTERVAL: "${TOURNAMENT_PAIR_ARENA_INTERVAL:-1}"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/static
+      - maia_models:/app/games/maia_models
+    networks:
+      - digichess-network
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  gateway:
+    image: haproxy:2.9-alpine
+    container_name: digichess-gateway
+    depends_on:
+      - backend
+      - backend-2
+    ports:
+      - "${GATEWAY_PORT:-8010}:8080"
+    volumes:
+      - ./infra/haproxy.tournament.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - digichess-network
+    restart: unless-stopped
+
+  celery:
+    command: celery -A config worker -l info -Q scm_default,scm_emails --concurrency=${CELERY_WORKER_CONCURRENCY:-8}
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-digichess}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_URL: redis://redis:6379/0
+      SKIP_DB_SETUP: "true"
+      TOURNAMENT_CHECK_START_INTERVAL: "${TOURNAMENT_CHECK_START_INTERVAL:-2}"
+      TOURNAMENT_CHECK_FINISH_INTERVAL: "${TOURNAMENT_CHECK_FINISH_INTERVAL:-2}"
+      TOURNAMENT_PAIR_ARENA_INTERVAL: "${TOURNAMENT_PAIR_ARENA_INTERVAL:-1}"
+
+  celery-beat:
+    command: sh -lc "rm -f /app/celerybeat-schedule && celery -A config beat -l info"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-digichess}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_URL: redis://redis:6379/0
+      SKIP_DB_SETUP: "true"
+      TOURNAMENT_CHECK_START_INTERVAL: "${TOURNAMENT_CHECK_START_INTERVAL:-2}"
+      TOURNAMENT_CHECK_FINISH_INTERVAL: "${TOURNAMENT_CHECK_FINISH_INTERVAL:-2}"
+      TOURNAMENT_PAIR_ARENA_INTERVAL: "${TOURNAMENT_PAIR_ARENA_INTERVAL:-1}"
