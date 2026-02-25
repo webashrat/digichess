@@ -86,6 +86,9 @@ export const listTournaments = (params = {}) => {
     return api.get(`/games/tournaments/${query ? `?${query}` : ''}`);
 };
 
+export const createTournament = (payload) =>
+    api.post('/games/tournaments/', payload);
+
 export const getTournament = (tournamentId) => api.get(`/games/tournaments/${tournamentId}/`);
 
 export const registerTournament = (tournamentId, payload = {}) =>
@@ -98,7 +101,7 @@ export const tournamentStandings = (tournamentId) =>
     api.get(`/games/tournaments/${tournamentId}/standings/`);
 
 export const tournamentPairings = (tournamentId) =>
-    api.get(`/games/tournaments/${tournamentId}/pairings/`);
+    api.post(`/games/tournaments/${tournamentId}/pairings/`);
 
 export const tournamentMyGame = (tournamentId) =>
     api.get(`/games/tournaments/${tournamentId}/my-game/`);

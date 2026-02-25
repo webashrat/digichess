@@ -144,6 +144,15 @@ CHANNEL_LAYERS = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_TASK_DEFAULT_QUEUE = os.getenv("CELERY_TASK_DEFAULT_QUEUE", "scm_default")
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
 CELERY_BEAT_SCHEDULE = {
     "store_daily_rating_snapshots": {
         "task": "games.tasks.store_daily_rating_snapshots",
@@ -151,15 +160,27 @@ CELERY_BEAT_SCHEDULE = {
     },
     "check_game_timeouts": {
         "task": "games.tasks.check_game_timeouts",
-        "schedule": 5.0,  # Every 5 seconds
+        "schedule": _env_float("GAME_TIMEOUT_CHECK_INTERVAL", 5.0),
     },
     "check_first_move_timeouts": {
         "task": "games.tasks.check_first_move_timeouts",
-        "schedule": 5.0,  # Every 5 seconds
+        "schedule": _env_float("FIRST_MOVE_TIMEOUT_CHECK_INTERVAL", 5.0),
     },
     "check_pending_challenge_expiry": {
         "task": "games.tasks.check_pending_challenge_expiry",
-        "schedule": 60.0,  # Every minute
+        "schedule": _env_float("PENDING_CHALLENGE_EXPIRY_INTERVAL", 60.0),
+    },
+    "check_tournament_start": {
+        "task": "games.tasks.check_tournament_start",
+        "schedule": _env_float("TOURNAMENT_CHECK_START_INTERVAL", 10.0),
+    },
+    "check_tournament_finish": {
+        "task": "games.tasks.check_tournament_finish",
+        "schedule": _env_float("TOURNAMENT_CHECK_FINISH_INTERVAL", 10.0),
+    },
+    "pair_arena_idle_players": {
+        "task": "games.tasks.pair_arena_idle_players",
+        "schedule": _env_float("TOURNAMENT_PAIR_ARENA_INTERVAL", 5.0),
     },
 }
 

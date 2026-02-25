@@ -36,6 +36,7 @@ export default function LoginPage() {
                                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
                                 value={identifier}
                                 onChange={(event) => setIdentifier(event.target.value)}
+                                data-testid="login-identifier"
                                 required
                             />
                         </label>
@@ -46,6 +47,7 @@ export default function LoginPage() {
                                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
+                                data-testid="login-password"
                                 required
                             />
                         </label>
@@ -56,6 +58,7 @@ export default function LoginPage() {
                             type="submit"
                             className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-60"
                             disabled={loading}
+                            data-testid="login-submit"
                         >
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>
