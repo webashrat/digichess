@@ -1,334 +1,271 @@
-<!-- DigiQuiz Locked State -->
+<!-- DigiQuiz Locked State Dashboard -->
 <!DOCTYPE html>
 
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>DigiQuiz Locked State</title>
+<title>DigiQuiz Locked State Dashboard</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#6af425",
-                        "background-light": "#f6f8f5",
-                        "background-dark": "#162210",
-                    },
-                    fontFamily: {
-                        "display": ["Space Grotesk", "sans-serif"]
-                    },
-                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
-                },
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+              "card-dark": "#1e2430",
+              "card-hover": "#2a3241",
+              "text-secondary": "#92a4c9",
             },
-        }
+            fontFamily: {
+              display: ["Lexend", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
     </script>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center text-slate-900 dark:text-slate-100 antialiased overflow-hidden selection:bg-primary selection:text-black">
-<div class="w-full max-w-md h-full min-h-screen bg-background-light dark:bg-background-dark relative flex flex-col shadow-2xl overflow-hidden">
-<!-- Background Pattern -->
-<div class="absolute inset-0 z-0 opacity-10 pointer-events-none">
-<div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(106,244,37,0.4),transparent_70%)]"></div>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-hidden">
+<div class="relative flex h-screen w-full bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- SideNavBar -->
+<aside class="hidden lg:flex w-72 flex-col border-r border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark h-full">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-6">
+<!-- Brand -->
+<div class="flex gap-3 px-2 pt-2">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10" data-alt="Abstract blue gradient logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDawkA0wkoUqtYa_a35EbeV6wrWyYTTOUpfN8ggilOqJXvQX0dPJQw0OYbPzbykHpEvtUh00Z6E90lsY4V1C-hmeJY9L9FCBhrRoUQkLoKaqG2SpGGcvGhcV_WxU5o6FqwZX5kwCgCjtDQRubRDZKMDF-6ME-ZvtqfEaL1ZP_qJBtFpZ6LP5A89XBcaPCZt-fG-e0O-5Q1cK-K_weJGdmnSG9KK06V16egtqVXYM39nwyeSm2bOYdaCRa6WEzMVmhUp-s6SsVDA50I");'></div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-medium leading-normal">DigiChess</h1>
+<p class="text-slate-500 dark:text-text-secondary text-sm font-normal leading-normal">Master the game</p>
 </div>
-<!-- Header -->
-<div class="relative z-10 flex items-center justify-between p-6 pb-2 pt-12">
-<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-<span class="material-symbols-outlined !text-3xl text-slate-800 dark:text-slate-200">menu</span>
+</div>
+<!-- Nav Links -->
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-card-hover transition-colors" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<p class="text-sm font-medium leading-normal">Play Chess</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:text-white dark:bg-card-hover border border-primary/20 dark:border-slate-700" href="#">
+<span class="material-symbols-outlined text-primary dark:text-white fill-1">quiz</span>
+<p class="text-sm font-medium leading-normal">Daily Quiz</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-card-hover transition-colors" href="#">
+<span class="material-symbols-outlined">celebration</span>
+<p class="text-sm font-medium leading-normal">Tournaments</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-card-hover transition-colors" href="#">
+<span class="material-symbols-outlined">school</span>
+<p class="text-sm font-medium leading-normal">Learn</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-card-hover transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-sm font-medium leading-normal">Profile</p>
+</a>
+</div>
+</div>
+<!-- Upgrade CTA -->
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors">
+<span class="truncate">Upgrade to Pro</span>
 </button>
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">bolt</span>
-<h2 class="text-xl font-bold tracking-tight">DigiQuiz</h2>
 </div>
-<button class="p-2 rounded-full bg-slate-200 dark:bg-slate-800 hover:opacity-80 transition-opacity relative group">
-<span class="material-symbols-outlined !text-2xl text-slate-800 dark:text-slate-200">calendar_month</span>
-<!-- Floating Calendar Tooltip/Hint -->
-<div class="absolute right-0 top-full mt-2 w-max px-2 py-1 bg-primary text-background-dark text-xs font-bold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    Past Results
-                </div>
-</button>
-</div>
+</aside>
 <!-- Main Content -->
-<div class="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-8">
-<!-- Status Message -->
-<div class="text-center space-y-2">
-<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700">
-<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-<span class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Locked</span>
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- Header -->
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark px-6 py-4 z-10">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="lg:hidden p-2 -ml-2 mr-2">
+<span class="material-symbols-outlined">menu</span>
 </div>
-<h1 class="text-3xl font-bold leading-tight">Next Round In</h1>
-<p class="text-slate-500 dark:text-slate-400 text-sm">Today's round opens at <span class="text-primary font-bold">23:30 IST</span></p>
+<span class="material-symbols-outlined text-primary">psychology</span>
+<h2 class="text-lg font-bold leading-tight">DigiQuiz</h2>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center size-10 rounded-full bg-white dark:bg-card-dark text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-card-hover transition-colors border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</button>
+<button class="flex items-center justify-center size-10 rounded-full bg-white dark:bg-card-dark text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-card-hover transition-colors border border-slate-200 dark:border-slate-700 relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2 right-2.5 size-2 bg-red-500 rounded-full border border-card-dark"></span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center justify-center h-10 px-5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors">
+                        Login
+                    </button>
+</div>
+</header>
+<!-- Scrollable Area -->
+<div class="flex-1 overflow-y-auto p-4 lg:p-8">
+<div class="max-w-5xl mx-auto flex flex-col gap-8">
+<!-- Locked State Hero -->
+<div class="flex flex-col items-center justify-center gap-6 py-10 lg:py-16 text-center relative rounded-2xl overflow-hidden">
+<!-- Background decoration -->
+<div class="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
+<div class="relative z-10 flex flex-col items-center gap-4">
+<div class="size-16 rounded-full bg-card-dark border border-slate-700 flex items-center justify-center mb-2 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-3xl text-primary">lock</span>
+</div>
+<h1 class="text-3xl lg:text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
+                                Next Quiz Unlocks at <span class="text-primary">23:30 IST</span>
+</h1>
+<p class="text-slate-500 dark:text-text-secondary text-lg max-w-lg">
+                                Sharpen your tactics while you wait. The daily challenge refreshes every 24 hours.
+                            </p>
 </div>
 <!-- Countdown Timer -->
-<div class="flex gap-3 w-full justify-center">
-<div class="flex flex-col items-center gap-2">
-<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
-<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
-<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">04</span>
+<div class="relative z-10 flex flex-wrap justify-center gap-4 mt-4">
+<div class="flex flex-col gap-2">
+<div class="flex h-20 w-20 items-center justify-center rounded-xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-700 shadow-sm">
+<span class="text-3xl font-bold text-slate-900 dark:text-white font-mono">04</span>
 </div>
-<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Hours</span>
+<span class="text-xs uppercase tracking-wider font-medium text-slate-500 dark:text-text-secondary">Hours</span>
 </div>
-<div class="flex flex-col justify-center h-24 pb-6">
-<span class="text-2xl font-bold text-slate-400 dark:text-slate-600">:</span>
+<div class="flex flex-col gap-2">
+<div class="flex h-20 w-20 items-center justify-center rounded-xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-700 shadow-sm">
+<span class="text-3xl font-bold text-slate-900 dark:text-white font-mono">12</span>
 </div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
-<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
-<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">15</span>
+<span class="text-xs uppercase tracking-wider font-medium text-slate-500 dark:text-text-secondary">Minutes</span>
 </div>
-<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Mins</span>
+<div class="flex flex-col gap-2">
+<div class="flex h-20 w-20 items-center justify-center rounded-xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-700 shadow-sm">
+<span class="text-3xl font-bold text-primary font-mono">45</span>
 </div>
-<div class="flex flex-col justify-center h-24 pb-6">
-<span class="text-2xl font-bold text-slate-400 dark:text-slate-600">:</span>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
-<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
-<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">30</span>
-</div>
-<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Secs</span>
+<span class="text-xs uppercase tracking-wider font-medium text-slate-500 dark:text-text-secondary">Seconds</span>
 </div>
 </div>
-<!-- Notify Me Button -->
-<button class="w-full py-4 rounded-xl bg-primary text-background-dark font-bold text-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_-5px_rgba(106,244,37,0.4)]">
-<span class="material-symbols-outlined">notifications_active</span>
-                Notify Me When Open
-            </button>
-<!-- Previous Leaderboard Preview -->
-<div class="w-full bg-slate-100 dark:bg-white/5 rounded-xl p-4 border border-slate-200 dark:border-white/10 backdrop-blur-sm">
-<div class="flex items-center justify-between mb-4">
-<h3 class="font-bold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Yesterday's Top 3</h3>
-<button class="text-xs text-primary hover:underline font-medium">View Full</button>
+<div class="relative z-10 flex gap-3 mt-4">
+<button class="px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-card-hover transition-colors">
+                                View Rules
+                            </button>
+<button class="px-6 py-2.5 rounded-lg bg-card-dark text-white font-medium hover:bg-card-hover transition-colors flex items-center gap-2 border border-slate-700">
+<span class="material-symbols-outlined text-lg">history</span>
+                                Past Quizzes
+                            </button>
 </div>
-<div class="flex items-end justify-center gap-4 h-32 pb-2">
+</div>
+<!-- Layout: Top 3 & Status Card -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Podium Section (Spans 2 cols) -->
+<div class="lg:col-span-2 rounded-2xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-yellow-500">trophy</span>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Yesterday's Top 3</h3>
+</div>
+<button class="text-sm text-primary font-medium hover:underline">View Full Leaderboard</button>
+</div>
+<div class="flex items-end justify-center gap-4 h-64 pb-4">
 <!-- 2nd Place -->
-<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="flex flex-col items-center gap-3 w-1/3">
 <div class="relative">
-<img alt="Avatar of second place winner" class="w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 object-cover" data-alt="Portrait of a woman with long hair" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnMK-gSrouJckV26rH5jFZlCI1UGesprACm7qWbpPAHSllDlI4U8m_392DQQ7eAMpj1wcxBAPEJGOqlYk8QqYrdMoK4QCGrSCz-O5N9rOx4qBGv8rpSjC1mo4p9U9KS6N0Jd1MouU8JTuWO1uwoXzeeI8C7Sm4iQkiMO2d4GpTYscurVGoUXNZNKpBbsJSGsaniGO2PytbESwnADqHeFB-rywWXR0UQ8FoNWpuDLwxzVdULWI0OZHaiJ7akV045De2z5tQ8Rb_w3Y"/>
-<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-300 dark:bg-slate-600 text-slate-800 dark:text-white text-[10px] font-bold px-1.5 rounded-md shadow-sm">#2</div>
+<div class="size-16 rounded-full bg-cover bg-center border-2 border-slate-300 dark:border-slate-600" data-alt="User avatar male" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA3nfqlVr2n5l7H3w7MqnJxfox1L8M9db0qbtj9OFSzSZhkG_sbJ9uw17_62eW_-713FYmawBrBsm50O4SfifQuskmEx2FM_uYF2_Bkj2eUwt8VFip5PW66hi7Xmusd37iQZ5n6cIBxRR8BV2MQA688F1awviMs75iEhgWc_MjTAATFr2RCRQ9hJ01QuVlBBqz6rdDWTjN4KUAg0b_nXBhJNVlglK6F9iKe8oXEan7kzZfCBrXRURKp3Lw9keAmJ7FEdBgth0xgujE");'></div>
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-white text-xs font-bold px-2 py-0.5 rounded-full border border-background-dark">2</span>
 </div>
-<div class="h-16 w-full bg-slate-300/20 dark:bg-white/5 rounded-t-lg flex items-end justify-center pb-2 group-hover:bg-slate-300/40 dark:group-hover:bg-white/10 transition-colors">
-<span class="text-xs font-bold">2,850</span>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white font-bold truncate max-w-[100px]">AlexR</p>
+<p class="text-primary text-sm font-medium">2850 pts</p>
+</div>
+<div class="w-full bg-slate-200 dark:bg-slate-700/50 rounded-t-lg h-32 relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
 </div>
 </div>
 <!-- 1st Place -->
-<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="flex flex-col items-center gap-3 w-1/3 -mt-6">
 <div class="relative">
-<img alt="Avatar of first place winner" class="w-16 h-16 rounded-full border-2 border-primary object-cover ring-4 ring-primary/20" data-alt="Portrait of a smiling man with glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpElIdSbjFr1ZMbYJHbYGK6Dw62x2BtNK4pcI5xXKQsoTeFwqQsC2JS_a5XqmkHFI_ZWLnFvrQGbOWB8vztFRFfEOS6114DpEfCxdO-VspehX95aePzDjP_hwR9ERTJV6qg6PhojD-uAGUY0NVKvkugsZcLtB18wRIQiXSVh_CkFPKSEcRdTloPsd-irfpojVsbRQFI13BBcQpq1VPNIK6vrf09BWPrECGkv_lw4OVOikmzskC_ObBxA97nsZaE-_zrTW7wFElOO4"/>
-<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-primary">
-<span class="material-symbols-outlined !text-3xl" style="font-variation-settings: 'FILL' 1;">crown</span>
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 text-yellow-400 material-symbols-outlined">crown</span>
+<div class="size-20 rounded-full bg-cover bg-center border-2 border-yellow-500 ring-2 ring-yellow-500/20" data-alt="User avatar female" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0_gJbJUPgjwU3avhgtE6ENlFZON0x5Li3v37Jx2DLeCTM0t0e1NOlAJdM0f4EzIuBYZHQwsSRKnq3IT8sc9Zy_jETi_o8bOut6_eSsXFdCDWDEv7GpK2OnGDHa410lOxzShnSuG8QFGiQxNGhPqCbwgAqZIICIEypj-y7TcSdVzf1Qz400z19-Luq3EAaAyGVCBZCBwosvmES7a3RXhn8LyKuy-V-0Ma1ComLG6adat8Qc_7neIFwZWECmPFl7Nj8V0507mmd-iY");'></div>
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full border border-background-dark">1</span>
 </div>
-<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-background-dark text-[10px] font-bold px-1.5 rounded-md shadow-sm">#1</div>
 </div>
-<div class="h-24 w-full bg-gradient-to-t from-primary/20 to-primary/5 rounded-t-lg flex items-end justify-center pb-2 relative overflow-hidden group-hover:from-primary/30 transition-colors">
-<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
-<span class="text-sm font-bold text-primary">3,120</span>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white font-bold text-lg truncate max-w-[120px]">GrandM</p>
+<p class="text-primary text-sm font-medium">2980 pts</p>
+</div>
+<div class="w-full bg-primary/20 rounded-t-lg h-44 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent"></div>
 </div>
 </div>
 <!-- 3rd Place -->
-<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="flex flex-col items-center gap-3 w-1/3">
 <div class="relative">
-<img alt="Avatar of third place winner" class="w-12 h-12 rounded-full border-2 border-[#CD7F32] object-cover" data-alt="Portrait of a woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZ36B7bZ-P7X6zJzqpEsVnaKA6ptw-M4ysJGv3KZADtba2VlqtNbfveBIUbmnZFScOXDAJdhyl1_VfoSI2OeIhcktJq5ut6cZolXdCvsDlFb5MLpHHclPziR68UA-9Bms-Z1ZTcD2U0aCn8hXAYFtno-6JFOdFIG3VW4nsMyNkb7uYo_4BSLJkugxJNGwGp5_pNeQnxU8FnInM7sJUpq5YZ4_DMmYZ0I2RVG6smOU7H7mPu-dMBwiT7Xnr0xTBUQlV29BfkK2t-NU"/>
-<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-[10px] font-bold px-1.5 rounded-md shadow-sm">#3</div>
-</div>
-<div class="h-12 w-full bg-[#CD7F32]/10 dark:bg-[#CD7F32]/20 rounded-t-lg flex items-end justify-center pb-2 group-hover:bg-[#CD7F32]/30 transition-colors">
-<span class="text-xs font-bold text-[#CD7F32]">2,400</span>
+<div class="size-16 rounded-full bg-cover bg-center border-2 border-amber-700" data-alt="User avatar abstract" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBa38jfPYhUAgqaLYogiq2tPsxZ-NBLeSANYnoi-Pl94JktKoowhMvS8rGsy_wuc9l0Mom1It9fzBrJlrfcvog1xVc8Lh5SSrWoIKzJlaK1u73SW4d1Z8TaV0h5G1SGLtptfRELt_xARb3t89RnNsN3pbDfTz-Y1OdY47KevfYZu4u-wf2Zo2ojnQqz68eai89rv71YUTh_mGnkiHtB_1T_Qt9SWo21yrD9plPnf68-xJ1lm_GUixAirf2nZKrRHjB2ZVT72g1lXLk");'></div>
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="bg-amber-700 text-white text-xs font-bold px-2 py-0.5 rounded-full border border-background-dark">3</span>
 </div>
 </div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white font-bold truncate max-w-[100px]">ChessViz</p>
+<p class="text-primary text-sm font-medium">2710 pts</p>
 </div>
-</div>
-</div>
-<!-- Bottom Navigation -->
-<nav class="relative z-10 w-full bg-slate-100/80 dark:bg-[#223418] border-t border-slate-200 dark:border-[#2f4922] px-6 pb-6 pt-3 backdrop-blur-md">
-<div class="flex items-center justify-between">
-<!-- Play Tab (Active-ish but showing locked context) -->
-<a class="flex flex-col items-center gap-1 group" href="#">
-<div class="relative">
-<span class="material-symbols-outlined text-primary text-2xl transition-transform group-hover:-translate-y-1" style="font-variation-settings: 'FILL' 1;">play_circle</span>
-<span class="absolute -top-1 -right-1 flex h-3 w-3">
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-</span>
-</div>
-<span class="text-[10px] font-semibold text-primary">Play</span>
-</a>
-<!-- Leaderboard Tab -->
-<a class="flex flex-col items-center gap-1 group" href="#">
-<span class="material-symbols-outlined text-slate-400 dark:text-[#a4cb90] text-2xl transition-transform group-hover:-translate-y-1 group-hover:text-slate-600 dark:group-hover:text-primary">emoji_events</span>
-<span class="text-[10px] font-medium text-slate-400 dark:text-[#a4cb90] group-hover:text-slate-600 dark:group-hover:text-primary">Leaderboard</span>
-</a>
-<!-- Profile Tab -->
-<a class="flex flex-col items-center gap-1 group" href="#">
-<span class="material-symbols-outlined text-slate-400 dark:text-[#a4cb90] text-2xl transition-transform group-hover:-translate-y-1 group-hover:text-slate-600 dark:group-hover:text-primary">person</span>
-<span class="text-[10px] font-medium text-slate-400 dark:text-[#a4cb90] group-hover:text-slate-600 dark:group-hover:text-primary">Profile</span>
-</a>
-</div>
-</nav>
-</div>
-</body></html>
-
-<!-- DigiQuiz Live Session -->
-<!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>DigiQuiz Live Session</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#6af425",
-                        "primary-content": "#162210",
-                        "background-light": "#f6f8f5",
-                        "background-dark": "#162210",
-                        "surface-dark": "#223418", 
-                        "surface-light": "#ffffff",
-                    },
-                    fontFamily: {
-                        "display": ["Space Grotesk", "sans-serif"]
-                    },
-                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
-                },
-            },
-        }
-    </script>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased selection:bg-primary selection:text-primary-content">
-<div class="relative mx-auto flex h-full min-h-screen w-full max-w-md flex-col overflow-hidden shadow-2xl">
-<!-- Header / Stats Bar -->
-<header class="flex items-center justify-between px-6 pt-6 pb-2">
-<div class="flex flex-col">
-<span class="text-slate-500 dark:text-[#a4cb90] text-sm font-medium tracking-wide">Question 7/20</span>
-<div class="mt-1 h-2 w-32 rounded-full bg-slate-200 dark:bg-[#2f4922]">
-<div class="h-full w-[35%] rounded-full bg-primary shadow-[0_0_10px_rgba(106,244,37,0.4)]"></div>
-</div>
-</div>
-<div class="flex items-center gap-2 rounded-full bg-slate-100 dark:bg-[#2f4922] px-4 py-1.5 border border-slate-200 dark:border-[#436831]">
-<span class="material-symbols-outlined text-amber-500 text-[20px] font-bold">trophy</span>
-<span class="text-slate-900 dark:text-white text-base font-bold tracking-tight">1450</span>
-</div>
-</header>
-<!-- Main Content Area -->
-<main class="flex-1 flex flex-col px-4 py-4 gap-6 overflow-y-auto pb-24 scrollbar-hide">
-<!-- Timer Section -->
-<div class="flex justify-center py-2 relative">
-<!-- Circular Timer SVG -->
-<div class="relative flex h-24 w-24 items-center justify-center">
-<svg class="h-full w-full -rotate-90 transform" viewbox="0 0 100 100">
-<circle class="text-slate-200 dark:text-[#2f4922]" cx="50" cy="50" fill="none" r="42" stroke="currentColor" stroke-width="6"></circle>
-<circle class="text-primary transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(106,244,37,0.5)]" cx="50" cy="50" fill="none" r="42" stroke="currentColor" stroke-dasharray="264" stroke-dashoffset="66" stroke-linecap="round" stroke-width="6"></circle>
-</svg>
-<div class="absolute inset-0 flex flex-col items-center justify-center">
-<span class="text-3xl font-bold tracking-tighter text-slate-900 dark:text-white">14</span>
-<span class="text-[10px] uppercase font-bold text-slate-500 dark:text-[#a4cb90] tracking-widest">Sec</span>
+<div class="w-full bg-slate-200 dark:bg-slate-700/50 rounded-t-lg h-24 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
 </div>
 </div>
 </div>
-<!-- Question Card -->
-<div class="relative overflow-hidden rounded-xl bg-surface-light dark:bg-surface-dark p-6 shadow-sm border border-slate-200 dark:border-[#2f4922]">
-<!-- Decorative background elements -->
-<div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/5 blur-3xl"></div>
-<div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl"></div>
-<div class="relative z-10">
-<div class="flex items-center gap-2 mb-3">
-<span class="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary uppercase tracking-wider">Astronomy</span>
-<span class="text-xs text-slate-400 font-medium">• 200 pts</span>
 </div>
-<h2 class="text-2xl font-bold leading-tight text-slate-900 dark:text-white mb-4">
-                        Which planet in our solar system is known as the Red Planet?
-                    </h2>
-<!-- Image (Optional context for question) -->
-<div class="w-full h-32 rounded-lg bg-slate-800 relative overflow-hidden mb-2 group">
-<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-<img alt="Red planet surface texture" class="h-full w-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" data-alt="Abstract red textured planet surface resembling Mars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJP25uLMCbFmxzPbwh6O_iGFNkysgB3DARcMstwaywm6IeZgVqGLUyPwS-d1S8pJx1_T0DOL6--Qre7ETp3XScLwByCCtJZI-FQrYeXqDahh9Z4aoXsRUEU6EkhaxSJtdtPmznaxNzZ1QL5rZSj5sxS3uPUEXK9MveAayrhRZR-i3-w7BLmxaFvektS4PjxeomFGCRJ5SpO0WExb-ohAV9xwFVLuiY5v_SOH4laC7DAOIdYU02XQYzBd2io-Z3sUnags35O303LR4"/>
+<!-- Sidebar Stats / Info -->
+<div class="flex flex-col gap-6">
+<!-- Streak Card -->
+<div class="rounded-2xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-slate-500 dark:text-text-secondary text-sm font-medium">Your Current Streak</p>
+<div class="flex items-baseline gap-1">
+<h4 class="text-3xl font-bold text-slate-900 dark:text-white">12</h4>
+<span class="text-sm text-slate-500 dark:text-text-secondary">days</span>
 </div>
 </div>
+<div class="size-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-orange-500">local_fire_department</span>
 </div>
-<!-- Feedback Banner (Hidden by default, shown conditionally in a real app) -->
-<!-- Example of a 'Correct' feedback state shown inline as requested by context description -->
-<div class="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/20 p-3 px-4 animate-fade-in-up">
-<div class="flex items-center gap-3">
-<div class="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white">
-<span class="material-symbols-outlined text-sm font-bold">check</span>
 </div>
-<span class="text-sm font-bold text-green-600 dark:text-green-400">Previous: Correct!</span>
+<div class="mt-4 flex gap-1">
+<!-- Streak dots visualization -->
+<div class="h-2 flex-1 rounded-full bg-primary"></div>
+<div class="h-2 flex-1 rounded-full bg-primary"></div>
+<div class="h-2 flex-1 rounded-full bg-primary"></div>
+<div class="h-2 flex-1 rounded-full bg-primary"></div>
+<div class="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
 </div>
-<span class="text-sm font-bold text-green-600 dark:text-green-400">+17 pts</span>
+<p class="mt-2 text-xs text-slate-500 dark:text-text-secondary">Play tomorrow to keep it up!</p>
 </div>
-<!-- Options Grid -->
-<div class="grid grid-cols-1 gap-3 pb-4">
-<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
-<div class="flex items-center gap-4">
-<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">A</div>
-<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Venus</span>
+<!-- News / Promo Card -->
+<div class="rounded-2xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-1 flex flex-col">
+<div class="h-32 bg-cover bg-center" data-alt="Abstract chess board pattern blue" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC5F1PhVLG4ycXdhbqhWiqv-odxZ0ed5ABJEeHmAG7rBLf02WCSfbhaTuIKsoqMZtn8zts9cJlCY3LHmnUnIIXSpVmTIr6aTBBZmSzmVsuCJF0IiLK99aWRCF06RRGWDzRoM4eoK6VuQuDRCBY5dqr0xkRiqP-q9xRZvku1VJ5gksSl6PXIsutrNhAwiCiAax0wktuwH_Ex9YVO90BCXhBERg_Fq_M1IknUETSGPxKob3W4Vd3YSVrFKNU-VDWKzTvFdhr4hI3i46o");'></div>
+<div class="p-5 flex flex-col justify-between flex-1">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">New</span>
 </div>
-</button>
-<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all border border-primary bg-primary/5 dark:bg-[#2a401e]/50 active:scale-[0.99] shadow-[0_0_15px_rgba(106,244,37,0.1)]">
-<div class="flex items-center gap-4">
-<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content font-bold shadow-sm">B</div>
-<span class="text-lg font-bold text-slate-900 dark:text-white">Mars</span>
+<h4 class="text-slate-900 dark:text-white font-bold leading-snug mb-2">Weekly Grandmaster Puzzle</h4>
+<p class="text-sm text-slate-500 dark:text-text-secondary line-clamp-3">
+                                            Solve this week's hardest puzzle curated by GM Hikaru. Bonus points awarded for speed.
+                                        </p>
 </div>
-<span class="material-symbols-outlined text-primary">check_circle</span>
-</button>
-<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
-<div class="flex items-center gap-4">
-<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">C</div>
-<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Jupiter</span>
+<button class="mt-4 w-full py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                                        Try Now
+                                    </button>
 </div>
-</button>
-<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
-<div class="flex items-center gap-4">
-<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">D</div>
-<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Saturn</span>
 </div>
-</button>
+</div>
+</div>
+</div>
 </div>
 </main>
-<!-- Bottom Nav Bar -->
-<nav class="sticky bottom-0 z-50 w-full border-t border-slate-200 dark:border-[#2f4922] bg-surface-light dark:bg-surface-dark/95 backdrop-blur-md px-4 pb-6 pt-2">
-<div class="flex items-center justify-between">
-<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">home</span>
-<p class="text-[10px] font-bold uppercase tracking-wider">Home</p>
-</a>
-<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-primary relative" href="#">
-<!-- Active Indicator Glow -->
-<div class="absolute -top-10 h-12 w-12 bg-primary/20 rounded-full blur-xl"></div>
-<span class="material-symbols-outlined text-[24px] fill-current">bolt</span>
-<p class="text-[10px] font-bold uppercase tracking-wider">Live Quiz</p>
-</a>
-<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">trophy</span>
-<p class="text-[10px] font-bold uppercase tracking-wider">Ranking</p>
-</a>
-<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">person</span>
-<p class="text-[10px] font-bold uppercase tracking-wider">Profile</p>
-</a>
-</div>
-</nav>
 </div>
 </body></html>
 
@@ -338,35 +275,34 @@
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>DigiQuiz Leaderboard &amp; History</title>
-<!-- Fonts -->
+<title>DigiChess - DigiQuiz Leaderboard</title>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<!-- Tailwind Config -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script>
+<script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        primary: "#6af425",
-                        "background-light": "#f6f8f5",
-                        "background-dark": "#162210",
-                        "surface-dark": "#223418",
-                        "surface-light": "#ffffff",
+                        primary: "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1e2430",
+                        "surface-highlight": "#2a3245",
                     },
                     fontFamily: {
-                        display: ["Space Grotesk", "sans-serif"],
+                        display: ["Lexend", "sans-serif"],
                     },
                     borderRadius: {
-                        DEFAULT: "0.5rem",
-                        lg: "1rem",
-                        xl: "1.5rem",
-                        full: "9999px",
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        "2xl": "1rem",
+                        full: "9999px"
                     },
                 },
             },
@@ -374,257 +310,556 @@
     </script>
 <style>
         body {
-            font-family: "Space Grotesk", sans-serif;
+            font-family: 'Lexend', sans-serif;
         }
-        /* Custom scrollbar for table if needed */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        ::-webkit-scrollbar-track {
+            background: #101622; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a3245; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b465e; 
         }
     </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
-<!-- Main Container -->
-<div class="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden">
-<!-- Header -->
-<div class="flex items-center justify-between p-4 pb-2 z-10 bg-background-light dark:bg-background-dark">
-<button class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark transition-colors">
-<span class="material-symbols-outlined">arrow_back</span>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col font-display">
+<!-- Navbar -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-[#232f48] bg-white dark:bg-[#111722]/90 backdrop-blur-md px-6 lg:px-10 py-3">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-[-0.015em]">DigiChess</h2>
+</div>
+<nav class="hidden md:flex flex-1 justify-center gap-8 lg:gap-12">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Play</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Learn</a>
+<a class="text-primary font-bold text-sm leading-normal" href="#">DigiQuiz</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Community</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden sm:flex text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary">
+<span class="material-symbols-outlined">notifications</span>
 </button>
-<h2 class="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight flex-1 text-center">Leaderboard</h2>
-<div class="flex w-10 items-center justify-end">
-<button class="text-primary hover:text-primary/80 transition-colors">
-<span class="material-symbols-outlined">calendar_month</span>
+<div class="h-8 w-[1px] bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+<div class="flex items-center gap-3">
+<span class="text-sm font-medium hidden sm:block">GrandMasterFlash</span>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-primary/20" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDcwOmhBFUPFga9ZG0HEV6VgP0-0dp9Vz6h9JpjPtkNrzNYBzcOnnp1UDlZGX_xYzhfDwjRqm9JLP-IdDIcHD4loeK6nHy5Nxe0y2YcMGwxUhXUog1E1MUBo3b0ESo-EYPZDtkGtVlqmQpaGQvbBhAwkjuAk4Jbm52N8DH2j5of9aiXkMOLfhCR2FEEYPuXv88B9A0Lu1L9wlyIP13A1Mq3qwhW8sDZvvPOBk2i5ocFKX9HOQxerQ0pQdvkhUND8S040UeGMaYN77s");'></div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<div class="flex flex-col gap-2">
+<h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                    DigiQuiz Leaderboard
+                </h1>
+<p class="text-slate-500 dark:text-slate-400 text-lg">
+                    View past round results and top performers.
+                </p>
+</div>
+<!-- Date Navigation -->
+<div class="flex items-center bg-white dark:bg-surface-dark rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-800">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-surface-highlight rounded-lg transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">chevron_left</span>
 </button>
+<div class="flex items-center gap-2 px-4 border-l border-r border-slate-200 dark:border-slate-700/50 mx-1">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+<span class="font-bold text-sm whitespace-nowrap">October 5, 2023</span>
 </div>
-</div>
-<!-- Scrollable Content Area -->
-<div class="flex-1 overflow-y-auto pb-24 hide-scrollbar">
-<!-- Calendar Strip (Collapsed View) -->
-<div class="px-4 py-2">
-<div class="flex items-center justify-between mb-4">
-<button class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark text-slate-500 dark:text-[#a4cb90]">
-<span class="material-symbols-outlined text-sm">arrow_back_ios</span>
-</button>
-<p class="text-slate-900 dark:text-white text-base font-bold">October 2023</p>
-<button class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark text-slate-500 dark:text-[#a4cb90]">
-<span class="material-symbols-outlined text-sm">arrow_forward_ios</span>
-</button>
-</div>
-<!-- Date Row -->
-<div class="flex justify-between gap-1 overflow-x-auto pb-2">
-<!-- Past Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">M</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">2</button>
-</div>
-<!-- Past Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">T</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">3</button>
-</div>
-<!-- Past Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">W</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">4</button>
-</div>
-<!-- Active Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-primary font-bold">T</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-bold bg-primary text-background-dark shadow-lg shadow-primary/20">5</button>
-</div>
-<!-- Future Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">F</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">6</button>
-</div>
-<!-- Future Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">S</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">7</button>
-</div>
-<!-- Future Date -->
-<div class="flex flex-col items-center gap-1 min-w-[40px]">
-<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">S</span>
-<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">8</button>
-</div>
-</div>
-</div>
-<!-- Stats Summary Cards -->
-<div class="grid grid-cols-3 gap-3 px-4 py-4">
-<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
-<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">450</p>
-<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Score</p>
-</div>
-<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
-<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">8/10</p>
-<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Correct</p>
-</div>
-<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
-<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">12s</p>
-<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Avg Time</p>
-</div>
-</div>
-<!-- Tabs -->
-<div class="px-4 sticky top-0 bg-background-light dark:bg-background-dark z-10 pt-2">
-<div class="flex border-b border-slate-200 dark:border-[#436831]">
-<button class="flex-1 pb-3 pt-2 text-center border-b-[3px] border-primary text-slate-900 dark:text-white">
-<span class="text-sm font-bold tracking-wide">Global</span>
-</button>
-<button class="flex-1 pb-3 pt-2 text-center border-b-[3px] border-transparent text-slate-500 dark:text-[#a4cb90] hover:text-slate-700 dark:hover:text-white transition-colors">
-<span class="text-sm font-bold tracking-wide">Friends</span>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-surface-highlight rounded-lg transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">chevron_right</span>
 </button>
 </div>
 </div>
-<!-- Leaderboard List -->
-<div class="px-4 pt-4 flex flex-col gap-3">
-<!-- Top 3 Podium (Optional Visual Flair) -->
-<div class="flex items-end justify-center gap-4 mb-6 mt-2">
+<div class="grid lg:grid-cols-12 gap-8">
+<!-- Sidebar / Calendar -->
+<div class="hidden lg:block lg:col-span-3 xl:col-span-3">
+<div class="bg-white dark:bg-surface-dark rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm sticky top-24">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold text-lg">Calendar</h3>
+<div class="flex gap-1">
+<button class="size-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-surface-highlight rounded-full transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<span class="text-sm font-semibold flex items-center">Oct 2023</span>
+<button class="size-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-surface-highlight rounded-full transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-y-4 gap-x-1 text-center mb-2">
+<span class="text-xs font-bold text-slate-400 uppercase">S</span>
+<span class="text-xs font-bold text-slate-400 uppercase">M</span>
+<span class="text-xs font-bold text-slate-400 uppercase">T</span>
+<span class="text-xs font-bold text-slate-400 uppercase">W</span>
+<span class="text-xs font-bold text-slate-400 uppercase">T</span>
+<span class="text-xs font-bold text-slate-400 uppercase">F</span>
+<span class="text-xs font-bold text-slate-400 uppercase">S</span>
+</div>
+<div class="grid grid-cols-7 gap-y-2 gap-x-1 place-items-center">
+<!-- Empty cells for previous month -->
+<span class="size-8"></span><span class="size-8"></span><span class="size-8"></span>
+<!-- Days -->
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">1</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">2</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">3</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">4</button>
+<button class="size-8 flex items-center justify-center text-sm font-bold bg-primary text-white rounded-full shadow-lg shadow-primary/30">5</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">6</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">7</button>
+<button class="size-8 flex items-center justify-center text-sm rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-highlight transition-colors">8</button>
+<!-- ... more days would go here in a real app ... -->
+</div>
+<div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+<h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Your Stats</h4>
+<div class="flex items-center justify-between mb-2">
+<span class="text-sm text-slate-600 dark:text-slate-300">Rank</span>
+<span class="font-bold text-slate-900 dark:text-white">#42</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm text-slate-600 dark:text-slate-300">Total Score</span>
+<span class="font-bold text-primary">1,240 pts</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="col-span-12 lg:col-span-9 xl:col-span-9 flex flex-col gap-8">
+<!-- Podium Section -->
+<section class="bg-gradient-to-b from-primary/10 to-transparent rounded-3xl p-6 sm:p-10 border border-primary/20 relative overflow-hidden">
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+<h2 class="text-2xl font-bold text-center mb-8 sm:mb-12 relative z-10">Top Performers</h2>
+<div class="flex flex-wrap justify-center items-end gap-4 sm:gap-8 md:gap-12 relative z-10 pb-4">
 <!-- 2nd Place -->
-<div class="flex flex-col items-center">
-<div class="relative mb-2">
-<img alt="User Avatar" class="size-12 rounded-full border-2 border-slate-300 dark:border-[#a4cb90]" data-alt="Portrait of a woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5_gvm0RYrMpvBM33QYcTrWYqrU4u2y2HdZvL7dmlKbcPIS7m1MScgDPgykzFIXuBLnTxoiMlczyafjFL0RyZ4pzDgzjT8Z2MLbxuilmt_zDOstxhlZgiU726yHApbBmW8WaLifL13jdBGRVTJnk4netgJ1KCdWE5qUPVoADKki3ULPNXNYg-ENmVhWsX4JNTNqeL6v63qwpDddOd3np-gtqStmYSaB66nXfpWAZKkfVa8FmUWVgR0Las19LeeyETK4tbB1gzrhjQ"/>
-<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-5 bg-slate-300 dark:bg-[#a4cb90] text-background-dark text-xs font-bold rounded-full">2</div>
+<div class="flex flex-col items-center order-2 sm:order-1 transform translate-y-0 sm:translate-y-4">
+<div class="relative mb-3 group cursor-pointer">
+<div class="absolute -inset-1 bg-gradient-to-tr from-slate-400 to-slate-600 rounded-full opacity-70 blur group-hover:opacity-100 transition-opacity"></div>
+<div class="w-16 h-16 sm:w-20 sm:h-20 bg-surface-dark rounded-full border-4 border-slate-500 overflow-hidden relative z-10">
+<div class="w-full h-full bg-cover bg-center" data-alt="2nd place user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCL0LT513dkawHYAMRq-NBvXKVXcY7ZIZStUXjduxa9l6_i-smvpD_2wGtPGlvCGF8_NZ5fxU1_tLIUfeEUc0tvlHmy2djGOdVPzPxtzAyvBafF1kNsj8IRcGvnCPvk0wJZukbIEELA35I1E3OLZRrcvN-qqp0QIMQx1NaBaQmmEBqDCdzQ1uDjFPMa9Xt1oGu1dPwUHZA13GUZvRynHQ6R2ggVUs8QD8vbkQnH0LmrrVRs1iF8iOLKCLHKsk2kovwAxgygLKjNKfk')"></div>
 </div>
-<p class="text-xs font-medium dark:text-white">SarahJ</p>
-<p class="text-xs text-primary font-bold">890</p>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-700 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-slate-600">#2</div>
+</div>
+<div class="text-center mt-2">
+<div class="font-bold text-lg sm:text-xl text-slate-200">QueenGambit</div>
+<div class="text-slate-400 font-medium text-sm">2,850 pts</div>
+</div>
+<div class="h-24 sm:h-32 w-20 sm:w-24 bg-gradient-to-t from-slate-800/80 to-slate-700/50 rounded-t-lg mt-4 flex items-end justify-center pb-2 border-t border-l border-r border-white/5">
+<span class="material-symbols-outlined text-slate-500 text-3xl opacity-20">chess</span>
+</div>
 </div>
 <!-- 1st Place -->
-<div class="flex flex-col items-center">
-<span class="material-symbols-outlined text-yellow-400 mb-1 text-2xl">emoji_events</span>
-<div class="relative mb-2">
-<img alt="User Avatar" class="size-16 rounded-full border-4 border-primary ring-4 ring-primary/20" data-alt="Portrait of a man with serious expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBitWGAAlsdtXISDGALpoMaoalNVft1tMUI8GZ0jNnR8lmkJ0nRh7x4XZQipq711JMcaVyDhh9keoSWCFyT6Q6kG0WnEQBDVhRqW9-apglSRdI0zqG12807O0ZJ_hKrylNscMjP442dHCiqiokrsh_nUx79jIvcMOX4UzTBdd2cMiKOoQFUu2B1FvV9Kn8gC2QBFJl23-_zZdVD6l_mfNfaRgg6fSFwlZm2XSDc257GG0yAoWeN1aQeYIjqMgGSqmOz_U0_LzhitTA"/>
-<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-6 bg-primary text-background-dark text-sm font-bold rounded-full">1</div>
+<div class="flex flex-col items-center order-1 sm:order-2 z-20">
+<div class="relative mb-3 group cursor-pointer">
+<div class="absolute -inset-1 bg-gradient-to-tr from-yellow-400 to-yellow-600 rounded-full opacity-70 blur group-hover:opacity-100 transition-opacity animate-pulse"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-yellow-400">
+<span class="material-symbols-outlined text-[32px] drop-shadow-lg">crown</span>
 </div>
-<p class="text-sm font-bold dark:text-white">PixelMaster</p>
-<p class="text-sm text-primary font-bold">950</p>
+<div class="w-20 h-20 sm:w-24 sm:h-24 bg-surface-dark rounded-full border-4 border-yellow-500 overflow-hidden relative z-10">
+<div class="w-full h-full bg-cover bg-center" data-alt="1st place user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBh8z_bBI-t-nTvj6geggtYHrGiaLVba6Di68TCq5Qw_i0psfUT4hBPVMMV8BarMWTUDYJVd__PXhD1JgJIL0xweTpiwfba0byEYT26fsBRkUQC6lou9nXcQutDNWljYYtwILJj_oZsoYB7_H92H5T7gEvfpnu1aoZct3jt0ms6L-ipntiw2RBPG4ah70x8sGwlDKqoVjGA9iDa-tPVR9fgW_5sxGquclYjDkmHcJeBKmnG5wI6fMfGbESNDe0GU3zKRUyb-na5MsU')"></div>
+</div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-600 text-white text-xs font-bold px-3 py-0.5 rounded-full shadow-md border border-yellow-500">#1</div>
+</div>
+<div class="text-center mt-2">
+<div class="font-bold text-xl sm:text-2xl text-white">GrandMasterFlash</div>
+<div class="text-yellow-400 font-bold text-base">3,100 pts</div>
+</div>
+<div class="h-32 sm:h-44 w-24 sm:w-32 bg-gradient-to-t from-yellow-600/20 to-yellow-500/10 rounded-t-lg mt-4 flex items-end justify-center pb-4 relative overflow-hidden border-t border-l border-r border-yellow-500/20">
+<div class="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-primary/20 via-transparent to-transparent"></div>
+<span class="material-symbols-outlined text-yellow-500 text-4xl opacity-30">emoji_events</span>
+</div>
 </div>
 <!-- 3rd Place -->
-<div class="flex flex-col items-center">
-<div class="relative mb-2">
-<img alt="User Avatar" class="size-12 rounded-full border-2 border-amber-700 dark:border-amber-600" data-alt="Portrait of a woman with curly hair" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6t63v8GESW8oCbJ-Xgykwug8Oee5PSKbkO3ffi49ivEBGLa2fo5KroWa1Uzau-46stRB3I9gjsYT9xE68tO8TpgaLwp5SNERHzBdjgDAaGK_VeUiHij2_bbn-d_CVa7wBMUaLM1hHsLikJ964BIk-MSFoI-vmv_7T45D5CQolAMcNdNQxcZJna4tZT2sMJed4sFWW7B3HlaJWKNJ5cOcIkcZb6W37NlwyfMcA-dBCxEkPpzsToOu_HKuv8uc9ynrchC9cIR8mgHc"/>
-<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-5 bg-amber-700 dark:bg-amber-600 text-white text-xs font-bold rounded-full">3</div>
+<div class="flex flex-col items-center order-3 transform translate-y-0 sm:translate-y-6">
+<div class="relative mb-3 group cursor-pointer">
+<div class="absolute -inset-1 bg-gradient-to-tr from-orange-700 to-orange-400 rounded-full opacity-60 blur group-hover:opacity-90 transition-opacity"></div>
+<div class="w-16 h-16 sm:w-20 sm:h-20 bg-surface-dark rounded-full border-4 border-orange-700 overflow-hidden relative z-10">
+<div class="w-full h-full bg-cover bg-center" data-alt="3rd place user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA7ykvGLmw6EWma2UOFyUQt6maBIb9Zes9KP7XbsG6XOFZ-x6KUMMv8xiW3AlDZ8HJBv3cAlWKOCqecxwZCqqOV0_SnVkBBgq0FyPRviJcV2ueqvYHne18TNwCvtO2HUfqS057x0tehYZz5-ChUwADhbgAE87QR0RnnKxHYvEtbNAdtOSFfZFieGJn7aXRNCAiJHEG7K-LMro3gDlzP1hVTk25EZJe5keaYvFfwQ_3R-vF_sfk-PP0xzOQKc5ez1gfNLkJEBuUOhZ4')"></div>
 </div>
-<p class="text-xs font-medium dark:text-white">QuizWiz</p>
-<p class="text-xs text-primary font-bold">820</p>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-orange-800 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-orange-700">#3</div>
+</div>
+<div class="text-center mt-2">
+<div class="font-bold text-lg sm:text-xl text-slate-200">PawnStar</div>
+<div class="text-slate-400 font-medium text-sm">2,700 pts</div>
+</div>
+<div class="h-20 sm:h-28 w-20 sm:w-24 bg-gradient-to-t from-orange-900/40 to-orange-800/20 rounded-t-lg mt-4 flex items-end justify-center pb-2 border-t border-l border-r border-orange-500/10">
+<span class="material-symbols-outlined text-orange-600 text-3xl opacity-20">military_tech</span>
 </div>
 </div>
-<!-- List Items -->
-<div class="flex flex-col gap-2">
+</div>
+</section>
+<!-- Full Leaderboard List -->
+<section class="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-lg">Full Rankings</h3>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[18px]">search</span>
+<input class="bg-slate-100 dark:bg-background-dark text-sm rounded-full pl-9 pr-4 py-2 border-none focus:ring-2 focus:ring-primary w-48 sm:w-64 transition-all" placeholder="Search user..." type="text"/>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-[#151b26] text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+<th class="px-6 py-4 font-bold w-20 text-center">Rank</th>
+<th class="px-6 py-4 font-bold">Player</th>
+<th class="px-6 py-4 font-bold hidden sm:table-cell">Accuracy</th>
+<th class="px-6 py-4 font-bold hidden md:table-cell">Time</th>
+<th class="px-6 py-4 font-bold text-right">Points</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
 <!-- Row 4 -->
-<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent hover:border-slate-300 dark:hover:border-[#436831] transition-all">
-<div class="flex items-center gap-4">
-<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">4</span>
+<tr class="hover:bg-slate-50 dark:hover:bg-surface-highlight/30 transition-colors group">
+<td class="px-6 py-4 text-center font-bold text-slate-400">4</td>
+<td class="px-6 py-4">
 <div class="flex items-center gap-3">
-<img alt="Avatar" class="size-10 rounded-full object-cover" data-alt="Portrait of a man smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6J-HrronyIvm7c5TeH96I0a8Pgz_nEJGBid2JkVPLNVQDr7hlwGVCq6PbdWySg-Vfh4jyu7_A0j3pi9DXeaxqxO_fy7UrDhaSYtW81PF1mPdT1NQuWIjgpe87UBcQOtaluPU8lVOwbYxJeAyF0cLJhGLTK61nf3VSe8DuePZ9sw5M8DfPdwJj8oFxov_-zYRNamXZydzowUQGbCV3lWUYDr8yrAbJVtAMUKG4v03n0CCrhHBeT90hxiN-3Y0Pb-YJFC4ecjFIGK8"/>
-<div>
-<p class="text-sm font-bold text-slate-900 dark:text-white">AlexR</p>
-<p class="text-xs text-slate-500 dark:text-slate-400">9/10 Correct</p>
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQgM3NBeeFLaO4mcBilBQ9eAvBpB-7N-VjW2G1eEuI7cPnHtr27H7A9JXgcv3ERKvaHzO97-GCmKiGfN0EVYYkuJCziHYjCHu7-EMIVB0GbL3EnEJ4qt8XQrGdcGhdZXahGv8oe7ONzXus7kmiU7TZfaw8JZikaKm6p5m4n5l4BOkrCSrDm96bZX8gYnQOZHg7RqppM5Su3s_Kb2mIc8XS8fJCFQ81KF-uf0rbvF3nf7b3LdHUETJIjTBuiMgyCN_XxlKBEmB0JE8')"></div>
+<span class="font-medium text-slate-900 dark:text-slate-200">BishopTakesKnight</span>
 </div>
-</div>
-</div>
-<div class="text-right">
-<p class="text-base font-bold text-primary">780</p>
-<p class="text-[10px] text-slate-400">14s avg</p>
-</div>
-</div>
-<!-- Row 5 (Current User) -->
-<div class="group flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary dark:border-primary relative overflow-hidden">
-<!-- Highlight Indicator -->
-<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-<div class="flex items-center gap-4 pl-2">
-<span class="w-6 text-center text-primary font-bold">5</span>
+</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">92%</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">12m 30s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,650</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-surface-highlight/30 transition-colors group">
+<td class="px-6 py-4 text-center font-bold text-slate-400">5</td>
+<td class="px-6 py-4">
 <div class="flex items-center gap-3">
-<img alt="Avatar" class="size-10 rounded-full object-cover ring-2 ring-primary ring-offset-2 ring-offset-background-dark" data-alt="Portrait of a young man with hoodie" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALrzqMSKklrXZfgW76Si3zXEkUvewRY4RN5A_hY_6gLKF63nvxuFwgkEqDjw572Ey4i4dGhbJHlY3DaOs0Ie6_-1Zxp9ElpB8QRrREcQLO-WtMvVA7hBPiZ0tiVQat8mSBtY5rDByvERh4g2Bn8n1xVZqiFTAFdUlga43XQDzpfEhxBjeJf9bs2mu-g8NpybIdsKqkrRsC2ndQLJnDyhrJAAOo1nf7BF1KvqTotOrdN4xqklJe-Hu8iFDHLVvP0ZKZFur5I1yGXBQ"/>
-<div>
-<p class="text-sm font-bold text-slate-900 dark:text-white">You</p>
-<p class="text-xs text-slate-500 dark:text-slate-300">8/10 Correct</p>
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAY-27g7eHzFbIzu6dFmuLH0DQDgXGoFAULaYhcEbU8qZoi5DUixZwOeaM-dkv2btI9frfvA3BTWeTZhThXpHH7CLZvaZahIwVW0dL1uNgnQw75gqBrC0piQyc41RAhTawG5vhqOelYMfSpUe0r2fPbvQYZNz3jKvPvQD_WDKa2GHxmVjzCc4rKRxZVGhongFvr6hNhVbSt35TdShmceVJIBnKy3__zOIPynlHVsh37VcfCqgTbvP2wT7gXsjthMwlnsvUE5L7U12o')"></div>
+<span class="font-medium text-slate-900 dark:text-slate-200">RookAndRoll</span>
 </div>
-</div>
-</div>
-<div class="text-right">
-<p class="text-base font-bold text-primary">450</p>
-<p class="text-[10px] text-slate-500 dark:text-slate-300">12s avg</p>
-</div>
-</div>
+</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">89%</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">11m 45s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,580</td>
+</tr>
 <!-- Row 6 -->
-<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent">
-<div class="flex items-center gap-4">
-<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">6</span>
+<tr class="hover:bg-slate-50 dark:hover:bg-surface-highlight/30 transition-colors group">
+<td class="px-6 py-4 text-center font-bold text-slate-400">6</td>
+<td class="px-6 py-4">
 <div class="flex items-center gap-3">
-<div class="size-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">DK</div>
-<div>
-<p class="text-sm font-bold text-slate-900 dark:text-white">DrKnow</p>
-<p class="text-xs text-slate-500 dark:text-slate-400">7/10 Correct</p>
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800">CK</div>
+<span class="font-medium text-slate-900 dark:text-slate-200">CheckMateKing</span>
 </div>
-</div>
-</div>
-<div class="text-right">
-<p class="text-base font-bold text-primary">420</p>
-<p class="text-[10px] text-slate-400">18s avg</p>
-</div>
-</div>
+</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">88%</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">14m 10s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,420</td>
+</tr>
 <!-- Row 7 -->
-<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent">
-<div class="flex items-center gap-4">
-<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">7</span>
+<tr class="hover:bg-slate-50 dark:hover:bg-surface-highlight/30 transition-colors group">
+<td class="px-6 py-4 text-center font-bold text-slate-400">7</td>
+<td class="px-6 py-4">
 <div class="flex items-center gap-3">
-<img alt="Avatar" class="size-10 rounded-full object-cover" data-alt="Portrait of a woman looking away" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOXavdNPmyut-L8ynpTlVWTe32cASjTUU2NuqeTRr0o_TpTS9onT4cIvlSmGrGg7apBR1kciOcFXQcmFz7zDkjyos7RpjwZjeabYOwI8cUsm_BbRa3txNdT5PWO5fL9esd79csKv5zjk8NpodIVLnYxQ4NX-wWs_FJpmPUq25mnZH64gSqONxxl-8U4i_ivXpEBPOvmC3SHolIqgT8y76bEBNJO8ZcmFISToaB_JAdvkE4iF2VNo8yzlgkFPRmvWrSPevVlSS3dOs"/>
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB4JUH3nPVCRk5RreUIHgVJIAXXlptzG4-1xvLl9REzAi9wSUE-nQD-bruJNv9Tj_X58KVnlX_sTRcwcecGRBdxZnjixEPT64mMZmcLebmrypX7xooveMPXf8CCGujWhzOxp6NqeNJx1YEw1DT_4Ift86w0_zdcGkxxbk7IUOmpHerx162-pq8SzQSMeT1eoz-DwUQLDuDvPZIMHVfgywcnKrZ-Fx5kS1teDakLy6gAQTNKtpmYFfBxVtxUa9Ep-QHbOAcIf3iZmlE')"></div>
+<span class="font-medium text-slate-900 dark:text-slate-200">AnnaChess</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">85%</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">10m 05s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,390</td>
+</tr>
+<!-- Row 8 (Current User) -->
+<tr class="bg-primary/10 hover:bg-primary/20 transition-colors group border-l-4 border-l-primary">
+<td class="px-6 py-4 text-center font-bold text-primary">8</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD67kYaccLD1KBfqrhp5ai36nNfNqrklOTXcfMZdaDaVaYNktI88hS6zrW-qXzqZuu0snOlB6j_L2hYCahViIbsm0wV729mUQ45bfxz68UOw7O3GYoVGIDrBO7QYR4jAuwoe6DHQ9LOPU46dd_JhXcfzZWAso3YR9BzClHSS9kTqDkz0M_fFZ1Mx4yZNzJNKkuBSB0szDTqxO_SKnZfsusTCtYYyxcAoW0pCJO8trwXy_1MUOq2wcC_mLRy76tNhcImEmLq4JAWJyI')"></div>
+<span class="font-bold text-slate-900 dark:text-white">You (GrandMasterFlash)</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-300 hidden sm:table-cell">84%</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-300 hidden md:table-cell">13m 22s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,350</td>
+</tr>
+<!-- Row 9 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-surface-highlight/30 transition-colors group">
+<td class="px-6 py-4 text-center font-bold text-slate-400">9</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800">SP</div>
+<span class="font-medium text-slate-900 dark:text-slate-200">SicilianPro</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">82%</td>
+<td class="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">15m 00s</td>
+<td class="px-6 py-4 text-right font-bold text-primary">2,200</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-center">
+<button class="text-sm font-medium text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-2 transition-colors">
+                            Show more ranks
+                            <span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+<footer class="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-sm">
+<p>© 2023 DigiChess. All rights reserved.</p>
+</footer>
+</body></html>
+
+<!-- DigiQuiz Live Round Desktop -->
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DigiQuiz Live Round</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#1e2430",
+                        "border-dark": "#232f48",
+                        "text-secondary": "#92a4c9",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-border-dark px-10 py-3 bg-white dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 text-primary">
+<svg class="w-full h-full" fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">DigiChess</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-9 hidden md:flex">
+<a class="text-slate-600 dark:text-text-secondary hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Home</a>
+<a class="text-primary text-sm font-bold leading-normal" href="#">Play</a>
+<a class="text-slate-600 dark:text-text-secondary hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Learn</a>
+<a class="text-slate-600 dark:text-text-secondary hover:text-primary dark:hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Community</a>
+</nav>
+<div class="flex gap-4 items-center">
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-border-dark text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-[#2d3b55] transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-border-dark text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-[#2d3b55] transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+</div>
+<div class="h-10 w-10 rounded-full bg-slate-200 bg-center bg-cover border-2 border-slate-100 dark:border-border-dark" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB-KbmO1vjLSxFT74ciUYrwZ3q23zOk_EIYkJ4SS3Of-BAW-EsQ5yf8KmRfAUbSkU1PdreXKGCaALQyaVOBBJbOlxh7vCdLTliL90tSxvrD8zrs5dzcpY2GUW872RKTgin1rxZlpPUTAFZzl9dwfnR_Ik-oEgYzayuk4tI6vk8DOZ3_sjW_ruFxSP9ZmFiZTuZk8B51puABaT6kxOmsMAFB9q_NJTAq7xSCBRmJMwfs1p9YiwfzSnDmhEQ6nDQgINPbz4iOi6N8Qoc');"></div>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-[1600px] w-full mx-auto p-4 md:p-6 lg:p-8 gap-6">
+<div class="flex-1 flex flex-col gap-6 min-w-0">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 <div>
-<p class="text-sm font-bold text-slate-900 dark:text-white">Luna_88</p>
-<p class="text-xs text-slate-500 dark:text-slate-400">6/10 Correct</p>
+<div class="flex items-center gap-3 mb-1">
+<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-primary/20 text-primary uppercase tracking-wide">Tactics</span>
+<span class="text-slate-500 dark:text-text-secondary text-sm font-medium">Round 3</span>
+</div>
+<h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Find the best move for White</h1>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-card-dark rounded-xl p-2 px-4 shadow-sm border border-slate-200 dark:border-border-dark">
+<div class="flex flex-col items-end">
+<span class="text-xs text-slate-500 dark:text-text-secondary uppercase font-semibold">Points</span>
+<span class="text-xl font-bold text-primary">+45</span>
+</div>
+<div class="h-8 w-px bg-slate-200 dark:bg-border-dark"></div>
+<div class="relative size-12 flex items-center justify-center">
+<svg class="transform -rotate-90 w-full h-full">
+<circle class="text-slate-200 dark:text-border-dark" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-dasharray="125.6" stroke-dashoffset="30" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-sm font-bold text-slate-900 dark:text-white">14s</span>
 </div>
 </div>
 </div>
-<div class="text-right">
-<p class="text-base font-bold text-primary">390</p>
-<p class="text-[10px] text-slate-400">10s avg</p>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-sm font-medium text-slate-500 dark:text-text-secondary">
+<span>Question 7/20</span>
+<span>35% Complete</span>
+</div>
+<div class="h-2 w-full bg-slate-200 dark:bg-border-dark rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[35%] rounded-full"></div>
+</div>
+</div>
+<div class="flex flex-col lg:flex-row gap-6 mt-2 flex-1 min-h-[400px]">
+<div class="w-full lg:w-1/2 aspect-square lg:aspect-auto bg-slate-800 rounded-xl overflow-hidden relative shadow-lg group">
+<div class="absolute inset-0 grid grid-cols-8 grid-rows-8">
+<div class="w-full h-full bg-cover bg-center" data-alt="Chess board position puzzle" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBNFqfpND1GFOHDJGDTkL2_kO01_Pb4Mwjhm3eM384wOGhHn69fCKN3NhHmfg7a54-KEZuObGJszuar5CEwiHQRYGdijVLzc3CMEx1yXw5Vn_IxrLd6C9YU5kNLpI1yuBzhb13M-GWqAR6iOazlpu7eobTUshZj_Ay6sNi5Z6Dqq0cBlRoF_Ru5PIjijmMLWntfnsAIIhpwaJ2eLnmcb1OCcE1u9R9HX37SBGl1a6M6T3GZ5ear_gh2q-qL-tLm5m-2aI3I4z7C1ik');"></div>
+</div>
+<div class="absolute bottom-4 left-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg flex items-center gap-2 border border-white/10">
+<div class="size-3 rounded-full bg-white border border-gray-400"></div>
+<span class="text-white text-sm font-medium">White to move</span>
+</div>
+</div>
+<div class="w-full lg:w-1/2 flex flex-col gap-3 justify-center">
+<button class="group w-full p-4 rounded-xl bg-white dark:bg-card-dark hover:bg-slate-50 dark:hover:bg-[#2d3b55] border-2 border-transparent hover:border-primary/50 transition-all text-left flex items-center gap-4 shadow-sm">
+<div class="size-8 rounded-lg bg-slate-100 dark:bg-border-dark group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-text-secondary font-bold flex items-center justify-center transition-colors">A</div>
+<span class="text-slate-700 dark:text-slate-200 font-medium text-lg">Qh5+</span>
+</button>
+<button class="group w-full p-4 rounded-xl bg-primary/10 border-2 border-primary text-left flex items-center gap-4 shadow-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-primary/5"></div>
+<div class="relative size-8 rounded-lg bg-primary text-white font-bold flex items-center justify-center">B</div>
+<span class="relative text-primary font-bold text-lg">Nf6#</span>
+<div class="relative ml-auto">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</div>
+</button>
+<button class="group w-full p-4 rounded-xl bg-white dark:bg-card-dark hover:bg-slate-50 dark:hover:bg-[#2d3b55] border-2 border-transparent hover:border-primary/50 transition-all text-left flex items-center gap-4 shadow-sm">
+<div class="size-8 rounded-lg bg-slate-100 dark:bg-border-dark group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-text-secondary font-bold flex items-center justify-center transition-colors">C</div>
+<span class="text-slate-700 dark:text-slate-200 font-medium text-lg">Bxf7</span>
+</button>
+<button class="group w-full p-4 rounded-xl bg-white dark:bg-card-dark hover:bg-slate-50 dark:hover:bg-[#2d3b55] border-2 border-transparent hover:border-primary/50 transition-all text-left flex items-center gap-4 shadow-sm">
+<div class="size-8 rounded-lg bg-slate-100 dark:bg-border-dark group-hover:bg-primary group-hover:text-white text-slate-500 dark:text-text-secondary font-bold flex items-center justify-center transition-colors">D</div>
+<span class="text-slate-700 dark:text-slate-200 font-medium text-lg">Rg8</span>
+</button>
+<div class="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center gap-2 animate-pulse">
+<span class="material-symbols-outlined text-green-500 filled">celebration</span>
+<span class="text-green-500 font-bold">Correct! +17 Points</span>
 </div>
 </div>
 </div>
-<!-- Empty State (Hidden by default, structure provided for dev implementation) -->
-<!-- 
-                <div class="flex flex-col items-center justify-center py-12 gap-4">
-                    <div class="size-24 bg-surface-dark rounded-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-4xl text-[#a4cb90]">history_edu</span>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-white font-bold text-lg">No Quizzes Played</p>
-                        <p class="text-[#a4cb90] text-sm">You haven't played any rounds on this date.</p>
-                    </div>
-                    <button class="bg-primary text-background-dark font-bold px-6 py-2 rounded-full mt-2">
-                        Start a Quiz
-                    </button>
-                </div> 
-                -->
+</div>
+<aside class="w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col gap-4">
+<div class="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark flex flex-col h-full max-h-[calc(100vh-140px)] shadow-sm">
+<div class="p-4 border-b border-slate-200 dark:border-border-dark flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="relative flex items-center justify-center">
+<span class="flex h-3 w-3 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white leading-none">
+                        Live Round Standings
+                    </h3>
+</div>
+<span class="text-xs font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded">Current</span>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-slate-500 dark:text-text-secondary uppercase bg-slate-50 dark:bg-[#1a202c] sticky top-0 z-10">
+<tr>
+<th class="px-4 py-3 font-semibold w-12 text-center">Rank</th>
+<th class="px-4 py-3 font-semibold">User</th>
+<th class="px-4 py-3 font-semibold text-right whitespace-nowrap">Round Pts</th>
+<th class="px-4 py-3 font-semibold text-right hidden sm:table-cell">Progress</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-border-dark">
+<tr class="bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors">
+<td class="px-4 py-3 text-center">
+<span class="material-symbols-outlined text-[18px] text-yellow-500">emoji_events</span>
+</td>
+<td class="px-4 py-3 font-medium text-slate-900 dark:text-white">GrandMaster_T</td>
+<td class="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">1,240</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">7/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center font-bold text-slate-400">2</td>
+<td class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">ChessWiz99</td>
+<td class="px-4 py-3 text-right font-bold text-slate-700 dark:text-slate-200">1,185</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">7/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center font-bold text-amber-700/70">3</td>
+<td class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">RookTakesAll</td>
+<td class="px-4 py-3 text-right font-bold text-slate-700 dark:text-slate-200">1,150</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">6/20</td>
+</tr>
+<tr class="bg-primary/5 dark:bg-primary/10 border-2 border-primary">
+<td class="px-4 py-3 text-center font-bold text-primary">14</td>
+<td class="px-4 py-3 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                You
+                                <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
+</td>
+<td class="px-4 py-3 text-right font-bold text-primary">895</td>
+<td class="px-4 py-3 text-right text-slate-900 dark:text-white font-medium hidden sm:table-cell">14/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">15</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">PawnStar</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">880</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">13/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">16</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">KnightMoves</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">872</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">13/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">17</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">BishopToE5</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">850</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">12/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">18</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">QueenGambit</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">845</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">13/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">19</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">CheckMate_88</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">830</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">12/20</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-[#2d3b55] transition-colors">
+<td class="px-4 py-3 text-center text-slate-500 dark:text-text-secondary">20</td>
+<td class="px-4 py-3 text-slate-600 dark:text-slate-300">EndGamePro</td>
+<td class="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">810</td>
+<td class="px-4 py-3 text-right text-slate-500 dark:text-text-secondary hidden sm:table-cell">13/20</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
-<!-- Bottom Navigation -->
-<div class="flex gap-2 border-t border-slate-200 dark:border-[#2f4922] bg-white dark:bg-[#223418] px-4 pb-6 pt-2">
-<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-2xl">home</span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Home</p>
-</a>
-<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-2xl">play_circle</span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Play</p>
-</a>
-<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-primary dark:text-white" href="#">
-<span class="material-symbols-outlined text-2xl font-variation-fill">trophy</span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Leaderboard</p>
-</a>
-<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined text-2xl">person</span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Profile</p>
-</a>
-</div>
-</div>
+</aside>
+</main>
+<style>.custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #232f48;
+        }
+    </style>
+
 </body></html>
