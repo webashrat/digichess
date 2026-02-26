@@ -9,6 +9,7 @@ import TournamentLobbyPage from './pages/TournamentLobbyPage';
 import ProfilePage from './pages/ProfilePage';
 import MessagesPage from './pages/MessagesPage';
 import PuzzlesPage from './pages/PuzzlesPage';
+import QuizPage from './pages/QuizPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -26,6 +27,7 @@ function App() {
       <Route path="/profile/:username" element={<ProfilePage />} />
       <Route path="/messages" element={<MessagesPage />} />
       <Route path="/puzzles" element={<PuzzlesPage />} />
+      <Route path="/quiz" element={<QuizPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/rankings" element={<Navigate to="/leaderboard" replace />} />
