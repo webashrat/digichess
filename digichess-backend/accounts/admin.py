@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
-from .models import OTPVerification, User
+from .models import OTPVerification, RefreshSession, User
 
 
 class UserCreationForm(forms.ModelForm):
@@ -74,3 +74,11 @@ class OTPVerificationAdmin(admin.ModelAdmin):
     list_display = ("user", "code", "purpose", "verified", "expires_at", "created_at")
     list_filter = ("purpose", "verified")
     search_fields = ("user__email", "code")
+
+
+@admin.register(RefreshSession)
+class RefreshSessionAdmin(admin.ModelAdmin):
+    list_display = ("user", "created_at", "last_used_at", "expires_at", "revoked_at")
+    list_filter = ("revoked_reason", "created_at")
+    search_fields = ("user__email", "user__username", "token_hash")
+    readonly_fields = ("created_at", "last_used_at")

@@ -5,7 +5,6 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from rest_framework.authtoken.models import Token
 
 from .models import OTPVerification, User
 from utils.email import send_email_notification
@@ -248,9 +247,7 @@ class VerifyOTPSerializer(serializers.Serializer):
         user.is_online = True
         user.last_seen_at = timezone.now()
         user.save(update_fields=["is_active", "last_login", "is_online", "last_seen_at"])
-
-        token, _ = Token.objects.get_or_create(user=user)
-        return {"user": user, "token": token.key}
+        return {"user": user}
 
 
 class LoginSerializer(serializers.Serializer):
@@ -298,8 +295,7 @@ class LoginSerializer(serializers.Serializer):
         user.is_online = True
         user.last_seen_at = timezone.now()
         user.save(update_fields=["last_login", "is_online", "last_seen_at"])
-        token, _ = Token.objects.get_or_create(user=user)
-        return {"user": user, "token": token.key}
+        return {"user": user}
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
@@ -379,5 +375,4 @@ class VerifyForgotOTPSerializer(serializers.Serializer):
         otp = self.validated_data["otp"]
 
         otp.mark_verified()
-        token, _ = Token.objects.get_or_create(user=user)
-        return {"user": user, "token": token.key}
+        return {"user": user}

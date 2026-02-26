@@ -1,6 +1,6 @@
 # DigiChess API Reference (localhost:8000)
 
-Auth: Token auth unless stated. Null allowed = field may be omitted/empty; defaults shown where relevant.
+Auth: Access token auth unless stated (`Authorization: Token <access>` or `Authorization: Bearer <access>`). Null allowed = field may be omitted/empty; defaults shown where relevant.
 
 ## Accounts
 - **POST /api/accounts/register/**  
@@ -16,15 +16,18 @@ Auth: Token auth unless stated. Null allowed = field may be omitted/empty; defau
   Response: 201 `{message, user}` where user includes profile fields, ratings (all default 800, digiquiz 0).
 
 - **POST /api/accounts/verify-otp/**  
-  Body: `{email, code}` → 200 `{token, user}` (activates account).
+  Body: `{email, code}` → 200 `{token, user}` (activates account) + refresh cookie.
 
 - **POST /api/accounts/resend-otp/** (GET also)  
   Body or query: `{email}` → 200 `{detail}` (new OTP sent).
 
 - **POST /api/accounts/login/**  
-  Body: `{email, password}` → 200 `{token, user}`.
+  Body: `{email, password}` → 200 `{token, user}` + refresh cookie.
 
-- **POST /api/accounts/logout/** → 200 `{message}`.
+- **POST /api/accounts/refresh/**  
+  Body: `{}` → 200 `{token, user}` + rotated refresh cookie.
+
+- **POST /api/accounts/logout/** → 200 `{message}` + clears refresh cookie.
 
 - **GET /api/accounts/me/** → 200 user.  
   **PATCH /api/accounts/me/** updates your profile (email/username must stay unique). Null allowed on optional fields; ratings read-only.

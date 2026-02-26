@@ -1,6 +1,6 @@
 # DigiChess backend (Django + DRF)
 
-Backend scaffold that supports email+OTP registration, token login, friends, chat threads, and lightweight game sessions for bullet/blitz/rapid/classical time controls.
+Backend scaffold that supports email+OTP registration, JWT access + refresh sessions, friends, chat threads, and lightweight game sessions for bullet/blitz/rapid/classical time controls.
 
 ## Setup
 - Ensure PostgreSQL is running and your `.env` contains DB + email settings (see provided `.env`).
@@ -17,15 +17,16 @@ To avoid migration race conditions, only the **backend** container should run mi
 Celery and Celery-beat containers set `SKIP_DB_SETUP=true` so they do not attempt migrations.
 
 ## API overview
-All endpoints live under `/api/…` and use token authentication once logged in.
+All endpoints live under `/api/…` and use access token authentication once logged in.
 
 **Auth / Accounts**
 - `POST /api/accounts/register/` `{email, username, password, first_name?, last_name?}` → creates inactive user + sends OTP to email.
-- `POST /api/accounts/verify-otp/` `{email, code}` → activates account, returns token.
+- `POST /api/accounts/verify-otp/` `{email, code}` → activates account, returns access token + sets refresh cookie.
 - `GET/POST /api/accounts/resend-otp/` `{email}` (or `?email=`) → regenerate and resend OTP if not yet verified.
-- `POST /api/accounts/login/` `{email, password}` → returns token.
+- `POST /api/accounts/login/` `{email, password}` → returns access token + sets refresh cookie.
+- `POST /api/accounts/refresh/` → rotates refresh cookie and returns a fresh access token.
 - `GET/PATCH /api/accounts/me/` → profile.
-- `POST /api/accounts/logout/` → deletes tokens.
+- `POST /api/accounts/logout/` → revokes current refresh session and clears cookie.
 - `GET /api/public/accounts/` → paginated public list with optional `search` and `sort` (username, ratings, date_joined).
 - `GET /api/public/accounts/{username}/` → public profile (includes ratings).
 
@@ -54,6 +55,9 @@ All endpoints live under `/api/…` and use token authentication once logged in.
 ## Notes
 - Custom user model uses unique email as the login identifier.
 - OTP expiry defaults to 10 minutes and uses your SMTP credentials from `.env`.
+- Access token expiry defaults to 15 minutes (`AUTH_ACCESS_TOKEN_MINUTES`).
+- Refresh session lifetime defaults to 180 days (`AUTH_REFRESH_TOKEN_DAYS`).
+- Refresh inactivity timeout defaults to 60 days (`AUTH_REFRESH_INACTIVITY_DAYS`).
 - Email sending: if `SENDGRID_API_KEY` is set, the backend uses SendGrid's HTTP API (recommended when SMTP is blocked). Otherwise it falls back to the configured Django email backend.
 - Chat and games are HTTP-based; swap to Django Channels/WebSockets for real-time blitz/bullet play.
 - For rules validation, moves are checked with `python-chess`; optional Stockfish analysis is used for spectators if `STOCKFISH_PATH` is set.
