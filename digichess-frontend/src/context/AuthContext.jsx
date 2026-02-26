@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { tokenStorage } from '../api/client';
-import { fetchMe, login as loginRequest, logout as logoutRequest } from '../api';
+import { fetchMe, login as loginRequest, logout as logoutRequest, refreshSession } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -20,6 +20,16 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const hydrate = async () => {
             if (!token) {
+                try {
+                    const refreshed = await refreshSession();
+                    if (refreshed?.token && refreshed?.user) {
+                        applyAuth(refreshed);
+                    }
+                } catch {
+                    tokenStorage.clear();
+                    setToken(null);
+                    setUser(null);
+                }
                 setLoading(false);
                 return;
             }
@@ -35,7 +45,26 @@ export function AuthProvider({ children }) {
             }
         };
         hydrate();
-    }, [token]);
+    }, [token, applyAuth]);
+
+    useEffect(() => {
+        if (!token) {
+            return undefined;
+        }
+        const interval = window.setInterval(async () => {
+            try {
+                const refreshed = await refreshSession();
+                if (refreshed?.token && refreshed?.user) {
+                    applyAuth(refreshed);
+                }
+            } catch {
+                tokenStorage.clear();
+                setToken(null);
+                setUser(null);
+            }
+        }, 10 * 60 * 1000);
+        return () => window.clearInterval(interval);
+    }, [token, applyAuth]);
 
     const login = useCallback(async (identifier, password) => {
         setLoading(true);

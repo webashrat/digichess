@@ -1,5 +1,6 @@
 import secrets
 import string
+import uuid
 from datetime import timedelta
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
@@ -134,6 +135,45 @@ class OTPVerification(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.email} ({self.purpose})"
+
+
+class RefreshSession(models.Model):
+    REVOKED_LOGOUT = "logout"
+    REVOKED_EXPIRED = "expired"
+    REVOKED_INACTIVE = "inactive"
+
+    REVOKED_REASON_CHOICES = [
+        (REVOKED_LOGOUT, "Logout"),
+        (REVOKED_EXPIRED, "Expired"),
+        (REVOKED_INACTIVE, "Inactive"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, related_name="refresh_sessions", on_delete=models.CASCADE
+    )
+    token_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_reason = models.CharField(
+        max_length=16, choices=REVOKED_REASON_CHOICES, blank=True
+    )
+    user_agent = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "revoked_at"]),
+            models.Index(fields=["expires_at"]),
+            models.Index(fields=["last_used_at"]),
+        ]
+
+    def revoke(self, reason: str):
+        self.revoked_at = timezone.now()
+        self.revoked_reason = reason
+        self.save(update_fields=["revoked_at", "revoked_reason"])
 
 
 # Import RatingHistory model

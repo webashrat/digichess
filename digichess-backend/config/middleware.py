@@ -1,20 +1,34 @@
 from urllib.parse import parse_qs
+
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from jwt import ExpiredSignatureError, InvalidTokenError
 from rest_framework.authtoken.models import Token
+
+from accounts.auth_tokens import decode_access_token
 
 User = get_user_model()
 
 
 @database_sync_to_async
 def get_user_from_token(token_key):
-    """Get user from token key"""
+    """Get user from access JWT or legacy DRF token key."""
     try:
-        token = Token.objects.select_related('user').get(key=token_key)
-        return token.user
+        payload = decode_access_token(token_key, verify_exp=True)
+        if payload.get("type") == "access":
+            user_id = payload.get("sub")
+            if user_id:
+                return User.objects.filter(id=user_id, is_active=True).first()
+    except (ExpiredSignatureError, InvalidTokenError):
+        pass
+    try:
+        token = Token.objects.select_related("user").get(key=token_key)
+        if token.user.is_active:
+            return token.user
     except Token.DoesNotExist:
-        return None
+        pass
+    return None
 
 
 class TokenAuthMiddleware(BaseMiddleware):
@@ -38,8 +52,6 @@ class TokenAuthMiddleware(BaseMiddleware):
             # Check query string for token
             if "token" in query_params:
                 token_key = query_params["token"][0]
-                import sys
-                print(f"[TokenAuth] Found token in query string for WebSocket", file=sys.stdout)
             
             # If no token in query string, check headers
             if not token_key:
@@ -47,8 +59,8 @@ class TokenAuthMiddleware(BaseMiddleware):
                 auth_header = headers.get(b"authorization", b"").decode()
                 if auth_header.startswith("Token "):
                     token_key = auth_header.replace("Token ", "").strip()
-                    import sys
-                    print(f"[TokenAuth] Found token in Authorization header for WebSocket", file=sys.stdout)
+                elif auth_header.startswith("Bearer "):
+                    token_key = auth_header.replace("Bearer ", "").strip()
             
             # Authenticate user if token is provided
             # Only set user if we have a valid token - AuthMiddlewareStack will handle AnonymousUser
@@ -56,14 +68,6 @@ class TokenAuthMiddleware(BaseMiddleware):
                 user = await get_user_from_token(token_key)
                 if user:
                     scope["user"] = user
-                    import sys
-                    print(f"[TokenAuth] Authenticated user {user.username} (ID: {user.id}) for WebSocket", file=sys.stdout)
-                else:
-                    import sys
-                    print(f"[TokenAuth] Invalid token for WebSocket", file=sys.stderr)
-            else:
-                import sys
-                print(f"[TokenAuth] No token provided for WebSocket connection", file=sys.stdout)
         except Exception as e:
             # Log error but don't fail the connection - let AuthMiddlewareStack handle it
             import logging

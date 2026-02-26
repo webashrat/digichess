@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .auth_tokens import set_refresh_cookie, create_access_token, issue_refresh_session
 from .models import OTPVerification
 from .serializers import (
     ForgotPasswordSerializer,
@@ -102,8 +102,12 @@ class VerifyForgotOTPView(APIView):
         serializer = VerifyForgotOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.save()
-        return Response(
-            {"token": data["token"], "user": UserSerializer(data["user"]).data},
+        access_token = create_access_token(data["user"])
+        refresh_token, _ = issue_refresh_session(data["user"], request)
+        response = Response(
+            {"token": access_token, "user": UserSerializer(data["user"]).data},
             status=status.HTTP_200_OK,
         )
+        set_refresh_cookie(response, refresh_token)
+        return response
 

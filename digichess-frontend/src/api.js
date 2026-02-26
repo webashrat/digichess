@@ -1,4 +1,4 @@
-import { api } from './api/client';
+import { api, refreshAccessToken } from './api/client';
 
 export const login = (identifier, password) =>
     api.post('/accounts/login/', {
@@ -16,6 +16,7 @@ export const resendOtp = (email) =>
     api.post('/accounts/resend-otp/', { email });
 
 export const logout = () => api.post('/accounts/logout/');
+export const refreshSession = () => refreshAccessToken();
 
 export const fetchMe = () => api.get('/accounts/me/');
 

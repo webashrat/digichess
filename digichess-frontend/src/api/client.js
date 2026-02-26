@@ -7,6 +7,8 @@ export class ApiError extends Error {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const REFRESH_PATH = '/accounts/refresh/';
+let refreshPromise = null;
 
 export const tokenStorage = {
     get() {
@@ -32,9 +34,53 @@ const buildUrl = (path) => {
     return `${API_BASE}${path}`;
 };
 
+const parseResponsePayload = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        return response.json();
+    }
+    return null;
+};
+
+export const refreshAccessToken = async () => {
+    if (refreshPromise) {
+        return refreshPromise;
+    }
+    refreshPromise = (async () => {
+        const response = await fetch(buildUrl(REFRESH_PATH), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        const payload = await parseResponsePayload(response);
+        if (!response.ok) {
+            tokenStorage.clear();
+            const message = payload?.detail || response.statusText || 'Session expired';
+            throw new ApiError(response.status, message, payload);
+        }
+        const nextToken = payload?.token;
+        if (nextToken) {
+            tokenStorage.set(nextToken);
+        }
+        return payload;
+    })();
+    try {
+        return await refreshPromise;
+    } finally {
+        refreshPromise = null;
+    }
+};
+
 export const apiRequest = async (path, options = {}) => {
-    const { method = 'GET', body, headers, token } = options;
-    const authToken = token ?? tokenStorage.get();
+    const {
+        method = 'GET',
+        body,
+        headers,
+        token,
+        noAuth = false,
+        retryOnAuthError = true,
+    } = options;
+    const authToken = noAuth ? null : (token ?? tokenStorage.get());
     const requestHeaders = {
         'Content-Type': 'application/json',
         ...headers,
@@ -43,14 +89,39 @@ export const apiRequest = async (path, options = {}) => {
         requestHeaders.Authorization = `Token ${authToken}`;
     }
 
-    const response = await fetch(buildUrl(path), {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-    });
+    const requestWithToken = (tokenValue) => {
+        const dynamicHeaders = { ...requestHeaders };
+        if (noAuth) {
+            delete dynamicHeaders.Authorization;
+        } else if (tokenValue) {
+            dynamicHeaders.Authorization = `Token ${tokenValue}`;
+        } else {
+            delete dynamicHeaders.Authorization;
+        }
+        return fetch(buildUrl(path), {
+            method,
+            headers: dynamicHeaders,
+            body: body ? JSON.stringify(body) : undefined,
+            credentials: 'include',
+        });
+    };
 
-    const contentType = response.headers.get('content-type') || '';
-    const payload = contentType.includes('application/json') ? await response.json() : null;
+    let response = await requestWithToken(authToken);
+    if (
+        response.status === 401
+        && retryOnAuthError
+        && !noAuth
+        && path !== REFRESH_PATH
+    ) {
+        try {
+            const refreshed = await refreshAccessToken();
+            response = await requestWithToken(refreshed?.token || tokenStorage.get());
+        } catch {
+            // allow final 401 handling below
+        }
+    }
+
+    const payload = await parseResponsePayload(response);
 
     if (!response.ok) {
         const message = payload?.detail || payload?.message || response.statusText || 'Request failed';

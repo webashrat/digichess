@@ -1,8 +1,192 @@
+<!-- DigiQuiz Locked State -->
 <!DOCTYPE html>
+
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Social &amp; Players Hub</title>
+<title>DigiQuiz Locked State</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6af425",
+                        "background-light": "#f6f8f5",
+                        "background-dark": "#162210",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center text-slate-900 dark:text-slate-100 antialiased overflow-hidden selection:bg-primary selection:text-black">
+<div class="w-full max-w-md h-full min-h-screen bg-background-light dark:bg-background-dark relative flex flex-col shadow-2xl overflow-hidden">
+<!-- Background Pattern -->
+<div class="absolute inset-0 z-0 opacity-10 pointer-events-none">
+<div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(106,244,37,0.4),transparent_70%)]"></div>
+</div>
+<!-- Header -->
+<div class="relative z-10 flex items-center justify-between p-6 pb-2 pt-12">
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined !text-3xl text-slate-800 dark:text-slate-200">menu</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<h2 class="text-xl font-bold tracking-tight">DigiQuiz</h2>
+</div>
+<button class="p-2 rounded-full bg-slate-200 dark:bg-slate-800 hover:opacity-80 transition-opacity relative group">
+<span class="material-symbols-outlined !text-2xl text-slate-800 dark:text-slate-200">calendar_month</span>
+<!-- Floating Calendar Tooltip/Hint -->
+<div class="absolute right-0 top-full mt-2 w-max px-2 py-1 bg-primary text-background-dark text-xs font-bold rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    Past Results
+                </div>
+</button>
+</div>
+<!-- Main Content -->
+<div class="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-8">
+<!-- Status Message -->
+<div class="text-center space-y-2">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700">
+<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+<span class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Locked</span>
+</div>
+<h1 class="text-3xl font-bold leading-tight">Next Round In</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Today's round opens at <span class="text-primary font-bold">23:30 IST</span></p>
+</div>
+<!-- Countdown Timer -->
+<div class="flex gap-3 w-full justify-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
+<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">04</span>
+</div>
+<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Hours</span>
+</div>
+<div class="flex flex-col justify-center h-24 pb-6">
+<span class="text-2xl font-bold text-slate-400 dark:text-slate-600">:</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
+<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">15</span>
+</div>
+<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Mins</span>
+</div>
+<div class="flex flex-col justify-center h-24 pb-6">
+<span class="text-2xl font-bold text-slate-400 dark:text-slate-600">:</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-20 h-24 bg-slate-200 dark:bg-[#1f2e18] border-2 border-slate-300 dark:border-[#2f4922] rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 dark:to-black/30 pointer-events-none"></div>
+<span class="text-4xl font-bold text-slate-900 dark:text-primary z-10">30</span>
+</div>
+<span class="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Secs</span>
+</div>
+</div>
+<!-- Notify Me Button -->
+<button class="w-full py-4 rounded-xl bg-primary text-background-dark font-bold text-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_-5px_rgba(106,244,37,0.4)]">
+<span class="material-symbols-outlined">notifications_active</span>
+                Notify Me When Open
+            </button>
+<!-- Previous Leaderboard Preview -->
+<div class="w-full bg-slate-100 dark:bg-white/5 rounded-xl p-4 border border-slate-200 dark:border-white/10 backdrop-blur-sm">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Yesterday's Top 3</h3>
+<button class="text-xs text-primary hover:underline font-medium">View Full</button>
+</div>
+<div class="flex items-end justify-center gap-4 h-32 pb-2">
+<!-- 2nd Place -->
+<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="relative">
+<img alt="Avatar of second place winner" class="w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 object-cover" data-alt="Portrait of a woman with long hair" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnMK-gSrouJckV26rH5jFZlCI1UGesprACm7qWbpPAHSllDlI4U8m_392DQQ7eAMpj1wcxBAPEJGOqlYk8QqYrdMoK4QCGrSCz-O5N9rOx4qBGv8rpSjC1mo4p9U9KS6N0Jd1MouU8JTuWO1uwoXzeeI8C7Sm4iQkiMO2d4GpTYscurVGoUXNZNKpBbsJSGsaniGO2PytbESwnADqHeFB-rywWXR0UQ8FoNWpuDLwxzVdULWI0OZHaiJ7akV045De2z5tQ8Rb_w3Y"/>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-300 dark:bg-slate-600 text-slate-800 dark:text-white text-[10px] font-bold px-1.5 rounded-md shadow-sm">#2</div>
+</div>
+<div class="h-16 w-full bg-slate-300/20 dark:bg-white/5 rounded-t-lg flex items-end justify-center pb-2 group-hover:bg-slate-300/40 dark:group-hover:bg-white/10 transition-colors">
+<span class="text-xs font-bold">2,850</span>
+</div>
+</div>
+<!-- 1st Place -->
+<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="relative">
+<img alt="Avatar of first place winner" class="w-16 h-16 rounded-full border-2 border-primary object-cover ring-4 ring-primary/20" data-alt="Portrait of a smiling man with glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpElIdSbjFr1ZMbYJHbYGK6Dw62x2BtNK4pcI5xXKQsoTeFwqQsC2JS_a5XqmkHFI_ZWLnFvrQGbOWB8vztFRFfEOS6114DpEfCxdO-VspehX95aePzDjP_hwR9ERTJV6qg6PhojD-uAGUY0NVKvkugsZcLtB18wRIQiXSVh_CkFPKSEcRdTloPsd-irfpojVsbRQFI13BBcQpq1VPNIK6vrf09BWPrECGkv_lw4OVOikmzskC_ObBxA97nsZaE-_zrTW7wFElOO4"/>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-primary">
+<span class="material-symbols-outlined !text-3xl" style="font-variation-settings: 'FILL' 1;">crown</span>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-background-dark text-[10px] font-bold px-1.5 rounded-md shadow-sm">#1</div>
+</div>
+<div class="h-24 w-full bg-gradient-to-t from-primary/20 to-primary/5 rounded-t-lg flex items-end justify-center pb-2 relative overflow-hidden group-hover:from-primary/30 transition-colors">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<span class="text-sm font-bold text-primary">3,120</span>
+</div>
+</div>
+<!-- 3rd Place -->
+<div class="flex flex-col items-center gap-2 w-1/3 group cursor-pointer">
+<div class="relative">
+<img alt="Avatar of third place winner" class="w-12 h-12 rounded-full border-2 border-[#CD7F32] object-cover" data-alt="Portrait of a woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZ36B7bZ-P7X6zJzqpEsVnaKA6ptw-M4ysJGv3KZADtba2VlqtNbfveBIUbmnZFScOXDAJdhyl1_VfoSI2OeIhcktJq5ut6cZolXdCvsDlFb5MLpHHclPziR68UA-9Bms-Z1ZTcD2U0aCn8hXAYFtno-6JFOdFIG3VW4nsMyNkb7uYo_4BSLJkugxJNGwGp5_pNeQnxU8FnInM7sJUpq5YZ4_DMmYZ0I2RVG6smOU7H7mPu-dMBwiT7Xnr0xTBUQlV29BfkK2t-NU"/>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-[10px] font-bold px-1.5 rounded-md shadow-sm">#3</div>
+</div>
+<div class="h-12 w-full bg-[#CD7F32]/10 dark:bg-[#CD7F32]/20 rounded-t-lg flex items-end justify-center pb-2 group-hover:bg-[#CD7F32]/30 transition-colors">
+<span class="text-xs font-bold text-[#CD7F32]">2,400</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<nav class="relative z-10 w-full bg-slate-100/80 dark:bg-[#223418] border-t border-slate-200 dark:border-[#2f4922] px-6 pb-6 pt-3 backdrop-blur-md">
+<div class="flex items-center justify-between">
+<!-- Play Tab (Active-ish but showing locked context) -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-primary text-2xl transition-transform group-hover:-translate-y-1" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+</div>
+<span class="text-[10px] font-semibold text-primary">Play</span>
+</a>
+<!-- Leaderboard Tab -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-[#a4cb90] text-2xl transition-transform group-hover:-translate-y-1 group-hover:text-slate-600 dark:group-hover:text-primary">emoji_events</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-[#a4cb90] group-hover:text-slate-600 dark:group-hover:text-primary">Leaderboard</span>
+</a>
+<!-- Profile Tab -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-[#a4cb90] text-2xl transition-transform group-hover:-translate-y-1 group-hover:text-slate-600 dark:group-hover:text-primary">person</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-[#a4cb90] group-hover:text-slate-600 dark:group-hover:text-primary">Profile</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>
+
+<!-- DigiQuiz Live Session -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DigiQuiz Live Session</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
         tailwind.config = {
@@ -10,46 +194,195 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#135bec",
-                        "background-light": "#f6f6f8",
-                        "background-dark": "#101622",
-                        "surface-dark": "#1c2433",
+                        "primary": "#6af425",
+                        "primary-content": "#162210",
+                        "background-light": "#f6f8f5",
+                        "background-dark": "#162210",
+                        "surface-dark": "#223418", 
                         "surface-light": "#ffffff",
                     },
                     fontFamily: {
-                        "display": ["Lexend", "sans-serif"]
+                        "display": ["Space Grotesk", "sans-serif"]
                     },
-                    borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "2xl": "1rem",
-                        "full": "9999px"
-                    },
-                    boxShadow: {
-                        'glow': '0 0 15px rgba(19, 91, 236, 0.3)',
-                    }
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
                 },
             },
         }
     </script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased selection:bg-primary selection:text-primary-content">
+<div class="relative mx-auto flex h-full min-h-screen w-full max-w-md flex-col overflow-hidden shadow-2xl">
+<!-- Header / Stats Bar -->
+<header class="flex items-center justify-between px-6 pt-6 pb-2">
+<div class="flex flex-col">
+<span class="text-slate-500 dark:text-[#a4cb90] text-sm font-medium tracking-wide">Question 7/20</span>
+<div class="mt-1 h-2 w-32 rounded-full bg-slate-200 dark:bg-[#2f4922]">
+<div class="h-full w-[35%] rounded-full bg-primary shadow-[0_0_10px_rgba(106,244,37,0.4)]"></div>
+</div>
+</div>
+<div class="flex items-center gap-2 rounded-full bg-slate-100 dark:bg-[#2f4922] px-4 py-1.5 border border-slate-200 dark:border-[#436831]">
+<span class="material-symbols-outlined text-amber-500 text-[20px] font-bold">trophy</span>
+<span class="text-slate-900 dark:text-white text-base font-bold tracking-tight">1450</span>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col px-4 py-4 gap-6 overflow-y-auto pb-24 scrollbar-hide">
+<!-- Timer Section -->
+<div class="flex justify-center py-2 relative">
+<!-- Circular Timer SVG -->
+<div class="relative flex h-24 w-24 items-center justify-center">
+<svg class="h-full w-full -rotate-90 transform" viewbox="0 0 100 100">
+<circle class="text-slate-200 dark:text-[#2f4922]" cx="50" cy="50" fill="none" r="42" stroke="currentColor" stroke-width="6"></circle>
+<circle class="text-primary transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(106,244,37,0.5)]" cx="50" cy="50" fill="none" r="42" stroke="currentColor" stroke-dasharray="264" stroke-dashoffset="66" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-bold tracking-tighter text-slate-900 dark:text-white">14</span>
+<span class="text-[10px] uppercase font-bold text-slate-500 dark:text-[#a4cb90] tracking-widest">Sec</span>
+</div>
+</div>
+</div>
+<!-- Question Card -->
+<div class="relative overflow-hidden rounded-xl bg-surface-light dark:bg-surface-dark p-6 shadow-sm border border-slate-200 dark:border-[#2f4922]">
+<!-- Decorative background elements -->
+<div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/5 blur-3xl"></div>
+<div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl"></div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-3">
+<span class="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary uppercase tracking-wider">Astronomy</span>
+<span class="text-xs text-slate-400 font-medium">• 200 pts</span>
+</div>
+<h2 class="text-2xl font-bold leading-tight text-slate-900 dark:text-white mb-4">
+                        Which planet in our solar system is known as the Red Planet?
+                    </h2>
+<!-- Image (Optional context for question) -->
+<div class="w-full h-32 rounded-lg bg-slate-800 relative overflow-hidden mb-2 group">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img alt="Red planet surface texture" class="h-full w-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" data-alt="Abstract red textured planet surface resembling Mars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJP25uLMCbFmxzPbwh6O_iGFNkysgB3DARcMstwaywm6IeZgVqGLUyPwS-d1S8pJx1_T0DOL6--Qre7ETp3XScLwByCCtJZI-FQrYeXqDahh9Z4aoXsRUEU6EkhaxSJtdtPmznaxNzZ1QL5rZSj5sxS3uPUEXK9MveAayrhRZR-i3-w7BLmxaFvektS4PjxeomFGCRJ5SpO0WExb-ohAV9xwFVLuiY5v_SOH4laC7DAOIdYU02XQYzBd2io-Z3sUnags35O303LR4"/>
+</div>
+</div>
+</div>
+<!-- Feedback Banner (Hidden by default, shown conditionally in a real app) -->
+<!-- Example of a 'Correct' feedback state shown inline as requested by context description -->
+<div class="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/20 p-3 px-4 animate-fade-in-up">
+<div class="flex items-center gap-3">
+<div class="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+<span class="text-sm font-bold text-green-600 dark:text-green-400">Previous: Correct!</span>
+</div>
+<span class="text-sm font-bold text-green-600 dark:text-green-400">+17 pts</span>
+</div>
+<!-- Options Grid -->
+<div class="grid grid-cols-1 gap-3 pb-4">
+<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">A</div>
+<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Venus</span>
+</div>
+</button>
+<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all border border-primary bg-primary/5 dark:bg-[#2a401e]/50 active:scale-[0.99] shadow-[0_0_15px_rgba(106,244,37,0.1)]">
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content font-bold shadow-sm">B</div>
+<span class="text-lg font-bold text-slate-900 dark:text-white">Mars</span>
+</div>
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</button>
+<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">C</div>
+<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Jupiter</span>
+</div>
+</button>
+<button class="group relative flex w-full items-center justify-between rounded-xl bg-surface-light dark:bg-surface-dark p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#2a401e] border border-slate-200 dark:border-[#2f4922] active:scale-[0.99]">
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-[#162210] border border-slate-200 dark:border-[#2f4922] font-bold text-slate-500 dark:text-[#a4cb90] group-hover:border-primary group-hover:text-primary transition-colors">D</div>
+<span class="text-lg font-medium text-slate-800 dark:text-slate-200">Saturn</span>
+</div>
+</button>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="sticky bottom-0 z-50 w-full border-t border-slate-200 dark:border-[#2f4922] bg-surface-light dark:bg-surface-dark/95 backdrop-blur-md px-4 pb-6 pt-2">
+<div class="flex items-center justify-between">
+<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">home</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Home</p>
+</a>
+<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-primary relative" href="#">
+<!-- Active Indicator Glow -->
+<div class="absolute -top-10 h-12 w-12 bg-primary/20 rounded-full blur-xl"></div>
+<span class="material-symbols-outlined text-[24px] fill-current">bolt</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Live Quiz</p>
+</a>
+<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">trophy</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Ranking</p>
+</a>
+<a class="group flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] group-hover:-translate-y-0.5 transition-transform duration-200">person</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Profile</p>
+</a>
+</div>
+</nav>
+</div>
+</body></html>
+
+<!-- DigiQuiz Leaderboard & History -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DigiQuiz Leaderboard &amp; History</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<style>.no-scrollbar::-webkit-scrollbar {
-            display: none;
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6af425",
+                        "background-light": "#f6f8f5",
+                        "background-dark": "#162210",
+                        "surface-dark": "#223418",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        display: ["Space Grotesk", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1.5rem",
+                        full: "9999px",
+                    },
+                },
+            },
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .glass-effect {
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-    </style>
+    </script>
 <style>
         body {
-          min-height: max(884px, 100dvh);
+            font-family: "Space Grotesk", sans-serif;
+        }
+        /* Custom scrollbar for table if needed */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 <style>
@@ -58,344 +391,240 @@
     }
   </style>
   </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased overflow-x-hidden min-h-screen relative flex flex-col">
-<header class="sticky top-0 z-40 bg-background-light/95 dark:bg-background-dark/95 glass-effect border-b border-slate-200 dark:border-slate-800">
-<div class="flex items-center justify-between px-4 py-3">
-<h1 class="text-xl font-bold tracking-tight">Social Hub</h1>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<!-- Main Container -->
+<div class="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden">
+<!-- Header -->
+<div class="flex items-center justify-between p-4 pb-2 z-10 bg-background-light dark:bg-background-dark">
+<button class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight flex-1 text-center">Leaderboard</h2>
+<div class="flex w-10 items-center justify-end">
+<button class="text-primary hover:text-primary/80 transition-colors">
+<span class="material-symbols-outlined">calendar_month</span>
+</button>
+</div>
+</div>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto pb-24 hide-scrollbar">
+<!-- Calendar Strip (Collapsed View) -->
+<div class="px-4 py-2">
+<div class="flex items-center justify-between mb-4">
+<button class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark text-slate-500 dark:text-[#a4cb90]">
+<span class="material-symbols-outlined text-sm">arrow_back_ios</span>
+</button>
+<p class="text-slate-900 dark:text-white text-base font-bold">October 2023</p>
+<button class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-surface-dark text-slate-500 dark:text-[#a4cb90]">
+<span class="material-symbols-outlined text-sm">arrow_forward_ios</span>
+</button>
+</div>
+<!-- Date Row -->
+<div class="flex justify-between gap-1 overflow-x-auto pb-2">
+<!-- Past Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">M</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">2</button>
+</div>
+<!-- Past Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">T</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">3</button>
+</div>
+<!-- Past Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">W</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-surface-dark">4</button>
+</div>
+<!-- Active Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-primary font-bold">T</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-bold bg-primary text-background-dark shadow-lg shadow-primary/20">5</button>
+</div>
+<!-- Future Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">F</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">6</button>
+</div>
+<!-- Future Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">S</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">7</button>
+</div>
+<!-- Future Date -->
+<div class="flex flex-col items-center gap-1 min-w-[40px]">
+<span class="text-xs text-slate-500 dark:text-[#a4cb90] font-medium">S</span>
+<button class="size-9 rounded-full flex items-center justify-center text-sm font-medium text-slate-400 dark:text-slate-500 pointer-events-none">8</button>
+</div>
+</div>
+</div>
+<!-- Stats Summary Cards -->
+<div class="grid grid-cols-3 gap-3 px-4 py-4">
+<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
+<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">450</p>
+<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Score</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
+<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">8/10</p>
+<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Correct</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-[#436831] p-3 items-center text-center shadow-sm">
+<p class="text-slate-900 dark:text-white text-xl font-bold leading-tight">12s</p>
+<p class="text-slate-500 dark:text-[#a4cb90] text-xs font-medium uppercase tracking-wide">Avg Time</p>
+</div>
+</div>
+<!-- Tabs -->
+<div class="px-4 sticky top-0 bg-background-light dark:bg-background-dark z-10 pt-2">
+<div class="flex border-b border-slate-200 dark:border-[#436831]">
+<button class="flex-1 pb-3 pt-2 text-center border-b-[3px] border-primary text-slate-900 dark:text-white">
+<span class="text-sm font-bold tracking-wide">Global</span>
+</button>
+<button class="flex-1 pb-3 pt-2 text-center border-b-[3px] border-transparent text-slate-500 dark:text-[#a4cb90] hover:text-slate-700 dark:hover:text-white transition-colors">
+<span class="text-sm font-bold tracking-wide">Friends</span>
+</button>
+</div>
+</div>
+<!-- Leaderboard List -->
+<div class="px-4 pt-4 flex flex-col gap-3">
+<!-- Top 3 Podium (Optional Visual Flair) -->
+<div class="flex items-end justify-center gap-4 mb-6 mt-2">
+<!-- 2nd Place -->
+<div class="flex flex-col items-center">
+<div class="relative mb-2">
+<img alt="User Avatar" class="size-12 rounded-full border-2 border-slate-300 dark:border-[#a4cb90]" data-alt="Portrait of a woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5_gvm0RYrMpvBM33QYcTrWYqrU4u2y2HdZvL7dmlKbcPIS7m1MScgDPgykzFIXuBLnTxoiMlczyafjFL0RyZ4pzDgzjT8Z2MLbxuilmt_zDOstxhlZgiU726yHApbBmW8WaLifL13jdBGRVTJnk4netgJ1KCdWE5qUPVoADKki3ULPNXNYg-ENmVhWsX4JNTNqeL6v63qwpDddOd3np-gtqStmYSaB66nXfpWAZKkfVa8FmUWVgR0Las19LeeyETK4tbB1gzrhjQ"/>
+<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-5 bg-slate-300 dark:bg-[#a4cb90] text-background-dark text-xs font-bold rounded-full">2</div>
+</div>
+<p class="text-xs font-medium dark:text-white">SarahJ</p>
+<p class="text-xs text-primary font-bold">890</p>
+</div>
+<!-- 1st Place -->
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-yellow-400 mb-1 text-2xl">emoji_events</span>
+<div class="relative mb-2">
+<img alt="User Avatar" class="size-16 rounded-full border-4 border-primary ring-4 ring-primary/20" data-alt="Portrait of a man with serious expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBitWGAAlsdtXISDGALpoMaoalNVft1tMUI8GZ0jNnR8lmkJ0nRh7x4XZQipq711JMcaVyDhh9keoSWCFyT6Q6kG0WnEQBDVhRqW9-apglSRdI0zqG12807O0ZJ_hKrylNscMjP442dHCiqiokrsh_nUx79jIvcMOX4UzTBdd2cMiKOoQFUu2B1FvV9Kn8gC2QBFJl23-_zZdVD6l_mfNfaRgg6fSFwlZm2XSDc257GG0yAoWeN1aQeYIjqMgGSqmOz_U0_LzhitTA"/>
+<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-6 bg-primary text-background-dark text-sm font-bold rounded-full">1</div>
+</div>
+<p class="text-sm font-bold dark:text-white">PixelMaster</p>
+<p class="text-sm text-primary font-bold">950</p>
+</div>
+<!-- 3rd Place -->
+<div class="flex flex-col items-center">
+<div class="relative mb-2">
+<img alt="User Avatar" class="size-12 rounded-full border-2 border-amber-700 dark:border-amber-600" data-alt="Portrait of a woman with curly hair" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6t63v8GESW8oCbJ-Xgykwug8Oee5PSKbkO3ffi49ivEBGLa2fo5KroWa1Uzau-46stRB3I9gjsYT9xE68tO8TpgaLwp5SNERHzBdjgDAaGK_VeUiHij2_bbn-d_CVa7wBMUaLM1hHsLikJ964BIk-MSFoI-vmv_7T45D5CQolAMcNdNQxcZJna4tZT2sMJed4sFWW7B3HlaJWKNJ5cOcIkcZb6W37NlwyfMcA-dBCxEkPpzsToOu_HKuv8uc9ynrchC9cIR8mgHc"/>
+<div class="absolute -bottom-2 inset-x-0 mx-auto flex items-center justify-center size-5 bg-amber-700 dark:bg-amber-600 text-white text-xs font-bold rounded-full">3</div>
+</div>
+<p class="text-xs font-medium dark:text-white">QuizWiz</p>
+<p class="text-xs text-primary font-bold">820</p>
+</div>
+</div>
+<!-- List Items -->
+<div class="flex flex-col gap-2">
+<!-- Row 4 -->
+<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent hover:border-slate-300 dark:hover:border-[#436831] transition-all">
+<div class="flex items-center gap-4">
+<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">4</span>
 <div class="flex items-center gap-3">
-<button class="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
-<span class="material-symbols-outlined" style="font-size: 24px;">search</span>
-</button>
-<button class="relative flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
-<span class="material-symbols-outlined" style="font-size: 24px;">notifications</span>
-<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
-</button>
-</div>
-</div>
-<div class="px-4 pb-4">
-<div class="flex p-1 bg-slate-200 dark:bg-surface-dark rounded-xl">
-<button class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
-                    Friends
-                </button>
-<button class="flex-1 py-2 text-sm font-medium rounded-lg bg-primary text-white shadow-lg shadow-primary/30">
-                    Players
-                </button>
-<button class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
-                    Chat
-                </button>
-</div>
-</div>
-</header>
-<main class="flex-1 px-4 py-4 pb-24 space-y-6">
-<div class="flex flex-col gap-3">
-<div class="flex items-center justify-between">
-<h2 class="text-lg font-bold">Leaderboard</h2>
-<button class="text-primary text-sm font-medium flex items-center gap-1">
-                    Filters <span class="material-symbols-outlined" style="font-size: 16px;">filter_list</span>
-</button>
-</div>
-<div class="flex overflow-x-auto gap-2 no-scrollbar pb-1">
-<button class="shrink-0 px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium">All</button>
-<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Standard</button>
-<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Blitz</button>
-<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Bullet</button>
-<button class="shrink-0 px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">Rapid</button>
-</div>
-</div>
-<div class="grid grid-cols-3 gap-3 items-end pt-4 pb-2">
-<div class="flex flex-col items-center gap-2">
-<div class="relative">
-<div class="w-16 h-16 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-2 ring-slate-400 dark:ring-slate-500">
-<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a smiling man with glasses" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAl8B8S-mpdI3LLovwjcBt0uBKwqQlU_eSuWSqu-E1kToZLGaizGur6Nndj6y6UxYd9mi9uQhiZymvqRM6zvtO2xoqKUj5QfRFI2visbM8-9dtGpxCHw0sP6FBIe4QPca5BJ1h7AZGd4yBFunTauDKCAUkkwgMLnY_b8J1jS8-iS_l2rmohdEUilg_8e98IHCq8Xr90QoJfYyFMMZ9gg64QRZu66PmNXoR1cWpAJCGc5_uTr6Nt2xfRPJ4dq8cLeG8rtw2VTkoIlYvV');"></div>
-</div>
-<div class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-slate-400 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        #2
-                    </div>
-</div>
-<div class="text-center mt-1">
-<p class="font-semibold text-sm truncate w-20">Hikaru_N</p>
-<p class="text-xs text-primary font-bold">2880</p>
-</div>
-</div>
-<div class="flex flex-col items-center gap-2 -mt-4">
-<div class="relative">
-<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[#FFD700]">
-<span class="material-symbols-outlined fill-current" style="font-size: 28px; font-variation-settings: 'FILL' 1;">crown</span>
-</div>
-<div class="w-20 h-20 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-4 ring-[#FFD700] shadow-glow">
-<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a focused young man" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB6DTLm8FBTchlLVUSGYWkSW401uLOKw5_mNrmk6ZtC8mgFskstuS4ugRLfJdZPgwzJLd6YK29oXJTVLB0iwMpp0hK4MqlSzXlKzVxAEi3bucmr6sZZgBDXLth5grKHnlZY_9V_mQKjjEnXJgEihy7soRilrVyTvjJa2yTFbyhM1s1uxtoOZA6Oee59ALLEaMhiIpo_WqcEOFHwesozeoHSOOtnm5ZkOPlBrhW4erfDEOte15ENgRepf9XUEUWb0we_8PtJ9yy-qKKd');"></div>
-</div>
-<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-black text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">
-                        #1
-                    </div>
-</div>
-<div class="text-center mt-2">
-<p class="font-bold text-base truncate w-24">Magnus_C</p>
-<p class="text-sm text-primary font-bold">2882</p>
-</div>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="relative">
-<div class="w-16 h-16 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden ring-2 ring-[#CD7F32]">
-<div class="w-full h-full bg-cover bg-center" data-alt="Portrait of a serious man with beard" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCVVWworiVDmuIHa3CqyOeryUTNtCwk9ir5rKP1GXYY59G99lCqzUxbcJhKuzKFLiDBQIusuF7IfkBVupWT1JyRn95dcM4SYeLbvVUOj3LiRO2rEU3zZGCqare7r8NNg3XeGW8PVk3TR2DYdKafp6ePUgFdiY5oDgUiCoZuq5knv3tFDk3GRrOZSONPH7TNyZGqoUqi7G5j4kjhP-XXPB6PTm79OUj-hmIXsw6GEWnKmVMqOuLygEcyHGFMRrp4eiHQs4Y6cGAkqYkL');"></div>
-</div>
-<div class="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        #3
-                    </div>
-</div>
-<div class="text-center mt-1">
-<p class="font-semibold text-sm truncate w-20">Fabi_C</p>
-<p class="text-xs text-primary font-bold">2801</p>
-</div>
-</div>
-</div>
-<div class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
-<div class="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 uppercase">
-<div class="col-span-1 text-center">#</div>
-<div class="col-span-6">Player</div>
-<div class="col-span-3 text-right">Rating</div>
-<div class="col-span-2 text-right"></div>
-</div>
-<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-<div class="col-span-1 text-sm font-bold text-slate-500 text-center">4</div>
-<div class="col-span-6 flex items-center gap-3">
-<div class="relative shrink-0">
-<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a woman" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPmlz-DDHdnKnUqvUuLAH6dRYcB0-4B00mLAx3_YZ0t-P3gxp6UQFKWOrjnQS6ReMlalqGqU5v5ctWGVWDd4XNY63MUpEkbnXNvfRBB0pEkAwcwlqawsA6yQgpE2dlBSj683u7GJs0BGXXcCdfboztyCno5NEX1mMtYN2s63lxNEntUg02GrakFS4jzXbx7GpFePVmZaw2xSNRHH295HglGm0Trvt4KEk00Ev0zJ35HNGrzjYwgGuk6_uUOMrO7Pm6e-eMA7YaFQ0v');"></div>
-<span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-surface-light dark:border-surface-dark"></span>
-</div>
-<div class="flex flex-col min-w-0">
-<div class="flex items-center gap-1">
-<span class="truncate font-medium text-sm">ChessQueen99</span>
-<span class="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1 rounded font-bold">GM</span>
-</div>
-<span class="text-xs text-slate-500">Online</span>
-</div>
-</div>
-<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">2795</div>
-<div class="col-span-2 flex justify-end">
-<button class="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
-<span class="material-symbols-outlined" style="font-size: 20px;">swords</span>
-</button>
-</div>
-</div>
-<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-<div class="col-span-1 text-sm font-bold text-slate-500 text-center">5</div>
-<div class="col-span-6 flex items-center gap-3">
-<div class="relative shrink-0">
-<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a man" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjVfVwQMGikCk7diS5vWt1U2WFjft-9AMuVwrxdmiPrEPe5PruNmfX8c1GEAqZMGLFSfeXcPY5KPA4noGqUFFFLzM_T3bDQD3_NjBul11LsjXzf0A-KVf_vNTgF7ULbi-xbmkEXlkitESNkKkDzVd9WuTbeWeZG3dhH47qAGzjspWdH8M9OTazK5UiRQMGcGTKnAt4VBRmEH1YuZooxNWfbU-GY7p1n0dh6hLQIjLDpHDjg0Hv-4M5nJgC0FXJtwYN1ZT5dJcS_YEu');"></div>
-</div>
-<div class="flex flex-col min-w-0">
-<div class="flex items-center gap-1">
-<span class="truncate font-medium text-sm">Bobby_F</span>
-<span class="text-[10px] bg-red-500/20 text-red-600 dark:text-red-400 px-1 rounded font-bold">IM</span>
-</div>
-<span class="text-xs text-slate-500">15m ago</span>
-</div>
-</div>
-<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">2750</div>
-<div class="col-span-2 flex justify-end">
-<button class="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
-<span class="material-symbols-outlined" style="font-size: 20px;">mail</span>
-</button>
-</div>
-</div>
-<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary border-b border-slate-100 dark:border-slate-800/50 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors cursor-pointer">
-<div class="col-span-1 text-sm font-bold text-primary text-center">42</div>
-<div class="col-span-6 flex items-center gap-3">
-<div class="relative shrink-0">
-<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                            ME
-                        </div>
-</div>
-<div class="flex flex-col min-w-0">
-<div class="flex items-center gap-1">
-<span class="truncate font-medium text-sm text-primary">GrandMasterFlash</span>
-</div>
-<span class="text-xs text-slate-500">France</span>
-</div>
-</div>
-<div class="col-span-3 text-right font-bold text-primary text-sm">1500</div>
-<div class="col-span-2 flex justify-end">
-<button class="text-slate-400 p-1.5 rounded-lg">
-<span class="material-symbols-outlined" style="font-size: 20px;">bar_chart</span>
-</button>
-</div>
-</div>
-<div class="group relative grid grid-cols-12 gap-2 items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-<div class="col-span-1 text-sm font-bold text-slate-500 text-center">43</div>
-<div class="col-span-6 flex items-center gap-3">
-<div class="relative shrink-0">
-<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Small thumbnail of a woman looking away" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCdm61Er5OK1m7McfD9RM3zJDhTw5Vv8vnBa4gmyUBjfMcl4oQPNsjazPdt7aWH3V97JXG56dZTZoS3Dwo5T3A-BIRJKE0vSlUWXvetOo5tZ1ZjYC7Xs6hyS_ub0pAQtmWMHlHDC_02s82xtpnNoRlj0bLfDOAI_Yxw2CZh2RKmCtxAY9xHRqeMrO9rL_c0hlV81-beWjwjKo8Cp72nb4yoVwP19cJhVqKtUdETJKWzb1ZMJyHE-IKhzmlREJ7TD9nc5CvuQF0Qd_nu');"></div>
-<span class="absolute bottom-0 right-0 w-2 h-2 bg-gray-500 rounded-full border border-surface-light dark:border-surface-dark"></span>
-</div>
-<div class="flex flex-col min-w-0">
-<div class="flex items-center gap-1">
-<span class="truncate font-medium text-sm">Ana_Chess</span>
-</div>
-<span class="text-xs text-slate-500">Offline</span>
-</div>
-</div>
-<div class="col-span-3 text-right font-bold text-slate-700 dark:text-slate-300 text-sm">1498</div>
-<div class="col-span-2 flex justify-end">
-<button class="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors">
-<span class="material-symbols-outlined" style="font-size: 20px;">swords</span>
-</button>
-</div>
-</div>
-</div>
-<div class="bg-gradient-to-r from-blue-900 to-primary rounded-xl p-4 text-white relative overflow-hidden">
-<div class="relative z-10 flex items-center justify-between">
+<img alt="Avatar" class="size-10 rounded-full object-cover" data-alt="Portrait of a man smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6J-HrronyIvm7c5TeH96I0a8Pgz_nEJGBid2JkVPLNVQDr7hlwGVCq6PbdWySg-Vfh4jyu7_A0j3pi9DXeaxqxO_fy7UrDhaSYtW81PF1mPdT1NQuWIjgpe87UBcQOtaluPU8lVOwbYxJeAyF0cLJhGLTK61nf3VSe8DuePZ9sw5M8DfPdwJj8oFxov_-zYRNamXZydzowUQGbCV3lWUYDr8yrAbJVtAMUKG4v03n0CCrhHBeT90hxiN-3Y0Pb-YJFC4ecjFIGK8"/>
 <div>
-<p class="text-xs font-medium opacity-80 mb-1">Weekly Tournament</p>
-<h3 class="font-bold text-lg leading-tight">Speed Chess<br/>Championship</h3>
-<button class="mt-3 bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                        Register Now
-                    </button>
-</div>
-<div class="text-white/20">
-<span class="material-symbols-outlined" style="font-size: 64px;">trophy</span>
+<p class="text-sm font-bold text-slate-900 dark:text-white">AlexR</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">9/10 Correct</p>
 </div>
 </div>
-<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
 </div>
-</main>
-<div class="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6 pointer-events-auto">
-<div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-<div class="relative w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[75vh] sm:h-[600px] border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-200">
-<div class="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 z-10">
-<div class="flex items-center justify-between px-4 py-3">
+<div class="text-right">
+<p class="text-base font-bold text-primary">780</p>
+<p class="text-[10px] text-slate-400">14s avg</p>
+</div>
+</div>
+<!-- Row 5 (Current User) -->
+<div class="group flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary dark:border-primary relative overflow-hidden">
+<!-- Highlight Indicator -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex items-center gap-4 pl-2">
+<span class="w-6 text-center text-primary font-bold">5</span>
 <div class="flex items-center gap-3">
-<div class="relative">
-<div class="w-10 h-10 rounded-full bg-slate-700 bg-cover bg-center shadow-inner" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPmlz-DDHdnKnUqvUuLAH6dRYcB0-4B00mLAx3_YZ0t-P3gxp6UQFKWOrjnQS6ReMlalqGqU5v5ctWGVWDd4XNY63MUpEkbnXNvfRBB0pEkAwcwlqawsA6yQgpE2dlBSj683u7GJs0BGXXcCdfboztyCno5NEX1mMtYN2s63lxNEntUg02GrakFS4jzXbx7GpFePVmZaw2xSNRHH295HglGm0Trvt4KEk00Ev0zJ35HNGrzjYwgGuk6_uUOMrO7Pm6e-eMA7YaFQ0v');"></div>
-<span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-light dark:border-surface-dark"></span>
-</div>
+<img alt="Avatar" class="size-10 rounded-full object-cover ring-2 ring-primary ring-offset-2 ring-offset-background-dark" data-alt="Portrait of a young man with hoodie" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALrzqMSKklrXZfgW76Si3zXEkUvewRY4RN5A_hY_6gLKF63nvxuFwgkEqDjw572Ey4i4dGhbJHlY3DaOs0Ie6_-1Zxp9ElpB8QRrREcQLO-WtMvVA7hBPiZ0tiVQat8mSBtY5rDByvERh4g2Bn8n1xVZqiFTAFdUlga43XQDzpfEhxBjeJf9bs2mu-g8NpybIdsKqkrRsC2ndQLJnDyhrJAAOo1nf7BF1KvqTotOrdN4xqklJe-Hu8iFDHLVvP0ZKZFur5I1yGXBQ"/>
 <div>
-<h3 class="font-bold text-sm leading-tight dark:text-white text-slate-900">ChessQueen99</h3>
-<div class="flex items-center gap-1">
-<div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-<span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Online</span>
+<p class="text-sm font-bold text-slate-900 dark:text-white">You</p>
+<p class="text-xs text-slate-500 dark:text-slate-300">8/10 Correct</p>
 </div>
 </div>
 </div>
-<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-<span class="material-symbols-outlined">close</span>
-</button>
+<div class="text-right">
+<p class="text-base font-bold text-primary">450</p>
+<p class="text-[10px] text-slate-500 dark:text-slate-300">12s avg</p>
 </div>
-<div class="flex border-t border-slate-200 dark:border-slate-800">
-<button class="flex-1 py-2.5 text-xs font-bold text-primary border-b-2 border-primary bg-primary/5 dark:bg-primary/10">
-                        Messages
+</div>
+<!-- Row 6 -->
+<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent">
+<div class="flex items-center gap-4">
+<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">6</span>
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">DK</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">DrKnow</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">7/10 Correct</p>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="text-base font-bold text-primary">420</p>
+<p class="text-[10px] text-slate-400">18s avg</p>
+</div>
+</div>
+<!-- Row 7 -->
+<div class="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-transparent">
+<div class="flex items-center gap-4">
+<span class="w-6 text-center text-slate-400 dark:text-[#a4cb90] font-bold">7</span>
+<div class="flex items-center gap-3">
+<img alt="Avatar" class="size-10 rounded-full object-cover" data-alt="Portrait of a woman looking away" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOXavdNPmyut-L8ynpTlVWTe32cASjTUU2NuqeTRr0o_TpTS9onT4cIvlSmGrGg7apBR1kciOcFXQcmFz7zDkjyos7RpjwZjeabYOwI8cUsm_BbRa3txNdT5PWO5fL9esd79csKv5zjk8NpodIVLnYxQ4NX-wWs_FJpmPUq25mnZH64gSqONxxl-8U4i_ivXpEBPOvmC3SHolIqgT8y76bEBNJO8ZcmFISToaB_JAdvkE4iF2VNo8yzlgkFPRmvWrSPevVlSS3dOs"/>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Luna_88</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">6/10 Correct</p>
+</div>
+</div>
+</div>
+<div class="text-right">
+<p class="text-base font-bold text-primary">390</p>
+<p class="text-[10px] text-slate-400">10s avg</p>
+</div>
+</div>
+</div>
+<!-- Empty State (Hidden by default, structure provided for dev implementation) -->
+<!-- 
+                <div class="flex flex-col items-center justify-center py-12 gap-4">
+                    <div class="size-24 bg-surface-dark rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-4xl text-[#a4cb90]">history_edu</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-white font-bold text-lg">No Quizzes Played</p>
+                        <p class="text-[#a4cb90] text-sm">You haven't played any rounds on this date.</p>
+                    </div>
+                    <button class="bg-primary text-background-dark font-bold px-6 py-2 rounded-full mt-2">
+                        Start a Quiz
                     </button>
-<button class="flex-1 py-2.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b-2 border-transparent">
-                        Global Chat
-                    </button>
+                </div> 
+                -->
 </div>
 </div>
-<div class="grid grid-cols-3 gap-1 p-2 bg-slate-50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800">
-<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group">
-<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform" style="font-size: 20px;">swords</span>
-<span class="text-[10px] font-medium">Propose Game</span>
-</button>
-<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group">
-<span class="material-symbols-outlined text-blue-500 group-hover:scale-110 transition-transform" style="font-size: 20px;">share</span>
-<span class="text-[10px] font-medium">Share PGN</span>
-</button>
-<button class="flex flex-col items-center justify-center gap-1 py-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group">
-<span class="material-symbols-outlined text-green-500 group-hover:scale-110 transition-transform" style="font-size: 20px;">call</span>
-<span class="text-[10px] font-medium">Voice Call</span>
-</button>
-</div>
-<div class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/50 dark:bg-[#0d121c] overscroll-contain">
-<div class="flex justify-center my-2">
-<span class="text-[10px] font-bold text-slate-400 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-full uppercase tracking-wider">Today</span>
-</div>
-<div class="flex items-end gap-2">
-<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center shrink-0 mb-1 ring-1 ring-slate-200 dark:ring-slate-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPmlz-DDHdnKnUqvUuLAH6dRYcB0-4B00mLAx3_YZ0t-P3gxp6UQFKWOrjnQS6ReMlalqGqU5v5ctWGVWDd4XNY63MUpEkbnXNvfRBB0pEkAwcwlqawsA6yQgpE2dlBSj683u7GJs0BGXXcCdfboztyCno5NEX1mMtYN2s63lxNEntUg02GrakFS4jzXbx7GpFePVmZaw2xSNRHH295HglGm0Trvt4KEk00Ev0zJ35HNGrzjYwgGuk6_uUOMrO7Pm6e-eMA7YaFQ0v');"></div>
-<div class="flex flex-col items-start gap-1 max-w-[85%]">
-<div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-bl-none shadow-sm text-sm border border-slate-200 dark:border-slate-700 dark:text-slate-200">
-<p>Hi! Are you up for a quick blitz game? ⚡️</p>
-</div>
-<span class="text-[10px] text-slate-400 ml-1">10:42 AM</span>
-</div>
-</div>
-<div class="flex flex-row-reverse items-end gap-2">
-<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-[9px] font-bold shrink-0 mb-1 shadow-md">ME</div>
-<div class="flex flex-col items-end gap-1 max-w-[85%]">
-<div class="bg-primary text-white p-3 rounded-2xl rounded-br-none shadow-md shadow-primary/20 text-sm">
-<p>Hey! Sure thing. Just let me grab a coffee first ☕</p>
-</div>
-<div class="flex items-center gap-1 mr-1">
-<span class="text-[10px] text-slate-400">10:43 AM</span>
-<span class="material-symbols-outlined text-primary text-[14px]">done_all</span>
-</div>
-</div>
-</div>
-<div class="flex items-end gap-2">
-<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center shrink-0 mb-1 ring-1 ring-slate-200 dark:ring-slate-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPmlz-DDHdnKnUqvUuLAH6dRYcB0-4B00mLAx3_YZ0t-P3gxp6UQFKWOrjnQS6ReMlalqGqU5v5ctWGVWDd4XNY63MUpEkbnXNvfRBB0pEkAwcwlqawsA6yQgpE2dlBSj683u7GJs0BGXXcCdfboztyCno5NEX1mMtYN2s63lxNEntUg02GrakFS4jzXbx7GpFePVmZaw2xSNRHH295HglGm0Trvt4KEk00Ev0zJ35HNGrzjYwgGuk6_uUOMrO7Pm6e-eMA7YaFQ0v');"></div>
-<div class="flex flex-col items-start gap-1 max-w-[85%]">
-<div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-bl-none shadow-sm text-sm border border-slate-200 dark:border-slate-700 dark:text-slate-200">
-<p class="mb-2">Perfect. Check this opening I've been studying in the meantime.</p>
-<div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-<div class="bg-orange-100 dark:bg-orange-500/10 p-2 rounded-lg">
-<span class="material-symbols-outlined text-orange-500">grid_on</span>
-</div>
-<div class="flex-1 min-w-0">
-<p class="truncate text-xs font-bold text-slate-800 dark:text-slate-200">Sicilian Defense: Najdorf</p>
-<p class="text-[10px] text-primary font-medium group-hover:underline">View Analysis</p>
-</div>
-<span class="material-symbols-outlined text-slate-400 text-base">chevron_right</span>
-</div>
-</div>
-<span class="text-[10px] text-slate-400 ml-1">10:44 AM</span>
-</div>
-</div>
-</div>
-<div class="p-3 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 z-10">
-<div class="flex items-center gap-2">
-<button class="p-2 text-slate-400 hover:text-primary transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-<span class="material-symbols-outlined">add_circle</span>
-</button>
-<div class="flex-1 relative">
-<input class="w-full pl-4 pr-10 py-2.5 rounded-full bg-slate-100 dark:bg-slate-900 border-none focus:ring-2 focus:ring-primary/50 text-sm placeholder-slate-400 dark:text-white" placeholder="Type a message..." type="text"/>
-<button class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-primary transition-colors">
-<span class="material-symbols-outlined" style="font-size: 20px;">sentiment_satisfied</span>
-</button>
-</div>
-<button class="p-2.5 bg-primary text-white rounded-full hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 flex items-center justify-center">
-<span class="material-symbols-outlined" style="font-size: 20px;">send</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-<button class="fixed right-4 bottom-20 z-40 flex items-center justify-center w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/40 hover:scale-105 transition-transform">
-<span class="material-symbols-outlined" style="font-size: 28px;">chat_bubble</span>
-<span class="absolute top-3 right-3 w-3 h-3 bg-red-500 border-2 border-primary rounded-full"></span>
-</button>
-<nav class="fixed bottom-0 w-full z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-safe">
-<div class="flex justify-around items-center h-16 px-2">
-<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined" style="font-size: 24px;">home</span>
-<span class="text-[10px] font-medium">Home</span>
+<!-- Bottom Navigation -->
+<div class="flex gap-2 border-t border-slate-200 dark:border-[#2f4922] bg-white dark:bg-[#223418] px-4 pb-6 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Home</p>
 </a>
-<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined" style="font-size: 24px;">swords</span>
-<span class="text-[10px] font-medium">Play</span>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">play_circle</span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Play</p>
 </a>
-<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-primary" href="#">
-<span class="material-symbols-outlined fill-current" style="font-size: 24px;">groups</span>
-<span class="text-[10px] font-medium">Social</span>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-primary dark:text-white" href="#">
+<span class="material-symbols-outlined text-2xl font-variation-fill">trophy</span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Leaderboard</p>
 </a>
-<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<span class="material-symbols-outlined" style="font-size: 24px;">school</span>
-<span class="text-[10px] font-medium">Learn</span>
-</a>
-<a class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
-<div class="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden">
-<img class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdoAjd0l3C8rkJsYCdllRtp_bRdUai0wEZPk71fht8R7KcKI3sJ15Y3f7EkK4iG_-z_J0qvJF5nOaBzYOnJwebzKeCUGc338TNhkIdb0IhBCsjaXRipaEZDHuNgdqK_9to9zZD2naqmzcHR9z63OcjCBAASHP_5-gNp2YAWGXNkp0fmUN-Xv5CIKB3OgTzAGPIBJBE1JG8ouUG3FoOUVbDRU6bPuSYqQoJrwLx56QZ8gC3QGgPEPAWOn1zycefDpDrIG2OHMeah_nT"/>
-</div>
-<span class="text-[10px] font-medium">Profile</span>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-[#a4cb90] hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Profile</p>
 </a>
 </div>
-</nav>
-
+</div>
 </body></html>
