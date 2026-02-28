@@ -46,7 +46,7 @@ export const refreshAccessToken = async () => {
     if (refreshPromise) {
         return refreshPromise;
     }
-    refreshPromise = (async () => {
+    const runRefresh = async () => {
         const response = await fetch(buildUrl(REFRESH_PATH), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -54,7 +54,6 @@ export const refreshAccessToken = async () => {
         });
         const payload = await parseResponsePayload(response);
         if (!response.ok) {
-            tokenStorage.clear();
             const message = payload?.detail || response.statusText || 'Session expired';
             throw new ApiError(response.status, message, payload);
         }
@@ -63,6 +62,17 @@ export const refreshAccessToken = async () => {
             tokenStorage.set(nextToken);
         }
         return payload;
+    };
+    refreshPromise = (async () => {
+        try {
+            return await runRefresh();
+        } catch (firstError) {
+            // One immediate retry prevents false logout on cookie-rotation races.
+            if (firstError?.status === 401 || firstError?.status === 403) {
+                return runRefresh();
+            }
+            throw firstError;
+        }
     })();
     try {
         return await refreshPromise;
@@ -79,6 +89,7 @@ export const apiRequest = async (path, options = {}) => {
         token,
         noAuth = false,
         retryOnAuthError = true,
+        fallbackToNoAuth = false,
     } = options;
     const authToken = noAuth ? null : (token ?? tokenStorage.get());
     const requestHeaders = {
@@ -107,8 +118,9 @@ export const apiRequest = async (path, options = {}) => {
     };
 
     let response = await requestWithToken(authToken);
+    let refreshError = null;
     if (
-        response.status === 401
+        (response.status === 401 || response.status === 403)
         && retryOnAuthError
         && !noAuth
         && path !== REFRESH_PATH
@@ -116,15 +128,23 @@ export const apiRequest = async (path, options = {}) => {
         try {
             const refreshed = await refreshAccessToken();
             response = await requestWithToken(refreshed?.token || tokenStorage.get());
-        } catch {
+        } catch (error) {
+            refreshError = error;
             // allow final 401 handling below
         }
+    }
+
+    if ((response.status === 401 || response.status === 403) && fallbackToNoAuth && !noAuth) {
+        response = await requestWithToken(null);
     }
 
     const payload = await parseResponsePayload(response);
 
     if (!response.ok) {
-        const message = payload?.detail || payload?.message || response.statusText || 'Request failed';
+        const isAuthFailure = response.status === 401 || response.status === 403;
+        const message = isAuthFailure && refreshError
+            ? (refreshError?.data?.detail || refreshError?.message || 'Session expired. Please log in again.')
+            : (payload?.detail || payload?.message || response.statusText || 'Request failed');
         throw new ApiError(response.status, message, payload);
     }
 

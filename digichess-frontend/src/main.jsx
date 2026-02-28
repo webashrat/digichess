@@ -15,7 +15,8 @@ if (faviconLink) {
 // GCS static hosting returns index.html for unknown paths as 404.
 // Canonicalize deep links to hash routes so SPA navigation works reliably.
 if (!window.location.hash && window.location.pathname !== '/') {
-  window.location.replace(`/#${window.location.pathname}${window.location.search}`)
+  const hashPath = `${window.location.pathname}${window.location.search}`
+  window.history.replaceState(null, '', `/#${hashPath}`)
 }
 
 createRoot(document.getElementById('root')).render(
@@ -27,3 +28,7 @@ createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </StrictMode>,
 )
+
+requestAnimationFrame(() => {
+  document.body.classList.add('app-ready')
+})

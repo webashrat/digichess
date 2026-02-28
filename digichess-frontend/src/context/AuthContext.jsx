@@ -17,6 +17,11 @@ export function AuthProvider({ children }) {
         setUser(data.user);
     }, []);
 
+    const isAuthFailure = useCallback((err) => {
+        const status = err?.status;
+        return status === 401 || status === 403;
+    }, []);
+
     useEffect(() => {
         const hydrate = async () => {
             if (!token) {
@@ -36,16 +41,18 @@ export function AuthProvider({ children }) {
             try {
                 const me = await fetchMe();
                 setUser(me);
-            } catch {
-                tokenStorage.clear();
-                setToken(null);
-                setUser(null);
+            } catch (err) {
+                if (isAuthFailure(err)) {
+                    tokenStorage.clear();
+                    setToken(null);
+                    setUser(null);
+                }
             } finally {
                 setLoading(false);
             }
         };
         hydrate();
-    }, [token, applyAuth]);
+    }, [token, applyAuth, isAuthFailure]);
 
     useEffect(() => {
         if (!token) {
@@ -57,14 +64,16 @@ export function AuthProvider({ children }) {
                 if (refreshed?.token && refreshed?.user) {
                     applyAuth(refreshed);
                 }
-            } catch {
-                tokenStorage.clear();
-                setToken(null);
-                setUser(null);
+            } catch (err) {
+                if (isAuthFailure(err)) {
+                    tokenStorage.clear();
+                    setToken(null);
+                    setUser(null);
+                }
             }
         }, 10 * 60 * 1000);
         return () => window.clearInterval(interval);
-    }, [token, applyAuth]);
+    }, [token, applyAuth, isAuthFailure]);
 
     const login = useCallback(async (identifier, password) => {
         setLoading(true);
