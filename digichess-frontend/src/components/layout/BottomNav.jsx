@@ -11,7 +11,7 @@ export default function BottomNav() {
         { id: 'play', to: '/play', icon: 'swords', label: 'Play' },
         { id: 'tournaments', to: '/tournaments', icon: 'trophy', label: 'Tournaments' },
         { id: 'quiz', to: '/quiz', icon: 'quiz', label: 'Quiz' },
-        { id: 'leaderboard', to: '/leaderboard', icon: 'emoji_events', label: 'Leaderboard' },
+        { id: 'leaderboard', to: '/leaderboard', icon: 'leaderboard', label: 'Leaderboard' },
         {
             id: 'profile',
             to: user ? '/profile' : '/login',
