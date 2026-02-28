@@ -323,7 +323,12 @@ export default function QuizPage() {
     const joinEnabled = Boolean(stateData?.join_enabled);
     const questionCount = round?.questions_count || 20;
     const questionDuration = round?.question_duration_seconds || 20;
-    const chip = phaseChip(roundPhase);
+    const chipPhase = activeTab === TAB_UPCOMING
+        ? 'upcoming'
+        : activeTab === TAB_RESULTS
+            ? 'results'
+            : roundPhase;
+    const chip = phaseChip(chipPhase);
     const firstOfficialLabel = toIstDateTimeLabel(stateData?.first_official_round_ist);
     const liveTabEnabled = joined && (roundPhase === 'join_open' || roundPhase === 'live');
 
@@ -767,15 +772,11 @@ export default function QuizPage() {
                                         setTabOverride(TAB_LIVE);
                                         return;
                                     }
-                                    if (roundPhase === 'results') {
-                                        setTabOverride(TAB_RESULTS);
-                                        return;
-                                    }
                                     handleJoinRound();
                                 }}
-                                disabled={joining || (!(joinEnabled && !joined) && !(joined && (roundPhase === 'join_open' || roundPhase === 'live')) && roundPhase !== 'results')}
+                                disabled={joining || (!(joinEnabled && !joined) && !(joined && (roundPhase === 'join_open' || roundPhase === 'live')))}
                                 className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                                    (joinEnabled && !joined) || (joined && (roundPhase === 'join_open' || roundPhase === 'live')) || roundPhase === 'results'
+                                    (joinEnabled && !joined) || (joined && (roundPhase === 'join_open' || roundPhase === 'live'))
                                         ? 'border-primary/40 bg-primary text-white hover:bg-primary/90'
                                         : 'border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                                 }`}
@@ -784,9 +785,7 @@ export default function QuizPage() {
                                     ? 'Joining...'
                                     : joined && (roundPhase === 'join_open' || roundPhase === 'live')
                                         ? 'Quiz In Progress Join'
-                                        : roundPhase === 'results'
-                                            ? 'View Results'
-                                            : (joinEnabled ? 'Join Quiz' : 'Join Opens at 23:20 IST')}
+                                        : (joinEnabled ? 'Join Quiz' : 'Join Opens at 23:20 IST')}
                             </button>
                         </div>
                     </div>
@@ -1277,14 +1276,14 @@ export default function QuizPage() {
             ) : null}
 
             {activeTab === TAB_LIVE && mobileStandingsOpen ? (
-                <div className="lg:hidden fixed inset-0 z-50">
+                <div className="lg:hidden fixed inset-0 z-[70]">
                     <button
                         type="button"
                         className="absolute inset-0 bg-black/50"
                         onClick={() => setMobileStandingsOpen(false)}
                         aria-label="Close standings"
                     />
-                    <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] rounded-t-2xl bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 overflow-hidden">
+                    <div className="absolute bottom-0 left-0 right-0 h-[82dvh] max-h-[82dvh] rounded-t-2xl bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
                         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                             <h3 className="font-bold text-slate-900 dark:text-white">Live Round Standings</h3>
                             <button
@@ -1295,7 +1294,17 @@ export default function QuizPage() {
                                 <span className="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
-                        <div className="overflow-y-auto no-scrollbar max-h-[calc(70vh-64px)]">
+                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Your Rank</div>
+                                <div className="text-base font-bold text-primary">#{yourRank}</div>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Your Points</div>
+                                <div className="text-base font-bold text-primary">{Number(yourPoints || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar pb-[calc(env(safe-area-inset-bottom)+8px)]">
                             <StandingsTable
                                 rows={standingsData?.rows || []}
                                 yourRow={standingsData?.your_row || null}
