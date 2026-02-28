@@ -45,6 +45,7 @@ const customFormatPresets = {
 
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
+const LOCAL_STORAGE_UI_THEME = 'uiTheme';
 
 const getRatingForControl = (user, control) => {
     if (!user) return null;
@@ -97,6 +98,12 @@ export default function HomePage() {
     const [showSettings, setShowSettings] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [notificationError, setNotificationError] = useState(null);
+    const [uiTheme, setUiTheme] = useState(() => {
+        if (typeof window === 'undefined') return 'dark';
+        const stored = localStorage.getItem(LOCAL_STORAGE_UI_THEME);
+        if (stored === 'light' || stored === 'dark') return stored;
+        return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    });
     const [boardThemeIndex, setBoardThemeIndex] = useState(() => {
         if (typeof window === 'undefined') return 6;
         const stored = Number(localStorage.getItem('boardTheme'));
@@ -277,6 +284,13 @@ export default function HomePage() {
             localStorage.setItem(LOCAL_STORAGE_SOUND, String(soundEnabled));
         }
     }, [soundEnabled]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const isDark = uiTheme === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        localStorage.setItem(LOCAL_STORAGE_UI_THEME, uiTheme);
+    }, [uiTheme]);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -547,6 +561,33 @@ export default function HomePage() {
                     {showSettings ? (
                         <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
                             <div>
+                                <div className="text-xs font-semibold text-slate-500 mb-2">App theme</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                                            uiTheme === 'light'
+                                                ? 'bg-primary text-white border-primary'
+                                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                        }`}
+                                        onClick={() => setUiTheme('light')}
+                                    >
+                                        Light
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                                            uiTheme === 'dark'
+                                                ? 'bg-primary text-white border-primary'
+                                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                        }`}
+                                        onClick={() => setUiTheme('dark')}
+                                    >
+                                        Dark
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
                                 <div className="text-xs font-semibold text-slate-500 mb-2">Board theme</div>
                                 <div className="flex items-center gap-3">
                                     <div className="grid grid-cols-2 grid-rows-2 w-8 h-8 rounded overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -762,11 +803,11 @@ export default function HomePage() {
                     {stats.map((stat) => (
                         <div
                             key={stat.label}
-                                className="flex min-w-[90px] sm:min-w-[100px] flex-col gap-1 rounded-xl bg-surface-dark border border-gray-800 p-3 items-center text-center shadow-sm"
+                                className="flex min-w-[90px] sm:min-w-[100px] flex-col gap-1 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 p-3 items-center text-center shadow-sm"
                         >
                             <span className={`material-symbols-outlined text-[20px] ${stat.color}`}>{stat.icon}</span>
-                            <p className="text-white text-lg font-bold leading-tight">{stat.value}</p>
-                            <p className="text-gray-400 text-xs font-normal">{stat.label}</p>
+                            <p className="text-slate-900 dark:text-white text-lg font-bold leading-tight">{stat.value}</p>
+                            <p className="text-slate-500 dark:text-gray-400 text-xs font-normal">{stat.label}</p>
                         </div>
                     ))}
                 </div>
@@ -782,18 +823,20 @@ export default function HomePage() {
                                 key={card.id}
                                 onClick={() => handleQuickPlay(card.id)}
                                 disabled={queueLoading || Boolean(queueingControl)}
-                                className="group relative flex flex-col items-start justify-between p-4 h-28 sm:h-32 rounded-2xl bg-gradient-to-br from-[#1e232e] to-[#13161c] border border-gray-800 hover:border-primary/50 transition-all overflow-hidden disabled:opacity-60"
+                                className="group relative flex items-center p-4 h-28 sm:h-32 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-200 dark:from-[#1e232e] dark:to-[#13161c] border border-slate-200 dark:border-gray-800 hover:border-primary/50 transition-all overflow-hidden disabled:opacity-60"
                                 type="button"
                             >
                                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                     <span className="material-symbols-outlined text-6xl">{card.icon}</span>
                                 </div>
-                                <div className="bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm">
-                                    <span className={`material-symbols-outlined ${card.color}`}>{card.icon}</span>
-                                </div>
-                                <div>
-                                    <span className="block text-2xl font-bold text-white">{card.time}</span>
-                                    <span className="text-sm text-gray-400 font-medium">{card.label}</span>
+                                <div className="relative z-10 flex items-center gap-3 w-full">
+                                    <div className="bg-slate-100/80 dark:bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm shrink-0">
+                                        <span className={`material-symbols-outlined ${card.color}`}>{card.icon}</span>
+                                    </div>
+                                    <div className="text-left leading-tight">
+                                        <span className="block text-2xl font-bold text-slate-900 dark:text-white">{card.time}</span>
+                                        <span className="block text-sm text-slate-600 dark:text-gray-400 font-medium mt-1">{card.label}</span>
+                                    </div>
                                 </div>
                             </button>
                         ))}
@@ -988,7 +1031,7 @@ export default function HomePage() {
                     ) : null}
                 </section>
 
-                <section className="mt-6 pl-4 border-t border-gray-800 pt-6 bg-gradient-to-b from-transparent to-black/20">
+                <section className="mt-6 pl-4 border-t border-slate-200 dark:border-gray-800 pt-6 bg-gradient-to-b from-transparent to-slate-200/40 dark:to-black/20">
                     <div className="flex items-center justify-between pr-4 mb-3">
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             <span className="relative flex h-3 w-3">
@@ -1010,11 +1053,11 @@ export default function HomePage() {
                                 return (
                                     <button
                                         key={game.id}
-                                        className="snap-center shrink-0 w-[min(80vw,240px)] sm:w-[240px] bg-surface-dark border border-gray-800 rounded-xl overflow-hidden shadow-lg text-left"
+                                        className="snap-center shrink-0 w-[min(80vw,240px)] sm:w-[240px] bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-lg text-left"
                                         type="button"
                                         onClick={() => navigate(`/game/${game.id}`)}
                                     >
-                                        <div className="relative aspect-square w-full bg-gray-800">
+                                        <div className="relative aspect-square w-full bg-slate-200 dark:bg-gray-800">
                                             <div className="w-full h-full flex items-center justify-center">
                                                     <MiniChessBoard
                                                         fen={game.current_fen}
@@ -1023,7 +1066,7 @@ export default function HomePage() {
                                                         pieceSet={pieceSet}
                                                     />
                                             </div>
-                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gray-700 flex flex-col">
+                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-slate-400 dark:bg-gray-700 flex flex-col">
                                                 <div className="bg-white w-full" style={{ height: `${evalSplit.white}%` }}></div>
                                                 <div className="bg-black w-full" style={{ height: `${evalSplit.black}%` }}></div>
                                             </div>
@@ -1031,19 +1074,19 @@ export default function HomePage() {
                                         <div className="p-3">
                                             <div className="flex justify-between items-center mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="size-2 rounded-full bg-white"></span>
+                                                    <span className="size-2 rounded-full bg-white border border-slate-300 dark:border-transparent"></span>
                                                     <span className="text-sm font-bold truncate max-w-[80px]">{game.white?.username || 'White'}</span>
                                                 </div>
-                                                <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">
+                                                <span className="text-xs bg-slate-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-gray-300">
                                                     {getRatingForControl(game.white, game.time_control) || '--'}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="size-2 rounded-full bg-black border border-gray-600"></span>
+                                                    <span className="size-2 rounded-full bg-black border border-slate-500 dark:border-gray-600"></span>
                                                     <span className="text-sm font-bold truncate max-w-[80px]">{game.black?.username || 'Black'}</span>
                                                 </div>
-                                                <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">
+                                                <span className="text-xs bg-slate-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-gray-300">
                                                     {getRatingForControl(game.black, game.time_control) || '--'}
                                                 </span>
                                             </div>

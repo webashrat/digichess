@@ -5,12 +5,32 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DigiChess</title>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('uiTheme');
+          if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (error) {
+          // Ignore storage access failures and keep default theme.
+        }
+      })();
+    </script>
     <style>
       html,
       body,
       #root {
         margin: 0;
         min-height: 100%;
+        background: #f6f6f8;
+      }
+
+      html.dark,
+      html.dark body,
+      html.dark #root {
         background: #060f22;
       }
 
@@ -25,12 +45,19 @@
         place-items: center;
         background:
           radial-gradient(1200px 500px at 50% -20%, rgba(19, 91, 236, 0.22), transparent 65%),
-          #060f22;
-        color: #e9eefc;
+          #f6f6f8;
+        color: #0f172a;
         letter-spacing: 0.3px;
         font-weight: 600;
         transition: opacity 0.2s ease;
         z-index: 1;
+      }
+
+      html.dark #app-boot {
+        background:
+          radial-gradient(1200px 500px at 50% -20%, rgba(19, 91, 236, 0.22), transparent 65%),
+          #060f22;
+        color: #e9eefc;
       }
 
       body.app-ready #app-boot {

@@ -423,7 +423,8 @@ export default function LeaderboardPage() {
                     ) : null}
                 </header>
 
-                <main className="flex-1 px-4 py-4 pb-24 space-y-6 overflow-y-auto no-scrollbar relative">
+                <main className="flex-1 px-4 py-4 pb-24 overflow-y-auto no-scrollbar relative">
+                    <div className="mx-auto w-full max-w-6xl space-y-6">
                     {segment === 'players' ? (
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between">
@@ -701,6 +702,7 @@ export default function LeaderboardPage() {
                     ) : null}
 
                     {!loading && !error && segment === 'players' ? null : null}
+                    </div>
                 </main>
 
                 <button
