@@ -48,6 +48,36 @@ def update_ratings_async(game_id: int, result: str):
 
 
 @shared_task
+def import_digiquiz_question_bank():
+    from .quiz_service import import_question_bank
+
+    return import_question_bank()
+
+
+@shared_task
+def prepare_daily_digiquiz_round():
+    from .quiz_service import ensure_round_for_date, ensure_round_questions, now_ist, sync_round_status
+
+    current_ist = now_ist()
+    round_obj = ensure_round_for_date(current_ist.date())
+    count = ensure_round_questions(round_obj)
+    phase = sync_round_status(round_obj)
+    return {
+        "round_id": round_obj.id,
+        "round_date": round_obj.round_date.isoformat(),
+        "questions_count": count,
+        "phase": phase,
+    }
+
+
+@shared_task
+def tick_digiquiz_rounds():
+    from .quiz_service import tick_rounds
+
+    return tick_rounds()
+
+
+@shared_task
 def store_daily_rating_snapshots():
     """Store a daily UTC snapshot of each user's ratings."""
     snapshot_date = timezone.localdate()

@@ -28,6 +28,37 @@ export const fetchLeaderboard = (mode = 'blitz', page = 1, limit = 100) =>
 export const fetchDigiQuizLeaderboard = (page = 1, limit = 100) =>
     api.get(`/games/leaderboard/digiquiz/?page=${page}&limit=${limit}`);
 
+export const fetchDigiQuizState = () =>
+    api.get('/games/digiquiz/state/', { fallbackToNoAuth: true });
+
+export const joinDigiQuizRound = (payload = {}) =>
+    api.post('/games/digiquiz/join/', payload);
+
+export const fetchDigiQuizLiveQuestion = (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/games/digiquiz/live/question/${query ? `?${query}` : ''}`);
+};
+
+export const submitDigiQuizAnswer = (payload) =>
+    api.post('/games/digiquiz/live/answer/', payload);
+
+export const fetchDigiQuizLiveStandings = (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/games/digiquiz/live/standings/${query ? `?${query}` : ''}`, {
+        fallbackToNoAuth: true,
+    });
+};
+
+export const fetchDigiQuizResults = (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/games/digiquiz/results/${query ? `?${query}` : ''}`, {
+        fallbackToNoAuth: true,
+    });
+};
+
+export const fetchDigiQuizRatingHistory = (limit = 90) =>
+    api.get(`/games/digiquiz/rating-history/?limit=${limit}`);
+
 export const fetchPublicGames = (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return api.get(`/games/public/${query ? `?${query}` : ''}`);

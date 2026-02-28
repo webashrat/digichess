@@ -17,13 +17,16 @@ class JWTOrTokenAuthentication(BaseAuthentication):
     - Authorization: Token <access_jwt or legacy drf token>
     """
 
+    def authenticate_header(self, request):
+        return "Token"
+
     def authenticate(self, request):
         auth = get_authorization_header(request).split()
         if not auth:
             return None
 
         if len(auth) != 2:
-            raise AuthenticationFailed("Invalid authorization header format.")
+            return None
 
         scheme = auth[0].decode("utf-8").lower()
         credential = auth[1].decode("utf-8")
@@ -35,8 +38,11 @@ class JWTOrTokenAuthentication(BaseAuthentication):
             user = self._authenticate_legacy_token(credential)
             if user is not None:
                 return (user, None)
+            return None
 
         user = self._authenticate_access_jwt(credential)
+        if user is None:
+            return None
         return (user, None)
 
     def _authenticate_legacy_token(self, key: str):
@@ -51,20 +57,14 @@ class JWTOrTokenAuthentication(BaseAuthentication):
     def _authenticate_access_jwt(self, token: str):
         try:
             payload = decode_access_token(token, verify_exp=True)
-        except ExpiredSignatureError as exc:
-            raise AuthenticationFailed("Access token expired.") from exc
-        except InvalidTokenError as exc:
-            raise AuthenticationFailed("Invalid access token.") from exc
+        except (ExpiredSignatureError, InvalidTokenError):
+            return None
 
         if payload.get("type") != "access":
-            raise AuthenticationFailed("Invalid token type.")
+            return None
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise AuthenticationFailed("Invalid token payload.")
+            return None
 
-        try:
-            user = User.objects.get(id=user_id, is_active=True)
-        except User.DoesNotExist as exc:
-            raise AuthenticationFailed("User not found.") from exc
-        return user
+        return User.objects.filter(id=user_id, is_active=True).first()

@@ -47,6 +47,18 @@ from .views_leaderboard import RatingLeaderboardView, DigiQuizLeaderboardView
 from .views_bot import BotListView, CreateBotGameView
 from .views_puzzle import DailyPuzzleView, PuzzleView, NextPuzzleView, PuzzleBatchView
 from .views_optimistic import OptimisticMoveView
+from .views_quiz import (
+    DigiQuizFinalizeRoundView,
+    DigiQuizImportQuestionBankView,
+    DigiQuizJoinRoundView,
+    DigiQuizLiveQuestionView,
+    DigiQuizLiveStandingsView,
+    DigiQuizPrepareRoundView,
+    DigiQuizRatingHistoryView,
+    DigiQuizResultsView,
+    DigiQuizStateView,
+    DigiQuizSubmitAnswerView,
+)
 
 urlpatterns = [
     path("", GameListCreateView.as_view(), name="games"),
@@ -89,6 +101,16 @@ urlpatterns = [
     path("<int:game_id>/predict/", PredictionCreateView.as_view(), name="game-predict"),
     path("leaderboard/ratings/", RatingLeaderboardView.as_view(), name="leaderboard-ratings"),
     path("leaderboard/digiquiz/", DigiQuizLeaderboardView.as_view(), name="leaderboard-digiquiz"),
+    path("digiquiz/state/", DigiQuizStateView.as_view(), name="digiquiz-state"),
+    path("digiquiz/join/", DigiQuizJoinRoundView.as_view(), name="digiquiz-join"),
+    path("digiquiz/live/question/", DigiQuizLiveQuestionView.as_view(), name="digiquiz-live-question"),
+    path("digiquiz/live/answer/", DigiQuizSubmitAnswerView.as_view(), name="digiquiz-submit-answer"),
+    path("digiquiz/live/standings/", DigiQuizLiveStandingsView.as_view(), name="digiquiz-live-standings"),
+    path("digiquiz/results/", DigiQuizResultsView.as_view(), name="digiquiz-results"),
+    path("digiquiz/rating-history/", DigiQuizRatingHistoryView.as_view(), name="digiquiz-rating-history"),
+    path("digiquiz/admin/prepare/", DigiQuizPrepareRoundView.as_view(), name="digiquiz-admin-prepare"),
+    path("digiquiz/admin/finalize/", DigiQuizFinalizeRoundView.as_view(), name="digiquiz-admin-finalize"),
+    path("digiquiz/admin/import-bank/", DigiQuizImportQuestionBankView.as_view(), name="digiquiz-admin-import-bank"),
     path("user/<str:username>/", UserGamesView.as_view(), name="user-games"),
     path("bots/", BotListView.as_view(), name="bots-list"),
     path("bots/create-game/", CreateBotGameView.as_view(), name="bot-create-game"),

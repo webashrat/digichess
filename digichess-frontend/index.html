@@ -5,8 +5,42 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DigiChess</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        min-height: 100%;
+        background: #060f22;
+      }
+
+      body {
+        font-family: "Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      #app-boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(1200px 500px at 50% -20%, rgba(19, 91, 236, 0.22), transparent 65%),
+          #060f22;
+        color: #e9eefc;
+        letter-spacing: 0.3px;
+        font-weight: 600;
+        transition: opacity 0.2s ease;
+        z-index: 1;
+      }
+
+      body.app-ready #app-boot {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
+    <div id="app-boot">DigiChess</div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

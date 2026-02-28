@@ -232,3 +232,154 @@ class TournamentParticipant(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.tournament.name}"
+
+
+class DigiQuizQuestion(models.Model):
+    source_id = models.CharField(max_length=64, unique=True)
+    tag = models.CharField(max_length=120, db_index=True)
+    question = models.TextField()
+    options = models.JSONField(default=list)
+    answer_index = models.PositiveSmallIntegerField()
+    answer_text = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.source_id} ({self.tag})"
+
+
+class DigiQuizRound(models.Model):
+    STATUS_SCHEDULED = "scheduled"
+    STATUS_JOIN_OPEN = "join_open"
+    STATUS_LIVE = "live"
+    STATUS_FINISHED = "finished"
+
+    STATUS_CHOICES = [
+        (STATUS_SCHEDULED, "Scheduled"),
+        (STATUS_JOIN_OPEN, "Join Open"),
+        (STATUS_LIVE, "Live"),
+        (STATUS_FINISHED, "Finished"),
+    ]
+
+    round_date = models.DateField(unique=True, help_text="Round date in IST")
+    join_open_at = models.DateTimeField()
+    start_at = models.DateTimeField()
+    end_at = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SCHEDULED)
+    is_official = models.BooleanField(default=False)
+    questions_count = models.PositiveSmallIntegerField(default=20)
+    question_duration_seconds = models.PositiveSmallIntegerField(default=20)
+    finalized_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_at"]
+
+    def __str__(self):
+        return f"DigiQuiz Round {self.round_date} ({self.status})"
+
+
+class DigiQuizRoundQuestion(models.Model):
+    round = models.ForeignKey(DigiQuizRound, related_name="round_questions", on_delete=models.CASCADE)
+    question = models.ForeignKey(DigiQuizQuestion, related_name="round_entries", on_delete=models.CASCADE)
+    question_no = models.PositiveSmallIntegerField()
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["question_no"]
+        constraints = [
+            models.UniqueConstraint(fields=["round", "question_no"], name="uq_digiquiz_round_question_no"),
+            models.UniqueConstraint(fields=["round", "question"], name="uq_digiquiz_round_question_unique"),
+        ]
+
+    def __str__(self):
+        return f"Round {self.round_id} Q{self.question_no}"
+
+
+class DigiQuizParticipation(models.Model):
+    round = models.ForeignKey(DigiQuizRound, related_name="participations", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name="digiquiz_participations", on_delete=models.CASCADE)
+    joined_at = models.DateTimeField(auto_now_add=True)
+    joined_question_no = models.PositiveSmallIntegerField(default=1)
+    total_points = models.IntegerField(default=0)
+    correct_count = models.PositiveIntegerField(default=0)
+    wrong_count = models.PositiveIntegerField(default=0)
+    resolved_count = models.PositiveIntegerField(default=0)
+    total_answer_time_ms = models.PositiveIntegerField(default=0)
+    last_answer_at = models.DateTimeField(null=True, blank=True)
+    rating_applied = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-total_points", "-correct_count", "total_answer_time_ms", "joined_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["round", "user"], name="uq_digiquiz_participation_round_user"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} in DigiQuiz round {self.round_id}"
+
+
+class DigiQuizAnswer(models.Model):
+    STATUS_CORRECT = "correct"
+    STATUS_WRONG = "wrong"
+    STATUS_TIMEOUT = "timeout"
+    STATUS_MISSED_LATE = "missed_late_join"
+
+    STATUS_CHOICES = [
+        (STATUS_CORRECT, "Correct"),
+        (STATUS_WRONG, "Wrong"),
+        (STATUS_TIMEOUT, "Timeout"),
+        (STATUS_MISSED_LATE, "Missed (Late Join)"),
+    ]
+
+    participation = models.ForeignKey(DigiQuizParticipation, related_name="answers", on_delete=models.CASCADE)
+    round = models.ForeignKey(DigiQuizRound, related_name="answers", on_delete=models.CASCADE)
+    question = models.ForeignKey(DigiQuizQuestion, related_name="answers", on_delete=models.CASCADE)
+    question_no = models.PositiveSmallIntegerField()
+    selected_index = models.SmallIntegerField(null=True, blank=True)
+    is_correct = models.BooleanField(default=False)
+    latency_ms = models.PositiveIntegerField(default=0)
+    points = models.IntegerField(default=0)
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES)
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["question_no"]
+        constraints = [
+            models.UniqueConstraint(fields=["participation", "question_no"], name="uq_digiquiz_answer_participation_question"),
+        ]
+        indexes = [
+            models.Index(fields=["round", "question_no"]),
+            models.Index(fields=["participation", "question_no"]),
+        ]
+
+    def __str__(self):
+        return f"Round {self.round_id} Q{self.question_no} answer by {self.participation.user_id}"
+
+
+class DigiQuizRatingHistory(models.Model):
+    user = models.ForeignKey(User, related_name="digiquiz_rating_history", on_delete=models.CASCADE)
+    round = models.ForeignKey(DigiQuizRound, related_name="rating_history", on_delete=models.CASCADE)
+    participation = models.OneToOneField(
+        DigiQuizParticipation,
+        related_name="rating_history_entry",
+        on_delete=models.CASCADE,
+    )
+    rating_before = models.IntegerField()
+    round_delta = models.IntegerField()
+    rating_after = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["round__start_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "round"], name="uq_digiquiz_rating_round_user"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.rating_before}->{self.rating_after} (round {self.round_id})"

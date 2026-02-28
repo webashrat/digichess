@@ -106,7 +106,6 @@ AUTH_USER_MODEL = "accounts.User"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.JWTOrTokenAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -129,13 +128,27 @@ AUTH_ACCESS_TOKEN_MINUTES = int(os.getenv("AUTH_ACCESS_TOKEN_MINUTES", "15"))
 AUTH_REFRESH_TOKEN_DAYS = int(os.getenv("AUTH_REFRESH_TOKEN_DAYS", "180"))
 AUTH_REFRESH_INACTIVITY_DAYS = int(os.getenv("AUTH_REFRESH_INACTIVITY_DAYS", "60"))
 AUTH_REFRESH_COOKIE_NAME = os.getenv("AUTH_REFRESH_COOKIE_NAME", "digichess_refresh")
-AUTH_REFRESH_COOKIE_SECURE = os.getenv("AUTH_REFRESH_COOKIE_SECURE", "True").lower() == "true"
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+AUTH_REFRESH_COOKIE_SECURE = _env_bool("AUTH_REFRESH_COOKIE_SECURE", not DEBUG)
 AUTH_REFRESH_COOKIE_SAMESITE = os.getenv("AUTH_REFRESH_COOKIE_SAMESITE", "Lax")
 AUTH_REFRESH_COOKIE_PATH = os.getenv("AUTH_REFRESH_COOKIE_PATH", "/api/accounts/")
 AUTH_REFRESH_COOKIE_DOMAIN = os.getenv("AUTH_REFRESH_COOKIE_DOMAIN", "")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://digichess.local")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+DIGIQUIZ_QUESTION_BANK_PATH = os.getenv(
+    "DIGIQUIZ_QUESTION_BANK_PATH",
+    str(BASE_DIR / "quiz_10000_questions_pretty.json"),
+)
+DIGIQUIZ_ALLOW_PREOFFICIAL = os.getenv("DIGIQUIZ_ALLOW_PREOFFICIAL", "True").lower() == "true"
 
 # Lichess API Configuration
 LICHESS_API_TOKEN = os.getenv("LICHESS_API_TOKEN", "")
@@ -190,6 +203,15 @@ CELERY_BEAT_SCHEDULE = {
     "pair_arena_idle_players": {
         "task": "games.tasks.pair_arena_idle_players",
         "schedule": _env_float("TOURNAMENT_PAIR_ARENA_INTERVAL", 5.0),
+    },
+    "prepare_daily_digiquiz_round": {
+        "task": "games.tasks.prepare_daily_digiquiz_round",
+        # 23:25 IST daily = 17:55 UTC
+        "schedule": crontab(minute=55, hour=17),
+    },
+    "tick_digiquiz_rounds": {
+        "task": "games.tasks.tick_digiquiz_rounds",
+        "schedule": _env_float("DIGIQUIZ_TICK_INTERVAL", 2.0),
     },
 }
 
