@@ -809,6 +809,14 @@ export default function HomePage() {
                             {showCustomForm ? 'expand_less' : 'expand_more'}
                         </span>
                     </button>
+                    <button
+                        onClick={() => navigate('/tournaments')}
+                        className="mt-3 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all"
+                        type="button"
+                    >
+                        <span className="material-symbols-outlined">trophy</span>
+                        Create or Join Tournament
+                    </button>
                     {showCustomForm ? (
                         <div className="mt-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 p-4 shadow-sm space-y-4">
                             <div className="flex items-center justify-between">
