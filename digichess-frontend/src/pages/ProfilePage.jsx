@@ -6,6 +6,7 @@ import MiniChessBoard from '../components/chess/MiniChessBoard';
 import { useAuth } from '../context/AuthContext';
 import {
     createThread,
+    fetchDigiQuizRatingHistory,
     fetchPublicAccount,
     fetchRatingHistory,
     fetchUserGames,
@@ -15,7 +16,7 @@ import {
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
 import { flagFor } from '../utils/countries';
 
-const ratingModes = ['bullet', 'blitz', 'rapid', 'classical'];
+const ratingModes = ['bullet', 'blitz', 'rapid', 'classical', 'digiquiz'];
 const ratingRanges = [
     { id: 'week', label: 'This Week', days: 7 },
     { id: 'month', label: 'This Month', days: 30 },
@@ -31,6 +32,25 @@ const formatResult = (game, username) => {
     if (game.result === '1-0') return game.white?.username === username ? 'Win' : 'Loss';
     if (game.result === '0-1') return game.black?.username === username ? 'Win' : 'Loss';
     return 'In Progress';
+};
+
+const buildDigiQuizHistory = (payload, rangeParams = {}) => {
+    const points = Array.isArray(payload?.points) ? payload.points : [];
+    let history = points
+        .map((point) => ({
+            date: point.round_date,
+            rating: point.rating_after,
+        }))
+        .filter((point) => point.date && Number.isFinite(point.rating));
+
+    if (rangeParams.start) {
+        history = history.filter((point) => point.date >= rangeParams.start);
+    }
+    if (rangeParams.end) {
+        history = history.filter((point) => point.date <= rangeParams.end);
+    }
+
+    return history;
 };
 
 const RatingChart = ({ history }) => {
@@ -193,6 +213,9 @@ export default function ProfilePage() {
         if (history.length) {
             return history[history.length - 1].rating;
         }
+        if (mode === 'digiquiz') {
+            return displayUser?.rating_digiquiz ?? 0;
+        }
         return displayUser?.[`rating_${mode}`] || 0;
     }, [history, mode, displayUser]);
 
@@ -223,6 +246,13 @@ export default function ProfilePage() {
         if (!displayUser?.username) {
             return { total: 0, winPct: 0, winPctWhite: 0, winPctBlack: 0 };
         }
+        if (mode === 'digiquiz') {
+            const correct = displayUser?.digiquiz_correct ?? 0;
+            const wrong = displayUser?.digiquiz_wrong ?? 0;
+            const total = correct + wrong;
+            const accuracy = total ? Math.round((correct / total) * 100) : 0;
+            return { total, winPct: accuracy, winPctWhite: correct, winPctBlack: wrong };
+        }
         const modeGames = completedNonBotGames.filter((game) => game.time_control === mode);
         const total = modeGames.length;
         const wins = modeGames.filter((game) => formatResult(game, displayUser.username) === 'Win').length;
@@ -235,6 +265,55 @@ export default function ProfilePage() {
         const winPctBlack = blackGames.length ? Math.round((blackWins / blackGames.length) * 100) : 0;
         return { total, winPct, winPctWhite, winPctBlack };
     }, [completedNonBotGames, mode, displayUser]);
+
+    const performanceCards = useMemo(() => {
+        if (mode === 'digiquiz') {
+            return [
+                {
+                    label: 'Total Answers',
+                    value: modeStats.total,
+                    valueClass: 'text-slate-500 dark:text-slate-300',
+                },
+                {
+                    label: 'Accuracy',
+                    value: modeStats.total ? `${modeStats.winPct}%` : '--',
+                    valueClass: 'text-green-500',
+                },
+                {
+                    label: 'Correct',
+                    value: modeStats.winPctWhite,
+                    valueClass: 'text-emerald-500',
+                },
+                {
+                    label: 'Wrong',
+                    value: modeStats.winPctBlack,
+                    valueClass: 'text-red-500',
+                },
+            ];
+        }
+        return [
+            {
+                label: 'Total Games',
+                value: modeStats.total,
+                valueClass: 'text-slate-500 dark:text-slate-300',
+            },
+            {
+                label: 'Win %',
+                value: modeStats.total ? `${modeStats.winPct}%` : '--',
+                valueClass: 'text-green-500',
+            },
+            {
+                label: 'Win % White',
+                value: modeStats.total ? `${modeStats.winPctWhite}%` : '--',
+                valueClass: 'text-blue-500',
+            },
+            {
+                label: 'Win % Black',
+                value: modeStats.total ? `${modeStats.winPctBlack}%` : '--',
+                valueClass: 'text-purple-500',
+            },
+        ];
+    }, [mode, modeStats]);
 
     const recentPreview = useMemo(() => visibleCompletedGames.slice(0, RECENT_LIMIT), [visibleCompletedGames]);
 
@@ -272,8 +351,17 @@ export default function ProfilePage() {
             setLoading(true);
             setError(null);
             try {
+                const historyPromise = mode === 'digiquiz'
+                    ? (
+                        isSelf
+                            ? fetchDigiQuizRatingHistory(365).then((payload) => ({
+                                history: buildDigiQuizHistory(payload, rangeParams),
+                            }))
+                            : Promise.resolve({ history: [] })
+                    )
+                    : fetchRatingHistory(displayUser.username, mode, rangeParams);
                 const [historyRes, gamesRes] = await Promise.all([
-                    fetchRatingHistory(displayUser.username, mode, rangeParams),
+                    historyPromise,
                     fetchUserGames(displayUser.username, { page_size: 50 }),
                 ]);
                 setHistory(historyRes.history || []);
@@ -285,7 +373,7 @@ export default function ProfilePage() {
             }
         };
         load();
-    }, [displayUser, mode, rangeParams]);
+    }, [displayUser, mode, rangeParams, isSelf]);
 
     useEffect(() => {
         if (!displayUser?.username || isSelf) {
@@ -543,7 +631,7 @@ export default function ProfilePage() {
                                         type="button"
                                         onClick={() => setMode(ratingMode)}
                                     >
-                                        {ratingMode.toUpperCase()}
+                                        {ratingMode === 'digiquiz' ? 'DigiQuiz' : ratingMode.toUpperCase()}
                                     </button>
                                 ))}
                             </div>
@@ -596,22 +684,15 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 px-4 mt-4">
-                            <div className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
-                                <span className="text-slate-500 dark:text-slate-300 font-bold text-lg">{modeStats.total}</span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Total Games</span>
-                            </div>
-                            <div className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
-                                <span className="text-green-500 font-bold text-lg">{modeStats.total ? `${modeStats.winPct}%` : '--'}</span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Win %</span>
-                            </div>
-                            <div className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
-                                <span className="text-blue-500 font-bold text-lg">{modeStats.total ? `${modeStats.winPctWhite}%` : '--'}</span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Win % White</span>
-                            </div>
-                            <div className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center">
-                                <span className="text-purple-500 font-bold text-lg">{modeStats.total ? `${modeStats.winPctBlack}%` : '--'}</span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Win % Black</span>
-                            </div>
+                            {performanceCards.map((card) => (
+                                <div
+                                    key={card.label}
+                                    className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center"
+                                >
+                                    <span className={`font-bold text-lg ${card.valueClass}`}>{card.value}</span>
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{card.label}</span>
+                                </div>
+                            ))}
                         </div>
 
                         <div className="mt-8 px-4">
