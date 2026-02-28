@@ -1,4 +1,3 @@
-/* global process */
 import { expect, test } from '@playwright/test';
 
 const ROUND_DATE = '2026-02-28';

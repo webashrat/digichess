@@ -289,14 +289,6 @@ class FinishGameView(APIView):
                 p.correct = correct
                 p.resolved = True
                 p.save(update_fields=["correct", "resolved"])
-                user = p.user
-                if correct:
-                    user.rating_digiquiz += 5
-                    user.digiquiz_correct += 1
-                else:
-                    user.rating_digiquiz -= 15
-                    user.digiquiz_wrong += 1
-                user.save(update_fields=["rating_digiquiz", "digiquiz_correct", "digiquiz_wrong"])
         except Exception:
             pass
         return Response(GameSerializer(game).data)
