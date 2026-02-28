@@ -6,7 +6,6 @@ import {
     abortGame,
     makeMove,
     offerDraw,
-    optimisticMove,
     resignGame,
     acceptGame,
     rejectGame,
@@ -18,7 +17,6 @@ import {
     fetchGameAnalysis,
     fetchGameAnalysisStatus,
     requestGameAnalysis,
-    createPrediction,
 } from '../api';
 import ChessPiece from '../components/chess/ChessPiece';
 import { useAuth } from '../context/AuthContext';
@@ -32,13 +30,6 @@ const BOARD_SETTING_EVENT = 'board-settings-change';
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-const outcomeToneStyles = {
-    success: 'bg-green-500/15 border-green-500/30 text-green-400',
-    danger: 'bg-red-500/15 border-red-500/30 text-red-400',
-    warning: 'bg-amber-500/15 border-amber-500/30 text-amber-400',
-    neutral: 'bg-slate-500/15 border-slate-500/30 text-slate-300',
-};
 
 const parseFen = (fen) => {
     if (!fen) return [];
@@ -84,9 +75,6 @@ export default function GamePage() {
     const [analysisLoading, setAnalysisLoading] = useState(false);
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [quickEval, setQuickEval] = useState(null);
-    const [quickEvalMeta, setQuickEvalMeta] = useState(null);
-    const [predictionStatus, setPredictionStatus] = useState(null);
-    const [predictionError, setPredictionError] = useState(null);
     const [chatInput, setChatInput] = useState('');
     const [chatRoom, setChatRoom] = useState('players');
     const [localChat, setLocalChat] = useState([]);
@@ -142,7 +130,7 @@ export default function GamePage() {
     const bottomBarRef = useRef(null);
     const pageRef = useRef(null);
 
-    const { game, state, chat, connected, sendChat, syncEvents, error: syncError } = useGameSync({
+    const { game, state, chat, sendChat, syncEvents, error: syncError } = useGameSync({
         gameId,
         spectate,
         token,
@@ -531,7 +519,6 @@ export default function GamePage() {
     const canOfferDraw = isAuthenticated && isUserPlayer && currentStatus === 'active' && !drawOfferBy;
     const canResign = isAuthenticated && isUserPlayer && currentStatus === 'active';
     const canAbort = isAuthenticated && isUserPlayer && currentStatus === 'active' && moveCount < 2;
-    const canPredict = currentStatus === 'active' && !isUserPlayer && moveCount <= 10;
     const clockTurn = state?.turn || fenTurn;
     const clockSource = useMemo(() => {
         const whiteRaw = state?.white_time_left ?? game?.white_time_left;
@@ -726,19 +713,6 @@ export default function GamePage() {
         const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
         return queenPromotion || candidates[0];
     };
-    const resolvePremoveUci = (fromSquare, toSquare) => {
-        const candidates = (premoveMovesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
-        if (candidates.length) {
-            const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
-            return queenPromotion || candidates[0];
-        }
-        const piece = squareMap[fromSquare];
-        const rank = Number(toSquare[1]);
-        if (piece && piece.toLowerCase() === 'p' && (rank === 1 || rank === 8)) {
-            return `${fromSquare}${toSquare}q`;
-        }
-        return `${fromSquare}${toSquare}`;
-    };
     const queuePremove = (fromSquare, toSquare) => {
         setSelectedSquare(null);
         setLegalTargets([]);
@@ -870,10 +844,6 @@ export default function GamePage() {
         setLastMoveUci(null);
     }, [gameId]);
     useEffect(() => {
-        setPredictionStatus(null);
-        setPredictionError(null);
-    }, [gameId]);
-    useEffect(() => {
         if (state?.uci) {
             setLastMoveUci(state.uci);
         }
@@ -962,15 +932,8 @@ export default function GamePage() {
             const score = data?.engine?.score;
             const numericScore = typeof score === 'number' ? score / 100 : null;
             setQuickEval(numericScore);
-            setQuickEvalMeta({
-                bestMove: data?.engine?.best_move,
-                mate: data?.engine?.mate,
-                depth: data?.engine?.depth,
-                source: data?.engine?.source,
-            });
         } catch (err) {
             setQuickEval(null);
-            setQuickEvalMeta(null);
         }
     }, [gameId]);
 
@@ -991,7 +954,6 @@ export default function GamePage() {
             && (!isAuthenticated || (!authLoading && user && (!isUserPlayer || currentStatus !== 'active')));
         if (!canQuickAnalyze) {
             setQuickEval(null);
-            setQuickEvalMeta(null);
             return;
         }
         loadQuickAnalysis();
@@ -1103,11 +1065,6 @@ export default function GamePage() {
         return currentTurn === 'white' ? quickEval : -quickEval;
     }, [quickEval, currentTurn]);
     const effectiveEval = analysisEval ?? quickEvalWhite;
-    const formattedEval = useMemo(() => {
-        if (effectiveEval == null) return null;
-        const value = Number(effectiveEval.toFixed(2));
-        return value > 0 ? `+${value}` : `${value}`;
-    }, [effectiveEval]);
     const evalSplit = useMemo(() => {
         if (effectiveEval == null) {
             return { white: 50, black: 50 };
@@ -1510,28 +1467,6 @@ export default function GamePage() {
             setAnalysisError(err.message || 'Failed to request analysis.');
         } finally {
             setAnalysisLoading(false);
-        }
-    };
-
-    const handlePrediction = async (result) => {
-        if (!isAuthenticated) {
-            navigate('/login');
-            return;
-        }
-        if (!gameId || !result) return;
-        setPredictionError(null);
-        setPredictionStatus('loading');
-        try {
-            await createPrediction(gameId, result);
-            setPredictionStatus('submitted');
-        } catch (err) {
-            const message = err?.message || 'Failed to submit prediction.';
-            if (message.toLowerCase().includes('already predicted')) {
-                setPredictionStatus('submitted');
-            } else {
-                setPredictionStatus('error');
-                setPredictionError(message);
-            }
         }
     };
 
@@ -2624,55 +2559,6 @@ export default function GamePage() {
                                                     {autoQueenEnabled ? 'Enabled' : 'Disabled'}
                                                 </button>
                                             </div>
-                                        </div>
-                                    ) : null}
-                                    {canPredict ? (
-                                        <div className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-3 text-xs">
-                                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">DigiQuiz Prediction</div>
-                                            <div className="text-[11px] text-slate-500 mt-1">
-                                                Pick the winner within the first 5 moves.
-                                            </div>
-                                            {!isAuthenticated ? (
-                                                <button
-                                                    type="button"
-                                                    className="mt-2 px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold"
-                                                    onClick={() => navigate('/login')}
-                                                >
-                                                    Sign in to predict
-                                                </button>
-                                            ) : predictionStatus === 'submitted' ? (
-                                                <div className="mt-2 text-emerald-500 font-semibold">Prediction submitted.</div>
-                                            ) : (
-                                                <div className="grid grid-cols-3 gap-2 mt-2">
-                                                    <button
-                                                        type="button"
-                                                        className="px-2 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold"
-                                                        onClick={() => handlePrediction('white')}
-                                                        disabled={predictionStatus === 'loading'}
-                                                    >
-                                                        White
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="px-2 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold"
-                                                        onClick={() => handlePrediction('draw')}
-                                                        disabled={predictionStatus === 'loading'}
-                                                    >
-                                                        Draw
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="px-2 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold"
-                                                        onClick={() => handlePrediction('black')}
-                                                        disabled={predictionStatus === 'loading'}
-                                                    >
-                                                        Black
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {predictionError ? (
-                                                <div className="mt-2 text-red-500">{predictionError}</div>
-                                            ) : null}
                                         </div>
                                     ) : null}
                                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 flex flex-col min-h-[200px] sm:min-h-[280px]">
