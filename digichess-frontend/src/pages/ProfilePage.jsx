@@ -623,15 +623,15 @@ export default function ProfilePage() {
 
                         <div className="px-4 mb-4">
                             <h3 className="text-lg font-bold mb-3">Performance</h3>
-                            <div className="bg-surface-light dark:bg-surface-dark p-1 rounded-xl flex gap-1 border border-slate-200 dark:border-slate-800 overflow-x-auto hide-scrollbar">
+                            <div className="bg-surface-light dark:bg-surface-dark p-1 rounded-xl grid grid-cols-5 gap-1 border border-slate-200 dark:border-slate-800">
                                 {ratingModes.map((ratingMode) => (
                                     <button
                                         key={ratingMode}
-                                        className={`flex-1 min-w-[80px] py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === ratingMode ? 'bg-white dark:bg-background-dark text-primary font-bold' : 'text-slate-500'}`}
+                                        className={`py-2 px-1 rounded-lg text-[12px] sm:text-sm font-semibold tracking-wide text-center whitespace-nowrap transition-all ${mode === ratingMode ? 'bg-white dark:bg-background-dark text-primary' : 'text-slate-500'}`}
                                         type="button"
                                         onClick={() => setMode(ratingMode)}
                                     >
-                                        {ratingMode === 'digiquiz' ? 'DigiQuiz' : ratingMode.toUpperCase()}
+                                        {ratingMode === 'digiquiz' ? 'DIGIQUIZ' : ratingMode.toUpperCase()}
                                     </button>
                                 ))}
                             </div>
