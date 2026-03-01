@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+@theme {
+  --color-primary: #135bec;
+  --color-primary-dark: #0e45b5;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #101622;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e2430;
+  --color-border-light: #e5e7eb;
+  --color-border-dark: #2d3544;
+  --color-accent-gold: #FFD700;
+  --color-accent-silver: #C0C0C0;
+  --color-accent-bronze: #CD7F32;
+  --color-accent-green: #2e7d32;
+  --color-accent-green-bright: #4ade80;
+  --color-board-light: #cbd5e1;
+  --color-board-dark: #475569;
+  --font-display: "Lexend", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased font-display;
+    min-height: max(884px, 100dvh);
+  }
+
+  button,
+  a,
+  [role="button"],
+  .clickable {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+::selection {
+  background: #135bec;
+  color: #ffffff;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}

@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/[...path]/route": "/api/[...path]",
+  "/leaderboard/page": "/leaderboard",
+  "/game/[gameId]/page": "/game/[gameId]",
+  "/messages/page": "/messages",
+  "/profile/[username]/page": "/profile/[username]",
+  "/profile/page": "/profile",
+  "/login/page": "/login",
+  "/tournaments/[tournamentId]/page": "/tournaments/[tournamentId]",
+  "/tournaments/page": "/tournaments",
+  "/page": "/",
+  "/signup/page": "/signup",
+  "/play/page": "/play",
+  "/social/page": "/social"
+}
