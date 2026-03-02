@@ -269,11 +269,11 @@ export default function SignupPage() {
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                        className="absolute inset-y-0 right-0 w-10 flex items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
-                                        <span className="material-symbols-outlined text-[20px]">
+                                        <span className="material-symbols-outlined block text-[18px] leading-none">
                                             {showPassword ? 'visibility_off' : 'visibility'}
                                         </span>
                                     </button>
@@ -291,11 +291,11 @@ export default function SignupPage() {
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                        className="absolute inset-y-0 right-0 w-10 flex items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                         onClick={() => setShowConfirmPassword((prev) => !prev)}
                                         aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                                     >
-                                        <span className="material-symbols-outlined text-[20px]">
+                                        <span className="material-symbols-outlined block text-[18px] leading-none">
                                             {showConfirmPassword ? 'visibility_off' : 'visibility'}
                                         </span>
                                     </button>
