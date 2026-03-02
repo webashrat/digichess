@@ -35,7 +35,7 @@ class DigiQuizServiceTests(TestCase):
             is_active=True,
         )
 
-    def _create_round_with_questions(self, start_at, *, questions_count=20, duration=20):
+    def _create_round_with_questions(self, start_at, *, questions_count=20, duration=10):
         round_date = start_at.astimezone(IST).date()
         join_open_at = start_at - timedelta(minutes=10)
         end_at = start_at + timedelta(seconds=questions_count * duration)
@@ -72,7 +72,7 @@ class DigiQuizServiceTests(TestCase):
 
     def test_late_join_penalty_is_applied(self):
         now = timezone.now()
-        round_obj = self._create_round_with_questions(now - timedelta(seconds=65))
+        round_obj = self._create_round_with_questions(now - timedelta(seconds=35))
 
         participation, created, phase = join_round(
             self.user,
@@ -83,7 +83,7 @@ class DigiQuizServiceTests(TestCase):
         self.assertTrue(created)
         self.assertEqual(phase, "live")
         self.assertEqual(participation.joined_question_no, 4)
-        self.assertEqual(participation.total_points, -45)
+        self.assertEqual(participation.total_points, -15)
         self.assertEqual(participation.wrong_count, 3)
         self.assertEqual(participation.resolved_count, 3)
         self.assertEqual(
@@ -97,12 +97,13 @@ class DigiQuizServiceTests(TestCase):
     def test_speed_points_curve(self):
         self.assertEqual(speed_points_for_latency(0), 20)
         self.assertEqual(speed_points_for_latency(999), 20)
-        self.assertEqual(speed_points_for_latency(1000), 19)
-        self.assertEqual(speed_points_for_latency(2500), 18)
-        self.assertEqual(speed_points_for_latency(19000), 1)
-        self.assertEqual(speed_points_for_latency(19999), 1)
+        self.assertEqual(speed_points_for_latency(1000), 18)
+        self.assertEqual(speed_points_for_latency(2500), 16)
+        self.assertEqual(speed_points_for_latency(9000), 2)
+        self.assertEqual(speed_points_for_latency(9999), 2)
+        self.assertEqual(speed_points_for_latency(10000), 0)
 
-    def test_submit_wrong_answer_deducts_15(self):
+    def test_submit_wrong_answer_deducts_5(self):
         now = timezone.now()
         round_obj = self._create_round_with_questions(now - timedelta(seconds=2))
         participation, _, _ = join_round(self.user, round_obj=round_obj, now=now)
@@ -117,14 +118,14 @@ class DigiQuizServiceTests(TestCase):
 
         self.assertFalse(already)
         self.assertFalse(answer.is_correct)
-        self.assertEqual(answer.points, -15)
-        self.assertEqual(participation.total_points, -15)
+        self.assertEqual(answer.points, -5)
+        self.assertEqual(participation.total_points, -5)
         self.assertEqual(participation.wrong_count, 1)
         self.assertEqual(participation.resolved_count, 1)
 
     def test_timeout_penalties_materialized_for_unanswered(self):
         now = timezone.now()
-        round_obj = self._create_round_with_questions(now - timedelta(seconds=45))
+        round_obj = self._create_round_with_questions(now - timedelta(seconds=25))
         participation = DigiQuizParticipation.objects.create(
             round=round_obj,
             user=self.user,
@@ -135,7 +136,7 @@ class DigiQuizServiceTests(TestCase):
         participation.refresh_from_db()
 
         self.assertEqual(created, 2)
-        self.assertEqual(participation.total_points, -30)
+        self.assertEqual(participation.total_points, -10)
         self.assertEqual(participation.wrong_count, 2)
         self.assertEqual(
             DigiQuizAnswer.objects.filter(
@@ -152,7 +153,7 @@ class DigiQuizServiceTests(TestCase):
             round=round_obj,
             user=self.user,
             joined_question_no=21,
-            total_points=-30,
+            total_points=-10,
             correct_count=3,
             wrong_count=5,
             resolved_count=8,
@@ -163,14 +164,14 @@ class DigiQuizServiceTests(TestCase):
         participation.refresh_from_db()
 
         self.assertTrue(changed)
-        self.assertEqual(self.user.rating_digiquiz, -30)
+        self.assertEqual(self.user.rating_digiquiz, -10)
         self.assertEqual(self.user.digiquiz_correct, 3)
         self.assertEqual(self.user.digiquiz_wrong, 5)
         self.assertTrue(participation.rating_applied)
         history = DigiQuizRatingHistory.objects.get(user=self.user, round=round_obj)
         self.assertEqual(history.rating_before, 0)
-        self.assertEqual(history.round_delta, -30)
-        self.assertEqual(history.rating_after, -30)
+        self.assertEqual(history.round_delta, -10)
+        self.assertEqual(history.rating_after, -10)
 
 
 class DigiQuizApiTests(TestCase):
@@ -184,7 +185,7 @@ class DigiQuizApiTests(TestCase):
         )
         self.client.force_authenticate(self.user)
 
-    def _create_round_with_questions(self, start_at, *, questions_count=20, duration=20):
+    def _create_round_with_questions(self, start_at, *, questions_count=20, duration=10):
         round_date = start_at.astimezone(IST).date()
         join_open_at = start_at - timedelta(minutes=10)
         end_at = start_at + timedelta(seconds=questions_count * duration)

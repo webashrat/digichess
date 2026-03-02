@@ -28,9 +28,9 @@ User = get_user_model()
 IST_TZ = ZoneInfo("Asia/Kolkata")
 ROUND_START_IST_TIME = time(hour=23, minute=30)
 JOIN_OPEN_DELTA = timedelta(minutes=10)
-QUESTION_DURATION_SECONDS = 20
+QUESTION_DURATION_SECONDS = 10
 QUESTION_COUNT = 20
-WRONG_POINTS = -15
+WRONG_POINTS = -5
 FIRST_OFFICIAL_ROUND_IST = datetime(2026, 3, 1, 23, 30, tzinfo=IST_TZ)
 
 
@@ -60,8 +60,10 @@ def get_question_bank_path() -> Path:
 
 
 def speed_points_for_latency(latency_ms: int) -> int:
-    bucket = max(0, min(19, latency_ms // 1000))
-    return 20 - bucket
+    elapsed_seconds = max(0, int(latency_ms // 1000))
+    if elapsed_seconds >= QUESTION_DURATION_SECONDS:
+        return 0
+    return max(0, 2 * (QUESTION_DURATION_SECONDS - elapsed_seconds))
 
 
 def _round_start_ist(round_date: date) -> datetime:
@@ -86,12 +88,49 @@ def _build_round_defaults(round_date: date) -> dict:
     }
 
 
+def _resync_pending_round_timing(round_obj: DigiQuizRound) -> None:
+    if round_obj.finalized_at or _now() >= round_obj.start_at:
+        return
+
+    update_fields: list[str] = []
+    expected_end_at = round_obj.start_at + timedelta(
+        seconds=round_obj.questions_count * QUESTION_DURATION_SECONDS
+    )
+    if round_obj.question_duration_seconds != QUESTION_DURATION_SECONDS:
+        round_obj.question_duration_seconds = QUESTION_DURATION_SECONDS
+        update_fields.append("question_duration_seconds")
+    if round_obj.end_at != expected_end_at:
+        round_obj.end_at = expected_end_at
+        update_fields.append("end_at")
+    if update_fields:
+        round_obj.save(update_fields=update_fields)
+
+    round_questions = list(round_obj.round_questions.all())
+    if not round_questions:
+        return
+
+    changed: list[DigiQuizRoundQuestion] = []
+    for round_question in round_questions:
+        starts_at = round_obj.start_at + timedelta(
+            seconds=(round_question.question_no - 1) * round_obj.question_duration_seconds
+        )
+        ends_at = starts_at + timedelta(seconds=round_obj.question_duration_seconds)
+        if round_question.starts_at != starts_at or round_question.ends_at != ends_at:
+            round_question.starts_at = starts_at
+            round_question.ends_at = ends_at
+            changed.append(round_question)
+    if changed:
+        DigiQuizRoundQuestion.objects.bulk_update(changed, ["starts_at", "ends_at"], batch_size=200)
+
+
 def ensure_round_for_date(round_date: date) -> DigiQuizRound:
     defaults = _build_round_defaults(round_date)
-    round_obj, _created = DigiQuizRound.objects.get_or_create(
+    round_obj, created = DigiQuizRound.objects.get_or_create(
         round_date=round_date,
         defaults=defaults,
     )
+    if not created:
+        _resync_pending_round_timing(round_obj)
     return round_obj
 
 
