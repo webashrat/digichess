@@ -14,7 +14,6 @@ import {
     updateProfile,
 } from '../api';
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
-import { flagFor } from '../utils/countries';
 
 const ratingModes = ['bullet', 'blitz', 'rapid', 'classical', 'digiquiz'];
 const ratingRanges = [
@@ -970,14 +969,14 @@ export default function ProfilePage() {
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Country</span>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
-                                        {flagFor(editForm.country) || normalizeCountryCode(editForm.country)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <CountrySelect value={editForm.country} onChange={(value) => setEditForm((prev) => ({ ...prev, country: value }))} />
-                                    </div>
-                                </div>
+                                <CountrySelect
+                                    value={editForm.country}
+                                    onChange={(value) => setEditForm((prev) => ({ ...prev, country: value }))}
+                                    placeholder="Search country by name or code"
+                                    showFlags={false}
+                                    showCode
+                                    searchable
+                                />
                             </label>
                             {editError ? <div className="text-xs text-red-500">{editError}</div> : null}
                             <button
