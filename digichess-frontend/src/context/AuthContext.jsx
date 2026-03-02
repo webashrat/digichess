@@ -124,7 +124,6 @@ export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) {
         if (typeof window !== 'undefined') {
-            // eslint-disable-next-line no-console
             console.warn('useAuth called without AuthProvider; returning guest context.');
         }
         return {

@@ -312,6 +312,11 @@ export default function QuizPage() {
     const resultsDateRef = useRef('');
     const roundFinishTimerRef = useRef(null);
     const previousRoundPhaseRef = useRef('');
+    const liveQuestionRef = useRef(null);
+
+    const blockProtectedEvent = useCallback((event) => {
+        event.preventDefault();
+    }, []);
 
     useEffect(() => {
         const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
@@ -352,6 +357,56 @@ export default function QuizPage() {
     useEffect(() => {
         resultsDateRef.current = resultsDate;
     }, [resultsDate]);
+
+    useEffect(() => {
+        const protectionEnabled = activeTab === TAB_LIVE && roundPhase === 'live';
+        if (!protectionEnabled || typeof document === 'undefined') return undefined;
+
+        const clearSelection = () => {
+            if (typeof window === 'undefined') return;
+            const selection = window.getSelection?.();
+            if (selection && selection.rangeCount > 0) {
+                selection.removeAllRanges();
+            }
+        };
+
+        const isWithinProtectedArea = (target) => {
+            if (!liveQuestionRef.current) return false;
+            return Boolean(target && liveQuestionRef.current.contains(target));
+        };
+
+        const blockIfProtected = (event) => {
+            if (isWithinProtectedArea(event.target)) {
+                event.preventDefault();
+                clearSelection();
+            }
+        };
+
+        const blockShortcuts = (event) => {
+            const key = String(event.key || '').toLowerCase();
+            const blockedCombo = (event.ctrlKey || event.metaKey) && ['a', 'c', 'x', 'u', 's', 'p'].includes(key);
+            const blockedKey = key === 'f12';
+            if (blockedCombo || blockedKey) {
+                event.preventDefault();
+            }
+        };
+
+        document.addEventListener('copy', blockIfProtected);
+        document.addEventListener('cut', blockIfProtected);
+        document.addEventListener('contextmenu', blockIfProtected);
+        document.addEventListener('dragstart', blockIfProtected);
+        document.addEventListener('selectstart', blockIfProtected);
+        document.addEventListener('keydown', blockShortcuts);
+
+        return () => {
+            document.removeEventListener('copy', blockIfProtected);
+            document.removeEventListener('cut', blockIfProtected);
+            document.removeEventListener('contextmenu', blockIfProtected);
+            document.removeEventListener('dragstart', blockIfProtected);
+            document.removeEventListener('selectstart', blockIfProtected);
+            document.removeEventListener('keydown', blockShortcuts);
+        };
+    }, [activeTab, roundPhase]);
 
     useEffect(() => {
         if (!tabOverride) return;
@@ -958,7 +1013,16 @@ export default function QuizPage() {
         }
 
         return (
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark p-4 md:p-5 space-y-3">
+            <section
+                ref={liveQuestionRef}
+                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark p-4 md:p-5 space-y-3 select-none"
+                onCopy={blockProtectedEvent}
+                onCut={blockProtectedEvent}
+                onPaste={blockProtectedEvent}
+                onContextMenu={blockProtectedEvent}
+                onDragStart={blockProtectedEvent}
+                onSelectStart={blockProtectedEvent}
+            >
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold">

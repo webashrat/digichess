@@ -588,11 +588,11 @@ export default function HomePage() {
                 <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
                 <header className="sticky top-0 z-30 border-b border-slate-200/70 dark:border-slate-800/70 bg-gradient-to-b from-background-light/95 to-background-light/85 dark:from-background-dark/95 dark:to-background-dark/85 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4 shadow-sm">
                     <div className="mx-auto w-full max-w-[1500px] rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/75 dark:bg-slate-900/55 shadow-[0_10px_35px_rgba(15,23,42,0.15)] dark:shadow-[0_12px_36px_rgba(2,6,23,0.5)] px-3 py-2 sm:px-4 sm:py-3">
-                        <div className="grid w-full grid-cols-[1fr_auto] grid-rows-[auto_auto] items-center gap-y-2 gap-x-2 sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1 sm:gap-x-3">
+                        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[auto_1fr_auto] sm:gap-x-3 sm:gap-y-0">
                         <div
                             role="button"
                             tabIndex={0}
-                            className="group flex items-center gap-2 sm:gap-3 text-left min-w-0 rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
+                            className="group flex items-center gap-2 sm:gap-3 text-left min-w-0 rounded-xl px-1 py-1 sm:px-2.5 sm:py-1.5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
                             onClick={() => navigate('/profile')}
                             onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
@@ -603,7 +603,7 @@ export default function HomePage() {
                         >
                             <div className="relative">
                                 <div
-                                    className={`rounded-full size-10 border-2 border-primary/90 shadow-sm ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
+                                    className={`rounded-full size-9 sm:size-10 border-2 border-primary/90 shadow-sm ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
                                     style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
                                 >
                                     {!avatarUrl ? initials : null}
@@ -638,7 +638,7 @@ export default function HomePage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="col-span-2 row-start-2 flex justify-center sm:col-span-1 sm:row-start-1 sm:col-start-2">
+                        <div className="col-span-2 row-start-2 mt-1 flex justify-center sm:col-span-1 sm:row-start-1 sm:col-start-2 sm:mt-0">
                             <button
                                 type="button"
                                 onClick={() => navigate('/')}
@@ -654,10 +654,11 @@ export default function HomePage() {
                                 </span>
                             </button>
                         </div>
-                        <div className="flex items-center justify-end gap-2 sm:col-start-3">
+                        <div className="flex items-center justify-end sm:col-start-3">
+                            <div className="inline-flex items-center gap-1 rounded-full border border-slate-300/70 dark:border-slate-700/80 bg-slate-100/75 dark:bg-slate-800/55 p-1 shadow-sm">
                             {!isAuthenticated ? (
                                 <button
-                                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full bg-primary text-white text-[11px] sm:text-xs font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
+                                    className="h-8 sm:h-9 px-3 rounded-full bg-primary text-white text-[11px] sm:text-xs font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
                                     type="button"
                                     onClick={() => navigate('/signup')}
                                 >
@@ -667,9 +668,10 @@ export default function HomePage() {
                                 <>
                                     <button
                                         ref={notificationsButtonRef}
-                                        className="relative flex items-center justify-center size-9 sm:size-10 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        className="relative flex items-center justify-center size-[34px] sm:size-9 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                         type="button"
                                         onClick={() => {
+                                            setShowSettings(false);
                                             setShowNotifications((prev) => {
                                                 const next = !prev;
                                                 if (next) setNotificationsPage(1);
@@ -684,27 +686,32 @@ export default function HomePage() {
                                         ) : null}
                                     </button>
                                     <button
-                                        className="flex items-center justify-center px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-slate-200/90 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                                        className="inline-flex h-[34px] sm:h-9 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-full bg-slate-200/90 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
                                         type="button"
                                         onClick={logout}
                                     >
-                                        Logout
+                                        <span className="material-symbols-outlined text-[16px]">logout</span>
+                                        <span className="max-[380px]:hidden">Logout</span>
                                     </button>
                                 </>
                             )}
                             <button
                                 ref={settingsButtonRef}
-                                className="flex items-center justify-center size-9 sm:size-10 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center justify-center size-[34px] sm:size-9 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 type="button"
-                                onClick={() => setShowSettings((prev) => !prev)}
+                                onClick={() => {
+                                    setShowNotifications(false);
+                                    setShowSettings((prev) => !prev);
+                                }}
                             >
                                 <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">settings</span>
                             </button>
+                            </div>
                         </div>
                     </div>
                     </div>
                     {showSettings ? (
-                        <div ref={settingsPanelRef} className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
+                        <div ref={settingsPanelRef} className="fixed inset-x-3 top-24 z-40 max-h-[calc(100dvh-7.5rem)] overflow-y-auto rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 shadow-2xl p-4 space-y-4 sm:absolute sm:inset-x-auto sm:top-16 sm:right-4 sm:max-h-none sm:w-72">
                             <div>
                                 <div className="text-xs font-semibold text-slate-500 mb-2">App theme</div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -793,7 +800,7 @@ export default function HomePage() {
                         </div>
                     ) : null}
                     {showNotifications ? (
-                        <div ref={notificationsPanelRef} className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(92vw,24rem)] sm:w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
+                        <div ref={notificationsPanelRef} className="fixed inset-x-3 top-24 z-40 max-h-[calc(100dvh-7.5rem)] overflow-y-auto rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 shadow-2xl p-4 sm:absolute sm:inset-x-auto sm:top-16 sm:right-4 sm:max-h-none sm:w-80">
                                 <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-semibold">Notifications</h4>
                                     <button
