@@ -332,7 +332,7 @@ export default function QuizPage() {
     const activeTab = tabOverride || safeAutoTab;
     const joinEnabled = Boolean(stateData?.join_enabled);
     const questionCount = round?.questions_count || 20;
-    const questionDuration = round?.question_duration_seconds || 20;
+    const questionDuration = round?.question_duration_seconds || 10;
     const chipPhase = activeTab === TAB_UPCOMING
         ? 'upcoming'
         : activeTab === TAB_RESULTS
