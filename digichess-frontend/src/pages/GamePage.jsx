@@ -31,6 +31,8 @@ const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 const SETTINGS_CHANGE_EVENT = 'digichess-settings-change';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const MOVE_ANIMATION_MS_DESKTOP = 150;
+const MOVE_ANIMATION_MS_MOBILE = 190;
 
 const parseFen = (fen) => {
     if (!fen) return [];
@@ -50,6 +52,19 @@ const parseFen = (fen) => {
         }
         return squares;
     });
+};
+
+const coordToDisplayPosition = (coord, isWhitePerspective) => {
+    if (!coord || coord.length < 2) return null;
+    const file = coord[0];
+    const rank = Number(coord[1]);
+    const actualCol = FILES.indexOf(file);
+    const actualRow = 8 - rank;
+    if (actualCol < 0 || actualRow < 0 || actualRow > 7) return null;
+    return {
+        row: isWhitePerspective ? actualRow : 7 - actualRow,
+        col: isWhitePerspective ? actualCol : 7 - actualCol,
+    };
 };
 
 export default function GamePage() {
@@ -115,6 +130,9 @@ export default function GamePage() {
     const soundInitRef = useRef(false);
     const lastTickRef = useRef(null);
     const audioCtxRef = useRef(null);
+    const audioGestureAtRef = useRef(0);
+    const animatedMoveRef = useRef(null);
+    const skipNextMoveAnimationRef = useRef(false);
     const [boardPixelSize, setBoardPixelSize] = useState(560);
     const [clockNow, setClockNow] = useState(() => Date.now());
     const [resignConfirm, setResignConfirm] = useState(false);
@@ -126,6 +144,7 @@ export default function GamePage() {
     const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
     const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
     const [isMobileLayout, setIsMobileLayout] = useState(false);
+    const [pieceMotion, setPieceMotion] = useState(null);
     const touchStateRef = useRef(null);
     const topBarRef = useRef(null);
     const bottomBarRef = useRef(null);
@@ -503,7 +522,7 @@ export default function GamePage() {
             setFirstMoveRemaining(remainingSeconds);
         };
         update();
-        const interval = setInterval(update, 250);
+        const interval = setInterval(update, 1000);
         return () => clearInterval(interval);
     }, [
         game,
@@ -573,7 +592,14 @@ export default function GamePage() {
 
     useEffect(() => {
         if (!game?.id || currentStatus !== 'active') return;
-        const interval = setInterval(() => setClockNow(Date.now()), 100);
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setClockNow((prev) => (
+                Math.floor(prev / 1000) === Math.floor(now / 1000)
+                    ? prev
+                    : now
+            ));
+        }, 120);
         return () => clearInterval(interval);
     }, [game?.id, currentStatus]);
     useEffect(() => {
@@ -588,7 +614,10 @@ export default function GamePage() {
         const isWhitePiece = piece === piece.toUpperCase();
         return isUserWhite ? isWhitePiece : !isWhitePiece;
     };
-    const resolveTargets = (fromSquare) => (movesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
+    const resolveTargets = useCallback(
+        (fromSquare) => (movesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4)),
+        [movesByFrom]
+    );
     const resolvePseudoTargets = useCallback((fromSquare) => {
         if (!fromSquare || !board?.length) return [];
         const file = fromSquare[0];
@@ -697,14 +726,14 @@ export default function GamePage() {
         }
         return targets;
     }, [board]);
-    const resolvePremoveTargets = (fromSquare) => {
+    const resolvePremoveTargets = useCallback((fromSquare) => {
         const premoveTargets = (premoveMovesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4));
         const pseudoTargets = resolvePseudoTargets(fromSquare);
         if (!pseudoTargets.length) return premoveTargets;
         const merged = new Set([...premoveTargets, ...pseudoTargets]);
         return Array.from(merged);
-    };
-    const getPromotionOptions = (fromSquare, toSquare, usePremove = false) => {
+    }, [premoveMovesByFrom, resolvePseudoTargets]);
+    const getPromotionOptions = useCallback((fromSquare, toSquare, usePremove = false) => {
         const source = usePremove ? premoveMovesByFrom : movesByFrom;
         const candidates = (source[fromSquare] || [])
             .filter((uci) => uci.slice(2, 4) === toSquare && uci.length === 5);
@@ -720,14 +749,14 @@ export default function GamePage() {
             }
         }
         return [];
-    };
-    const resolveMoveUci = (fromSquare, toSquare) => {
+    }, [movesByFrom, premoveMovesByFrom, squareMap]);
+    const resolveMoveUci = useCallback((fromSquare, toSquare) => {
         const candidates = (movesByFrom[fromSquare] || []).filter((uci) => uci.slice(2, 4) === toSquare);
         if (!candidates.length) return null;
         const queenPromotion = candidates.find((uci) => uci.length === 5 && uci.endsWith('q'));
         return queenPromotion || candidates[0];
-    };
-    const queuePremove = (fromSquare, toSquare) => {
+    }, [movesByFrom]);
+    const queuePremove = useCallback((fromSquare, toSquare) => {
         setSelectedSquare(null);
         setLegalTargets([]);
         const piece = squareMap[fromSquare];
@@ -752,7 +781,7 @@ export default function GamePage() {
         }
         setPremove({ from: fromSquare, to: toSquare });
         setPremoveNotice('Premove set.');
-    };
+    }, [autoQueenEnabled, squareMap]);
     const activeMoveIndex = isPreviewing ? previewIndex - 1 : navigation.uciList.length - 1;
     const activeMoveUci = (activeMoveIndex >= 0 && navigation.uciList[activeMoveIndex])
         || lastMoveUci
@@ -764,6 +793,52 @@ export default function GamePage() {
             to: activeMoveUci.slice(2, 4),
         };
     }, [activeMoveUci]);
+    useEffect(() => {
+        if (!activeMoveUci || activeMoveUci.length < 4 || isPreviewing || dragFrom) return;
+        if (skipNextMoveAnimationRef.current) {
+            skipNextMoveAnimationRef.current = false;
+            animatedMoveRef.current = activeMoveUci;
+            setPieceMotion(null);
+            return;
+        }
+        if (animatedMoveRef.current === activeMoveUci) return;
+        const from = activeMoveUci.slice(0, 2);
+        const to = activeMoveUci.slice(2, 4);
+        const piece = squareMap[to];
+        if (!piece) {
+            animatedMoveRef.current = activeMoveUci;
+            return;
+        }
+        const fromPos = coordToDisplayPosition(from, isUserWhite);
+        const toPos = coordToDisplayPosition(to, isUserWhite);
+        if (!fromPos || !toPos) {
+            animatedMoveRef.current = activeMoveUci;
+            return;
+        }
+        const squareSize = Math.max(1, boardPixelSize / 8);
+        const motionKey = `${activeMoveUci}-${Date.now()}`;
+        const duration = isMobileLayout ? MOVE_ANIMATION_MS_MOBILE : MOVE_ANIMATION_MS_DESKTOP;
+        animatedMoveRef.current = activeMoveUci;
+        setPieceMotion({
+            key: motionKey,
+            to,
+            piece,
+            offsetX: (fromPos.col - toPos.col) * squareSize,
+            offsetY: (fromPos.row - toPos.row) * squareSize,
+            duration,
+            phase: 'start',
+        });
+        const raf = requestAnimationFrame(() => {
+            setPieceMotion((prev) => (prev && prev.key === motionKey ? { ...prev, phase: 'end' } : prev));
+        });
+        const timeout = setTimeout(() => {
+            setPieceMotion((prev) => (prev && prev.key === motionKey ? null : prev));
+        }, duration + 40);
+        return () => {
+            cancelAnimationFrame(raf);
+            clearTimeout(timeout);
+        };
+    }, [activeMoveUci, boardPixelSize, dragFrom, isMobileLayout, isPreviewing, isUserWhite, squareMap]);
     const checkSquare = useMemo(() => {
         try {
             const fen = isPreviewing ? previewFen : displayFen;
@@ -810,33 +885,23 @@ export default function GamePage() {
         }
         setSelectedSquare(dragFrom);
         if (canInteract) {
-            const liveTargets = (movesByFrom[dragFrom] || []).map((uci) => uci.slice(2, 4));
-            setLegalTargets(liveTargets);
+            setLegalTargets(resolveTargets(dragFrom));
             return;
         }
         if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
-            const premoveTargets = (premoveMovesByFrom[dragFrom] || []).map((uci) => uci.slice(2, 4));
-            const pseudoTargets = resolvePseudoTargets(dragFrom);
-            if (!pseudoTargets.length) {
-                setLegalTargets(premoveTargets);
-                return;
-            }
-            const merged = new Set([...premoveTargets, ...pseudoTargets]);
-            setLegalTargets(Array.from(merged));
+            setLegalTargets(resolvePremoveTargets(dragFrom));
             return;
         }
         setLegalTargets([]);
     }, [
         canInteract,
         currentStatus,
-        displayFen,
         dragFrom,
         isPreviewing,
         isUserPlayer,
         isUserTurn,
-        movesByFrom,
-        premoveMovesByFrom,
-        resolvePseudoTargets,
+        resolvePremoveTargets,
+        resolveTargets,
     ]);
 
     useEffect(() => {
@@ -884,6 +949,9 @@ export default function GamePage() {
     }, [optimisticState, state?.moves, game?.moves]);
     useEffect(() => {
         setLastMoveUci(null);
+        animatedMoveRef.current = null;
+        skipNextMoveAnimationRef.current = false;
+        setPieceMotion(null);
     }, [gameId]);
     useEffect(() => {
         if (state?.uci) {
@@ -1262,6 +1330,9 @@ export default function GamePage() {
 
     const ensureAudioContext = useCallback((force = false) => {
         if (!soundEnabled || typeof window === 'undefined') return null;
+        if (force) {
+            audioGestureAtRef.current = Date.now();
+        }
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return null;
         if (!audioCtxRef.current) {
@@ -1280,7 +1351,8 @@ export default function GamePage() {
 
     const playTone = useCallback((frequency, duration, type, volume) => {
         try {
-            const context = ensureAudioContext();
+            const interactedRecently = Date.now() - audioGestureAtRef.current < 1500;
+            const context = ensureAudioContext(interactedRecently);
             if (!context) return;
             const oscillator = context.createOscillator();
             const gain = context.createGain();
@@ -1316,11 +1388,30 @@ export default function GamePage() {
     useEffect(() => {
         if (typeof window === 'undefined' || !soundEnabled) return;
         const unlock = () => {
-            ensureAudioContext(true);
+            const context = ensureAudioContext(true);
+            if (context && context.state === 'suspended') {
+                context.resume().catch(() => {});
+            }
         };
-        window.addEventListener('pointerdown', unlock);
-        return () => window.removeEventListener('pointerdown', unlock);
+        window.addEventListener('pointerdown', unlock, true);
+        window.addEventListener('touchstart', unlock, true);
+        window.addEventListener('mousedown', unlock, true);
+        window.addEventListener('keydown', unlock, true);
+        window.addEventListener('click', unlock, true);
+        return () => {
+            window.removeEventListener('pointerdown', unlock, true);
+            window.removeEventListener('touchstart', unlock, true);
+            window.removeEventListener('mousedown', unlock, true);
+            window.removeEventListener('keydown', unlock, true);
+            window.removeEventListener('click', unlock, true);
+        };
     }, [ensureAudioContext, soundEnabled]);
+
+    useEffect(() => {
+        if (soundEnabled) return;
+        soundInitRef.current = false;
+        lastSoundMoveRef.current = 0;
+    }, [soundEnabled]);
 
     useEffect(() => {
         if (!soundEnabled) return;
@@ -1613,6 +1704,7 @@ export default function GamePage() {
             navigate('/login');
             return;
         }
+        if (pendingMove) return;
         if (!canInteract) {
             if (currentStatus === 'active') {
                 setError('You cannot move right now.');
@@ -1645,7 +1737,7 @@ export default function GamePage() {
         } finally {
             setPendingMove(false);
         }
-    }, [applyLocalMove, canInteract, currentStatus, gameId, isAuthenticated, moveMap, navigate]);
+    }, [applyLocalMove, canInteract, currentStatus, gameId, isAuthenticated, moveMap, navigate, pendingMove]);
 
     useEffect(() => {
         if (!premove || !isUserPlayer || !isUserTurn || pendingMove || isPreviewing || currentStatus !== 'active') return;
@@ -1661,12 +1753,15 @@ export default function GamePage() {
 
     const handlePromotionSelect = async (promotion) => {
         if (!pendingPromotion) return;
-        const { from, to, mode } = pendingPromotion;
+        const { from, to, mode, origin } = pendingPromotion;
         setPendingPromotion(null);
         if (mode === 'premove') {
             setPremove({ from, to, promotion });
             setPremoveNotice('Premove set.');
             return;
+        }
+        if (origin === 'drag') {
+            skipNextMoveAnimationRef.current = true;
         }
         await submitMoveFromUci(`${from}${to}${promotion}`);
     };
@@ -1729,6 +1824,7 @@ export default function GamePage() {
                     to: squareCoord,
                     options: promotionOptions,
                     color: isWhitePiece ? 'w' : 'b',
+                    origin: 'click',
                 });
                 return;
             }
@@ -1859,11 +1955,13 @@ export default function GamePage() {
                                 to: targetSquare,
                                 options: promotionOptions,
                                 color: isWhitePiece ? 'w' : 'b',
+                                origin: 'drag',
                             });
                             return;
                         }
                         const uciMove = resolveMoveUci(fromSquare, targetSquare);
                         if (uciMove) {
+                            skipNextMoveAnimationRef.current = true;
                             await submitMoveFromUci(uciMove);
                         }
                     }
@@ -2038,21 +2136,7 @@ export default function GamePage() {
         navigate(`/profile/${player.username}`);
     }, [navigate]);
     const handleBack = useCallback(() => {
-        if (typeof window !== 'undefined') {
-            const referrer = document.referrer || '';
-            if (referrer && referrer.startsWith(window.location.origin)) {
-                try {
-                    const refPath = new URL(referrer).pathname || '';
-                    if (refPath && !refPath.startsWith('/game/')) {
-                        navigate(-1);
-                        return;
-                    }
-                } catch (err) {
-                    // ignore invalid referrer
-                }
-            }
-        }
-        navigate('/play');
+        navigate('/');
     }, [navigate]);
 
     return (
@@ -2360,8 +2444,8 @@ export default function GamePage() {
                                     </div>
                                 </div>
 
-                                <div className="flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
-                                    {showEvalBar ? (
+                                <div className="relative flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
+                                    {showEvalBar && !isMobileLayout ? (
                                         <div className={`hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shrink-0 relative shadow-inner`}>
                                             <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
                                         </div>
@@ -2402,6 +2486,23 @@ export default function GamePage() {
                                                             && currentStatus === 'active'
                                                             && !isPreviewing));
                                                 const isDragging = dragFrom === coord;
+                                                const isMotionTarget = Boolean(
+                                                    pieceMotion
+                                                    && pieceMotion.to === coord
+                                                    && pieceMotion.piece === square
+                                                    && !isDragging
+                                                );
+                                                const pieceMotionStyle = isMotionTarget
+                                                    ? {
+                                                        transform: pieceMotion.phase === 'start'
+                                                            ? `translate(${pieceMotion.offsetX}px, ${pieceMotion.offsetY}px)`
+                                                            : 'translate(0px, 0px)',
+                                                        transition: pieceMotion.phase === 'start'
+                                                            ? 'none'
+                                                            : `transform ${pieceMotion.duration}ms cubic-bezier(0.22, 0.8, 0.2, 1)`,
+                                                        willChange: 'transform',
+                                                    }
+                                                    : null;
                                                 const squareStyle = {
                                                     backgroundColor: isDark ? boardTheme.dark : boardTheme.light,
                                                 };
@@ -2450,7 +2551,7 @@ export default function GamePage() {
                                                                         handlePiecePointerDown(event, coord);
                                                                     }
                                                                 }}
-                                                                style={{ touchAction: 'none' }}
+                                                                style={pieceMotionStyle ? { touchAction: 'none', ...pieceMotionStyle } : { touchAction: 'none' }}
                                                                 className={`flex items-center justify-center outline-none focus:outline-none ${isDragging ? 'opacity-0' : ''}`}
                                                             >
                                                                 <ChessPiece piece={square} size={pieceSize} pieceSet={pieceSet} />
@@ -2521,6 +2622,29 @@ export default function GamePage() {
                                     ) : null}
                                     </div>
                                 </div>
+                                {showEvalBar && isMobileLayout ? (
+                                    <div className="sm:hidden px-2 pb-1">
+                                        <div className="mx-auto w-[min(92vw,520px)] rounded-lg border border-gray-700/80 bg-gray-900/95 px-2 py-1.5">
+                                            <div className="h-2 rounded-full border border-gray-700 bg-gray-950/90 overflow-hidden flex">
+                                                {evalBarFlip ? (
+                                                    <>
+                                                        <div className="h-full bg-slate-950/95" style={{ width: `${evalSplit.black}%` }} />
+                                                        <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
+                                                        <div className="h-full bg-slate-950/95" style={{ width: `${evalSplit.black}%` }} />
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="mt-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                                                <span>White {evalSplit.white}%</span>
+                                                <span>Black {evalSplit.black}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
 
                                 <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
                                     <div
