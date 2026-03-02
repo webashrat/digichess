@@ -789,23 +789,51 @@ export default function GamePage() {
     const drawerOpen = leftDrawerOpen || rightDrawerOpen;
 
     useEffect(() => {
-        setSelectedSquare(null);
+        if (!dragFrom) {
+            setSelectedSquare(null);
+            setLegalTargets([]);
+            return;
+        }
+        setSelectedSquare(dragFrom);
+        if (canInteract) {
+            const liveTargets = (movesByFrom[dragFrom] || []).map((uci) => uci.slice(2, 4));
+            setLegalTargets(liveTargets);
+            return;
+        }
+        if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
+            const premoveTargets = (premoveMovesByFrom[dragFrom] || []).map((uci) => uci.slice(2, 4));
+            const pseudoTargets = resolvePseudoTargets(dragFrom);
+            if (!pseudoTargets.length) {
+                setLegalTargets(premoveTargets);
+                return;
+            }
+            const merged = new Set([...premoveTargets, ...pseudoTargets]);
+            setLegalTargets(Array.from(merged));
+            return;
+        }
         setLegalTargets([]);
-        setDragFrom(null);
-        setDragPiece(null);
-        setDragPosition(null);
-    }, [displayFen]);
+    }, [
+        canInteract,
+        currentStatus,
+        displayFen,
+        dragFrom,
+        isPreviewing,
+        isUserPlayer,
+        isUserTurn,
+        movesByFrom,
+        premoveMovesByFrom,
+        resolvePseudoTargets,
+    ]);
 
     useEffect(() => {
         if (!canInteract) {
-            setSelectedSquare(null);
-            setLegalTargets([]);
-            setDragFrom(null);
-            setDragPiece(null);
-            setDragPosition(null);
+            if (!dragFrom) {
+                setSelectedSquare(null);
+                setLegalTargets([]);
+            }
             setPendingPromotion(null);
         }
-    }, [canInteract]);
+    }, [canInteract, dragFrom]);
     useEffect(() => {
         if (currentStatus !== 'active') {
             setPremove(null);
@@ -1711,6 +1739,24 @@ export default function GamePage() {
         });
     }, []);
 
+    const clearDragState = useCallback((clearSelection = true) => {
+        setDragFrom(null);
+        setDragPiece(null);
+        setDragPosition(null);
+        if (clearSelection) {
+            setSelectedSquare(null);
+            setLegalTargets([]);
+        }
+        dragPointerRef.current = null;
+        dragStartRef.current = null;
+        dragMovedRef.current = false;
+        dragPosRef.current = null;
+        if (dragRafRef.current) {
+            cancelAnimationFrame(dragRafRef.current);
+            dragRafRef.current = null;
+        }
+    }, []);
+
     const resolveCoordFromPoint = useCallback((clientX, clientY) => {
         const rect = boardRef.current?.getBoundingClientRect();
         if (!rect) return null;
@@ -1785,14 +1831,7 @@ export default function GamePage() {
             }
             const fromSquare = dragFrom;
             const targetSquare = moved ? resolveCoordFromPoint(event.clientX, event.clientY) : null;
-            setDragFrom(null);
-            setDragPiece(null);
-            setDragPosition(null);
-            setSelectedSquare(null);
-            setLegalTargets([]);
-            dragPointerRef.current = null;
-            dragStartRef.current = null;
-            dragMovedRef.current = false;
+            clearDragState(true);
             if (moved && fromSquare && targetSquare) {
                 if (canInteract) {
                     const targets = resolveTargets(fromSquare);
@@ -1826,15 +1865,31 @@ export default function GamePage() {
                 }, 0);
             }
         };
+        const handleCancel = () => {
+            clearDragState(true);
+            suppressClickRef.current = false;
+        };
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                handleCancel();
+            }
+        };
         window.addEventListener('pointermove', handleMove);
         window.addEventListener('pointerup', handleUp);
+        window.addEventListener('pointercancel', handleCancel);
+        window.addEventListener('blur', handleCancel);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
             window.removeEventListener('pointermove', handleMove);
             window.removeEventListener('pointerup', handleUp);
+            window.removeEventListener('pointercancel', handleCancel);
+            window.removeEventListener('blur', handleCancel);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [
         autoQueenEnabled,
         canInteract,
+        clearDragState,
         currentStatus,
         dragFrom,
         getPromotionOptions,
@@ -2301,6 +2356,7 @@ export default function GamePage() {
                                         ref={boardRef}
                                         className="aspect-square w-[min(100vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[100vw] md:max-w-[720px] max-h-[100vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
                                         style={isMobileLayout && mobileBoardSize ? { width: mobileBoardSize, height: mobileBoardSize } : undefined}
+                                        data-testid="game-board"
                                         onContextMenu={(event) => {
                                             if (!premove) return;
                                             event.preventDefault();
@@ -2342,6 +2398,10 @@ export default function GamePage() {
                                                         tabIndex={-1}
                                                         className="relative flex items-center justify-center"
                                                         style={squareStyle}
+                                                        data-square={coord}
+                                                        data-selected={isSelected ? 'true' : 'false'}
+                                                        data-target={isTarget ? 'true' : 'false'}
+                                                        data-premove={isPremoveSquare ? 'true' : 'false'}
                                                         onClick={() => {
                                                             if (suppressClickRef.current) {
                                                                 suppressClickRef.current = false;
@@ -2431,6 +2491,7 @@ export default function GamePage() {
                                     )}
                                     {dragFrom && dragPiece && dragPosition ? (
                                         <div
+                                            data-testid="drag-ghost"
                                             style={{
                                                 position: 'absolute',
                                                 left: dragPosition.x - pieceSize / 2,
