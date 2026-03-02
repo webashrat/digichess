@@ -8,6 +8,7 @@ export default function LoginPage() {
     const { login, loading, error } = useAuth();
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState(null);
 
     const handleSubmit = async (event) => {
@@ -42,14 +43,26 @@ export default function LoginPage() {
                         </label>
                         <label className="block">
                             <span className="text-xs font-semibold text-slate-500">Password</span>
-                            <input
-                                type="password"
-                                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
-                                value={password}
-                                onChange={(event) => setPassword(event.target.value)}
-                                data-testid="login-password"
-                                required
-                            />
+                            <div className="relative mt-1">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-primary"
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    data-testid="login-password"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute inset-y-0 right-0 w-10 flex items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    <span className="material-symbols-outlined block text-[18px] leading-none">
+                                        {showPassword ? 'visibility_off' : 'visibility'}
+                                    </span>
+                                </button>
+                            </div>
                         </label>
                         {(localError || error) ? (
                             <div className="text-sm text-red-500">{localError || error}</div>

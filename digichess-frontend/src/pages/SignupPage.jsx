@@ -36,6 +36,8 @@ export default function SignupPage() {
     const [resendLoading, setResendLoading] = useState(false);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const canSubmit = useMemo(() => (
         form.email.trim() && form.username.trim() && form.password && form.confirmPassword
@@ -257,23 +259,47 @@ export default function SignupPage() {
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Password</span>
-                                <input
-                                    type="password"
-                                    className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
-                                    value={form.password}
-                                    onChange={handleChange('password')}
-                                    required
-                                />
+                                <div className="relative mt-1">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-primary"
+                                        value={form.password}
+                                        onChange={handleChange('password')}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 w-10 flex items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <span className="material-symbols-outlined block text-[18px] leading-none">
+                                            {showPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Confirm password</span>
-                                <input
-                                    type="password"
-                                    className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
-                                    value={form.confirmPassword}
-                                    onChange={handleChange('confirmPassword')}
-                                    required
-                                />
+                                <div className="relative mt-1">
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-primary"
+                                        value={form.confirmPassword}
+                                        onChange={handleChange('confirmPassword')}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 w-10 flex items-center justify-center rounded-r-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                                    >
+                                        <span className="material-symbols-outlined block text-[18px] leading-none">
+                                            {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </label>
                             {error ? <div className="text-sm text-red-500">{error}</div> : null}
                             {message ? <div className="text-sm text-green-500">{message}</div> : null}
