@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 const pieceMap = {
     p: 'P',
@@ -32,7 +32,7 @@ const preloadPieceSet = (pieceSet) => {
     });
 };
 
-export default function ChessPiece({ piece, size = 40, pieceSet = 'cburnett', className = '' }) {
+function ChessPieceBase({ piece, size = 40, pieceSet = 'cburnett', className = '' }) {
     const [imageError, setImageError] = useState(false);
     const isWhite = piece === piece?.toUpperCase();
     const pieceType = piece?.toLowerCase();
@@ -89,3 +89,8 @@ export default function ChessPiece({ piece, size = 40, pieceSet = 'cburnett', cl
         </span>
     );
 }
+
+const ChessPiece = memo(ChessPieceBase);
+ChessPiece.displayName = 'ChessPiece';
+
+export default ChessPiece;

@@ -151,7 +151,7 @@ export default function TournamentLobbyPage() {
                         <button
                             className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white"
                             type="button"
-                            onClick={() => navigate(-1)}
+                            onClick={() => navigate('/')}
                         >
                             <span className="material-symbols-outlined">arrow_back_ios_new</span>
                         </button>

@@ -189,7 +189,7 @@ export default function TournamentsPage() {
                     <button
                         className="flex items-center justify-center p-2 -ml-2 rounded-full active:bg-slate-200 dark:active:bg-slate-800 transition-colors"
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={() => navigate('/')}
                     >
                         <span className="material-symbols-outlined text-2xl">arrow_back</span>
                     </button>
