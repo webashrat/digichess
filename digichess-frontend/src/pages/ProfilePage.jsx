@@ -25,6 +25,19 @@ const ratingRanges = [
 ];
 const RECENT_LIMIT = 5;
 const RECENT_PAGE_SIZE = 6;
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
+const normalizeCountryCode = (value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (!normalized || normalized === 'INTERNATIONAL' || normalized === 'INT') return 'INTL';
+    return normalized;
+};
+
+const readImageAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read image.'));
+    reader.readAsDataURL(file);
+});
 
 const formatResult = (game, username) => {
     if (!game || !username) return '•';
@@ -163,7 +176,7 @@ export default function ProfilePage() {
     const [editOpen, setEditOpen] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState(null);
-    const [editForm, setEditForm] = useState({ nickname: '', bio: '', country: '' });
+    const [editForm, setEditForm] = useState({ nickname: '', bio: '', country: '', profilePic: '' });
     const [challengeError, setChallengeError] = useState(null);
     const [showAllGames, setShowAllGames] = useState(false);
     const [gamesFilter, setGamesFilter] = useState('all');
@@ -408,7 +421,8 @@ export default function ProfilePage() {
         setEditForm({
             nickname: displayUser.nickname || '',
             bio: displayUser.bio || '',
-            country: displayUser.country || '',
+            country: normalizeCountryCode(displayUser.country),
+            profilePic: displayUser.profile_pic || '',
         });
     }, [isSelf, displayUser]);
 
@@ -425,6 +439,7 @@ export default function ProfilePage() {
     const liveGameId = activeGame?.id || displayUser?.spectate_game_id || null;
     const isPlayingLive = Boolean(displayUser?.is_playing || liveGameId);
     const canChallenge = isAuthenticated && displayUser && !isSelf && !displayUser.is_bot && !isPlayingLive;
+    const displayCountryCode = useMemo(() => normalizeCountryCode(displayUser?.country), [displayUser?.country]);
 
     const handleFriendRequest = async () => {
         if (!displayUser?.id || friendState === 'loading' || friendState === 'sent') return;
@@ -459,6 +474,7 @@ export default function ProfilePage() {
                 nickname: editForm.nickname || '',
                 bio: editForm.bio || '',
                 country: editForm.country || '',
+                profile_pic: editForm.profilePic || '',
             });
             setUser(updated);
             setEditOpen(false);
@@ -480,6 +496,30 @@ export default function ProfilePage() {
             return;
         }
         navigate(`/?challenge=1&opponent=${displayUser.id}&username=${encodeURIComponent(displayUser.username || '')}`);
+    };
+
+    const handleEditProfilePicChange = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        const type = file.type?.toLowerCase();
+        const validType = type === 'image/jpeg' || type === 'image/jpg' || type === 'image/png';
+        if (!validType) {
+            setEditError('Profile picture must be JPG or PNG.');
+            return;
+        }
+        if (file.size > MAX_PROFILE_IMAGE_BYTES) {
+            setEditError('Profile picture must be smaller than 2 MB.');
+            return;
+        }
+        try {
+            const dataUrl = await readImageAsDataUrl(file);
+            setEditForm((prev) => ({ ...prev, profilePic: String(dataUrl || '') }));
+            setEditError(null);
+        } catch (err) {
+            setEditError('Could not process profile picture.');
+        }
     };
 
     return (
@@ -507,7 +547,11 @@ export default function ProfilePage() {
                         <div className="px-4 py-6 flex flex-col items-center">
                             <div className="relative mb-4">
                                 <div className="w-28 h-28 rounded-xl overflow-hidden shadow-lg ring-4 ring-surface-light dark:ring-surface-dark bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold">
-                                    {displayUser?.username?.slice(0, 2).toUpperCase()}
+                                    {displayUser?.profile_pic ? (
+                                        <img src={displayUser.profile_pic} alt={`${displayUser?.username || 'User'} avatar`} className="w-full h-full object-cover" />
+                                    ) : (
+                                        displayUser?.username?.slice(0, 2).toUpperCase()
+                                    )}
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-background-light dark:border-background-dark flex items-center justify-center">
                                     <div className="w-full h-full rounded-full animate-ping opacity-20 bg-green-500 absolute"></div>
@@ -521,7 +565,7 @@ export default function ProfilePage() {
                                         </span>
                                     ) : null}
                                     <h2 className="text-2xl font-bold tracking-tight">{displayUser?.username}</h2>
-                                    <span className="text-lg">{displayUser?.country || '🌍'}</span>
+                                    <span className="text-lg">{displayCountryCode}</span>
                                 </div>
                                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{displayUser?.bio || 'No bio yet.'}</p>
                             </div>
@@ -870,6 +914,44 @@ export default function ProfilePage() {
                             </button>
                         </div>
                         <div className="space-y-4">
+                            <div>
+                                <span className="text-xs font-semibold text-slate-500">Profile picture</span>
+                                <div className="mt-2 flex items-center gap-3">
+                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200">
+                                        {editForm.profilePic ? (
+                                            <img src={editForm.profilePic} alt="Edit profile preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            displayUser?.username?.slice(0, 2).toUpperCase()
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <input
+                                            id="editProfilePic"
+                                            type="file"
+                                            accept="image/png,image/jpeg"
+                                            className="hidden"
+                                            onChange={handleEditProfilePicChange}
+                                        />
+                                        <label
+                                            htmlFor="editProfilePic"
+                                            className="inline-flex px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark text-xs font-semibold cursor-pointer hover:border-primary/50"
+                                        >
+                                            Upload image
+                                        </label>
+                                        {editForm.profilePic ? (
+                                            <button
+                                                type="button"
+                                                className="ml-2 text-xs font-semibold text-slate-500 hover:text-primary"
+                                                onClick={() => setEditForm((prev) => ({ ...prev, profilePic: '' }))}
+                                            >
+                                                Remove
+                                            </button>
+                                        ) : (
+                                            <p className="text-[11px] text-slate-500">JPG or PNG, up to 2 MB.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Nickname</span>
                                 <input
@@ -890,7 +972,7 @@ export default function ProfilePage() {
                                 <span className="text-xs font-semibold text-slate-500">Country</span>
                                 <div className="mt-1 flex items-center gap-2">
                                     <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
-                                        {flagFor(editForm.country)}
+                                        {flagFor(editForm.country) || normalizeCountryCode(editForm.country)}
                                     </div>
                                     <div className="flex-1">
                                         <CountrySelect value={editForm.country} onChange={(value) => setEditForm((prev) => ({ ...prev, country: value }))} />

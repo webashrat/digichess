@@ -29,6 +29,7 @@ const DEFAULT_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const BOARD_SETTING_EVENT = 'board-settings-change';
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
+const SETTINGS_CHANGE_EVENT = 'digichess-settings-change';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 const parseFen = (fen) => {
@@ -187,6 +188,12 @@ export default function GamePage() {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        const syncFromStorage = () => {
+            const soundStored = localStorage.getItem(LOCAL_STORAGE_SOUND);
+            const autoQueenStored = localStorage.getItem(LOCAL_STORAGE_AUTO_QUEEN);
+            setSoundEnabled(soundStored ? soundStored === 'true' : true);
+            setAutoQueenEnabled(autoQueenStored ? autoQueenStored === 'true' : true);
+        };
         const handleStorage = (event) => {
             if (event.key === LOCAL_STORAGE_SOUND) {
                 setSoundEnabled(event.newValue ? event.newValue === 'true' : true);
@@ -195,8 +202,15 @@ export default function GamePage() {
                 setAutoQueenEnabled(event.newValue ? event.newValue === 'true' : true);
             }
         };
+        const handleSettingsChange = () => {
+            syncFromStorage();
+        };
         window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
+        window.addEventListener(SETTINGS_CHANGE_EVENT, handleSettingsChange);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener(SETTINGS_CHANGE_EVENT, handleSettingsChange);
+        };
     }, []);
 
     useEffect(() => {
@@ -1300,13 +1314,13 @@ export default function GamePage() {
     }, [playTone, soundEnabled]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !soundEnabled) return;
         const unlock = () => {
             ensureAudioContext(true);
         };
-        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('pointerdown', unlock);
         return () => window.removeEventListener('pointerdown', unlock);
-    }, [ensureAudioContext]);
+    }, [ensureAudioContext, soundEnabled]);
 
     useEffect(() => {
         if (!soundEnabled) return;

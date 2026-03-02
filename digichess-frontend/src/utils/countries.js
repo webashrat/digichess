@@ -1,68 +1,57 @@
+const COUNTRY_CODES = [
+    'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ',
+    'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ',
+    'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ',
+    'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ',
+    'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET',
+    'FI', 'FJ', 'FK', 'FM', 'FO', 'FR',
+    'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY',
+    'HK', 'HM', 'HN', 'HR', 'HT', 'HU',
+    'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT',
+    'JE', 'JM', 'JO', 'JP',
+    'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ',
+    'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY',
+    'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
+    'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ',
+    'OM',
+    'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY',
+    'QA',
+    'RE', 'RO', 'RS', 'RU', 'RW',
+    'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SX', 'SY', 'SZ',
+    'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ',
+    'UA', 'UG', 'UM', 'US', 'UY', 'UZ',
+    'VA', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU',
+    'WF', 'WS',
+    'XK',
+    'YE', 'YT',
+    'ZA', 'ZM', 'ZW',
+];
+const INTERNATIONAL_OPTION = { code: 'INTL', name: 'International' };
+
+const regionNames = (
+    typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined'
+        ? new Intl.DisplayNames(['en'], { type: 'region' })
+        : null
+);
+
+const nameForCode = (code) => {
+    if (code === 'XK') return 'Kosovo';
+    const name = regionNames?.of(code);
+    return name || code;
+};
+
 export const countryOptions = [
-    { code: 'IN', name: 'India' },
-    { code: 'US', name: 'United States' },
-    { code: 'GB', name: 'United Kingdom' },
-    { code: 'CA', name: 'Canada' },
-    { code: 'AU', name: 'Australia' },
-    { code: 'DE', name: 'Germany' },
-    { code: 'FR', name: 'France' },
-    { code: 'ES', name: 'Spain' },
-    { code: 'IT', name: 'Italy' },
-    { code: 'NL', name: 'Netherlands' },
-    { code: 'SE', name: 'Sweden' },
-    { code: 'NO', name: 'Norway' },
-    { code: 'FI', name: 'Finland' },
-    { code: 'DK', name: 'Denmark' },
-    { code: 'PL', name: 'Poland' },
-    { code: 'RU', name: 'Russia' },
-    { code: 'UA', name: 'Ukraine' },
-    { code: 'BR', name: 'Brazil' },
-    { code: 'AR', name: 'Argentina' },
-    { code: 'MX', name: 'Mexico' },
-    { code: 'CL', name: 'Chile' },
-    { code: 'CO', name: 'Colombia' },
-    { code: 'ZA', name: 'South Africa' },
-    { code: 'NG', name: 'Nigeria' },
-    { code: 'EG', name: 'Egypt' },
-    { code: 'TR', name: 'Turkey' },
-    { code: 'SA', name: 'Saudi Arabia' },
-    { code: 'AE', name: 'United Arab Emirates' },
-    { code: 'IL', name: 'Israel' },
-    { code: 'JP', name: 'Japan' },
-    { code: 'KR', name: 'South Korea' },
-    { code: 'CN', name: 'China' },
-    { code: 'SG', name: 'Singapore' },
-    { code: 'MY', name: 'Malaysia' },
-    { code: 'ID', name: 'Indonesia' },
-    { code: 'PH', name: 'Philippines' },
-    { code: 'TH', name: 'Thailand' },
-    { code: 'VN', name: 'Vietnam' },
-    { code: 'NZ', name: 'New Zealand' },
-    { code: 'IR', name: 'Iran' },
-    { code: 'IQ', name: 'Iraq' },
-    { code: 'PK', name: 'Pakistan' },
-    { code: 'BD', name: 'Bangladesh' },
-    { code: 'LK', name: 'Sri Lanka' },
-    { code: 'NP', name: 'Nepal' },
-    { code: 'KE', name: 'Kenya' },
-    { code: 'GH', name: 'Ghana' },
-    { code: 'ET', name: 'Ethiopia' },
-    { code: 'MA', name: 'Morocco' },
-    { code: 'PT', name: 'Portugal' },
-    { code: 'GR', name: 'Greece' },
-    { code: 'CZ', name: 'Czech Republic' },
-    { code: 'HU', name: 'Hungary' },
-    { code: 'RO', name: 'Romania' },
-    { code: 'BE', name: 'Belgium' },
-    { code: 'CH', name: 'Switzerland' },
-    { code: 'AT', name: 'Austria' },
-    { code: 'IE', name: 'Ireland' },
-    { code: 'IS', name: 'Iceland' },
+    INTERNATIONAL_OPTION,
+    ...COUNTRY_CODES
+        .map((code) => ({ code, name: nameForCode(code) }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
 ];
 
 export const flagFor = (code) => {
-    if (!code) return '🌍';
+    if (!code) return '';
     const normalized = code.toUpperCase();
+    if (normalized === 'INTL' || normalized === 'INTERNATIONAL' || normalized === 'INT') return '';
+    if (!/^[A-Z]{2}$/.test(normalized)) return '';
     const base = 127397;
     return normalized.replace(/[A-Z]/g, (char) => String.fromCodePoint(base + char.charCodeAt(0)));
 };

@@ -2,9 +2,17 @@ import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import CountrySelect from '../components/common/CountrySelect';
-import { flagFor } from '../utils/countries';
 import { registerAccount, verifyOtp, resendOtp } from '../api';
 import { useAuth } from '../context/AuthContext';
+
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
+
+const readImageAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read image.'));
+    reader.readAsDataURL(file);
+});
 
 const initialForm = {
     email: '',
@@ -13,7 +21,8 @@ const initialForm = {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    country: '',
+    country: 'INTL',
+    profilePic: '',
 };
 
 export default function SignupPage() {
@@ -34,6 +43,30 @@ export default function SignupPage() {
 
     const handleChange = (field) => (event) => {
         setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+    const handleProfilePicChange = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        const type = file.type?.toLowerCase();
+        const validType = type === 'image/jpeg' || type === 'image/jpg' || type === 'image/png';
+        if (!validType) {
+            setError('Profile picture must be JPG or PNG.');
+            return;
+        }
+        if (file.size > MAX_PROFILE_IMAGE_BYTES) {
+            setError('Profile picture must be smaller than 2 MB.');
+            return;
+        }
+        try {
+            const dataUrl = await readImageAsDataUrl(file);
+            setForm((prev) => ({ ...prev, profilePic: String(dataUrl || '') }));
+            setError(null);
+        } catch (err) {
+            setError('Could not process profile picture.');
+        }
     };
 
     const handleRegister = async (event) => {
@@ -58,6 +91,7 @@ export default function SignupPage() {
             if (form.firstName.trim()) payload.first_name = form.firstName.trim();
             if (form.lastName.trim()) payload.last_name = form.lastName.trim();
             if (form.country) payload.country = form.country;
+            if (form.profilePic) payload.profile_pic = form.profilePic;
             await registerAccount(payload);
             setStep('verify');
             setMessage(`We sent a 6-digit code to ${form.email.trim()}.`);
@@ -131,6 +165,46 @@ export default function SignupPage() {
 
                     {step === 'form' ? (
                         <form className="space-y-4" onSubmit={handleRegister}>
+                            <div>
+                                <span className="text-xs font-semibold text-slate-500">Profile picture</span>
+                                <div className="mt-2 flex items-center gap-3">
+                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200">
+                                        {form.profilePic ? (
+                                            <img src={form.profilePic} alt="Profile preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>
+                                                {(form.username.trim() || form.firstName.trim() || 'U').slice(0, 2).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <input
+                                            id="signupProfilePic"
+                                            type="file"
+                                            accept="image/png,image/jpeg"
+                                            className="hidden"
+                                            onChange={handleProfilePicChange}
+                                        />
+                                        <label
+                                            htmlFor="signupProfilePic"
+                                            className="inline-flex px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark text-xs font-semibold cursor-pointer hover:border-primary/50"
+                                        >
+                                            Upload image
+                                        </label>
+                                        {form.profilePic ? (
+                                            <button
+                                                type="button"
+                                                className="ml-2 text-xs font-semibold text-slate-500 hover:text-primary"
+                                                onClick={() => setForm((prev) => ({ ...prev, profilePic: '' }))}
+                                            >
+                                                Remove
+                                            </button>
+                                        ) : (
+                                            <p className="text-[11px] text-slate-500">JPG or PNG, up to 2 MB.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <label className="block">
                                     <span className="text-xs font-semibold text-slate-500">First name</span>
@@ -172,14 +246,14 @@ export default function SignupPage() {
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Country</span>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
-                                        {flagFor(form.country)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <CountrySelect value={form.country} onChange={(value) => setForm((prev) => ({ ...prev, country: value }))} />
-                                    </div>
-                                </div>
+                                <CountrySelect
+                                    value={form.country}
+                                    onChange={(value) => setForm((prev) => ({ ...prev, country: value }))}
+                                    placeholder="Search country by name or code"
+                                    showFlags={false}
+                                    showCode
+                                    searchable
+                                />
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold text-slate-500">Password</span>
