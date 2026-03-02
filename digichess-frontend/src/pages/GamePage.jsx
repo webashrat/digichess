@@ -2445,32 +2445,10 @@ export default function GamePage() {
                                 </div>
 
                                 <div className="relative flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
-                                    {showEvalBar ? (
-                                        isMobileLayout ? (
-                                            <div className="sm:hidden absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(88vw,420px)] pointer-events-none">
-                                                <div className="h-2 rounded-full border border-gray-700 bg-gray-900 overflow-hidden flex">
-                                                    {evalBarFlip ? (
-                                                        <>
-                                                            <div className="h-full bg-slate-950/90" style={{ width: `${evalSplit.black}%` }} />
-                                                            <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
-                                                            <div className="h-full bg-slate-950/90" style={{ width: `${evalSplit.black}%` }} />
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div className="mt-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-300">
-                                                    <span>White {evalSplit.white}%</span>
-                                                    <span>Black {evalSplit.black}%</span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className={`hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shrink-0 relative shadow-inner`}>
-                                                <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
-                                            </div>
-                                        )
+                                    {showEvalBar && !isMobileLayout ? (
+                                        <div className={`hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shrink-0 relative shadow-inner`}>
+                                            <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
+                                        </div>
                                     ) : null}
                                     <div
                                         ref={boardRef}
@@ -2644,6 +2622,29 @@ export default function GamePage() {
                                     ) : null}
                                     </div>
                                 </div>
+                                {showEvalBar && isMobileLayout ? (
+                                    <div className="sm:hidden px-2 pb-1">
+                                        <div className="mx-auto w-[min(92vw,520px)] rounded-lg border border-gray-700/80 bg-gray-900/95 px-2 py-1.5">
+                                            <div className="h-2 rounded-full border border-gray-700 bg-gray-950/90 overflow-hidden flex">
+                                                {evalBarFlip ? (
+                                                    <>
+                                                        <div className="h-full bg-slate-950/95" style={{ width: `${evalSplit.black}%` }} />
+                                                        <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="h-full bg-slate-100/95 shadow-[0_0_8px_rgba(255,255,255,0.25)]" style={{ width: `${evalSplit.white}%` }} />
+                                                        <div className="h-full bg-slate-950/95" style={{ width: `${evalSplit.black}%` }} />
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="mt-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                                                <span>White {evalSplit.white}%</span>
+                                                <span>Black {evalSplit.black}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
 
                                 <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
                                     <div
