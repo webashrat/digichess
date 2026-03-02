@@ -12,6 +12,7 @@ export default function CountrySelect({
     const wrapperRef = useRef(null);
     const inputRef = useRef(null);
     const [open, setOpen] = useState(false);
+    const [openUpwards, setOpenUpwards] = useState(false);
     const [query, setQuery] = useState('');
     const normalizeCountryCode = (code) => {
         const normalized = String(code || '').trim().toUpperCase();
@@ -47,6 +48,17 @@ export default function CountrySelect({
 
     useEffect(() => {
         if (!open) return undefined;
+        const evaluateDropdownDirection = () => {
+            const rect = wrapperRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            // Prefer opening upward when near viewport bottom.
+            setOpenUpwards(spaceBelow < 220 && spaceAbove > spaceBelow);
+        };
+        evaluateDropdownDirection();
+        window.addEventListener('resize', evaluateDropdownDirection);
         const handleOutside = (event) => {
             const target = event.target;
             if (!wrapperRef.current?.contains(target)) {
@@ -57,6 +69,7 @@ export default function CountrySelect({
         document.addEventListener('mousedown', handleOutside);
         document.addEventListener('touchstart', handleOutside);
         return () => {
+            window.removeEventListener('resize', evaluateDropdownDirection);
             document.removeEventListener('mousedown', handleOutside);
             document.removeEventListener('touchstart', handleOutside);
         };
@@ -99,7 +112,7 @@ export default function CountrySelect({
         <div ref={wrapperRef} className="relative mt-1">
             <input
                 ref={inputRef}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/50"
                 placeholder={placeholder}
                 value={inputValue}
                 onFocus={() => {
@@ -113,7 +126,7 @@ export default function CountrySelect({
             />
             <button
                 type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 onClick={() => {
                     setOpen((prev) => !prev);
                     if (!open) {
@@ -124,7 +137,11 @@ export default function CountrySelect({
                 <span className="material-symbols-outlined text-lg">{open ? 'expand_less' : 'expand_more'}</span>
             </button>
             {open ? (
-                <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark shadow-lg">
+                <div
+                    className={`absolute z-50 w-full max-h-44 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark shadow-lg ${
+                        openUpwards ? 'bottom-full mb-1' : 'mt-1'
+                    }`}
+                >
                     {filteredOptions.length ? (
                         filteredOptions.map((country) => (
                             <button

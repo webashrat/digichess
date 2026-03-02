@@ -522,7 +522,7 @@ export default function ProfilePage() {
     };
 
     return (
-        <Layout showHeader={false}>
+        <Layout showHeader={false} showBottomNav={!editOpen && !showAllGames}>
             <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
                 <div className="sticky top-0 z-50 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md border-b border-border-light dark:border-border-dark shadow-sm px-4 py-3 flex items-center justify-between">
                     <button className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400" type="button" onClick={() => window.history.back()}>
@@ -895,35 +895,42 @@ export default function ProfilePage() {
             ) : null}
 
             {editOpen ? (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
+                <div
+                    className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm p-3 sm:p-6 md:p-8 flex items-center justify-center overflow-y-auto"
+                    onPointerDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setEditOpen(false);
+                        }
+                    }}
+                >
                     <div
-                        className="relative w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6"
+                        className="relative w-full max-w-lg max-h-[min(92dvh,52rem)] flex flex-col bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
                         role="dialog"
                         aria-modal="true"
+                        onPointerDown={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between px-5 pt-4 pb-2.5 shrink-0 border-b border-slate-200/70 dark:border-slate-700/70">
                             <h3 className="text-lg font-bold">Edit profile</h3>
                             <button
-                                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+                                className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
                                 type="button"
                                 onClick={() => setEditOpen(false)}
                             >
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
-                        <div className="space-y-4">
+                        <div className="px-5 py-3.5 space-y-4 overflow-y-auto no-scrollbar">
                             <div>
-                                <span className="text-xs font-semibold text-slate-500">Profile picture</span>
-                                <div className="mt-2 flex items-center gap-3">
-                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-200">
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Profile picture</span>
+                                <div className="mt-2 flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-base font-bold text-slate-700 dark:text-slate-200">
                                         {editForm.profilePic ? (
                                             <img src={editForm.profilePic} alt="Edit profile preview" className="w-full h-full object-cover" />
                                         ) : (
                                             displayUser?.username?.slice(0, 2).toUpperCase()
                                         )}
                                     </div>
-                                    <div className="flex-1 space-y-1">
+                                    <div className="flex-1 space-y-1.5">
                                         <input
                                             id="editProfilePic"
                                             type="file"
@@ -933,42 +940,42 @@ export default function ProfilePage() {
                                         />
                                         <label
                                             htmlFor="editProfilePic"
-                                            className="inline-flex px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark text-xs font-semibold cursor-pointer hover:border-primary/50"
+                                            className="inline-flex px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark text-sm font-semibold cursor-pointer hover:border-primary/50"
                                         >
                                             Upload image
                                         </label>
                                         {editForm.profilePic ? (
                                             <button
                                                 type="button"
-                                                className="ml-2 text-xs font-semibold text-slate-500 hover:text-primary"
+                                                className="ml-2 text-sm font-semibold text-slate-500 hover:text-primary"
                                                 onClick={() => setEditForm((prev) => ({ ...prev, profilePic: '' }))}
                                             >
                                                 Remove
                                             </button>
                                         ) : (
-                                            <p className="text-[11px] text-slate-500">JPG or PNG, up to 2 MB.</p>
+                                            <p className="text-xs text-slate-500">JPG or PNG, up to 2 MB.</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
                             <label className="block">
-                                <span className="text-xs font-semibold text-slate-500">Nickname</span>
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Nickname</span>
                                 <input
-                                    className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm"
+                                    className="mt-1.5 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2.5 text-sm"
                                     value={editForm.nickname}
                                     onChange={(event) => setEditForm((prev) => ({ ...prev, nickname: event.target.value }))}
                                 />
                             </label>
                             <label className="block">
-                                <span className="text-xs font-semibold text-slate-500">Bio</span>
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Bio</span>
                                 <textarea
-                                    className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2 text-sm min-h-[90px]"
+                                    className="mt-1.5 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-background-dark px-3 py-2.5 text-sm min-h-[112px] resize-none"
                                     value={editForm.bio}
                                     onChange={(event) => setEditForm((prev) => ({ ...prev, bio: event.target.value }))}
                                 />
                             </label>
                             <label className="block">
-                                <span className="text-xs font-semibold text-slate-500">Country</span>
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Country</span>
                                 <CountrySelect
                                     value={editForm.country}
                                     onChange={(value) => setEditForm((prev) => ({ ...prev, country: value }))}
@@ -978,9 +985,11 @@ export default function ProfilePage() {
                                     searchable
                                 />
                             </label>
-                            {editError ? <div className="text-xs text-red-500">{editError}</div> : null}
+                        </div>
+                        <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] pt-2 border-t border-slate-200/80 dark:border-slate-700/80 shrink-0">
+                            {editError ? <div className="mb-2 text-xs text-red-500">{editError}</div> : null}
                             <button
-                                className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-60"
+                                className="w-full py-2.25 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-60"
                                 type="button"
                                 onClick={handleEditSave}
                                 disabled={editLoading}
