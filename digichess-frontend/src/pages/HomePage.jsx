@@ -6,10 +6,12 @@ import {
     acceptGame,
     acceptRematch,
     cancelMatchmaking,
+    createBotGame,
     createGame,
     enqueueMatchmaking,
     fetchPublicAccount,
     fetchPublicGames,
+    listBots,
     rejectGame,
     rejectRematch,
     respondFriendRequest,
@@ -42,10 +44,14 @@ const customFormatPresets = {
     classical: { minutes: 30, increment: 0 },
 };
 
+const botModeOptions = quickPlayCards.map((card) => ({ id: card.id, label: card.label }));
+const JIANG_BOT_IMAGE = '/images/jiang-bot.png';
+
 
 const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 const LOCAL_STORAGE_UI_THEME = 'uiTheme';
+const SETTINGS_CHANGE_EVENT = 'digichess-settings-change';
 
 const getRatingForControl = (user, control) => {
     if (!user) return null;
@@ -137,7 +143,17 @@ export default function HomePage() {
     const [customColor, setCustomColor] = useState('auto');
     const [customSubmitting, setCustomSubmitting] = useState(false);
     const [customError, setCustomError] = useState(null);
+    const [showBotPanel, setShowBotPanel] = useState(false);
+    const [botMode, setBotMode] = useState('blitz');
+    const [bots, setBots] = useState([]);
+    const [botLoading, setBotLoading] = useState(false);
+    const [botError, setBotError] = useState(null);
+    const [botSubmittingId, setBotSubmittingId] = useState(null);
     const prefillAppliedRef = useRef(false);
+    const settingsButtonRef = useRef(null);
+    const settingsPanelRef = useRef(null);
+    const notificationsButtonRef = useRef(null);
+    const notificationsPanelRef = useRef(null);
 
     const stats = useMemo(() => ([
         { label: 'Bullet', value: user?.rating_bullet || 800, icon: 'local_fire_department', color: 'text-orange-400' },
@@ -150,6 +166,7 @@ export default function HomePage() {
 
     const blitzTag = getBlitzTag(user?.rating_blitz);
     const boardTheme = BOARD_THEMES[boardThemeIndex] || BOARD_THEMES[6] || BOARD_THEMES[0];
+    const isPlayModalOpen = showCustomForm || showBotPanel;
 
     const loadLiveGames = useCallback(async (showSpinner = false) => {
         if (showSpinner) {
@@ -203,6 +220,7 @@ export default function HomePage() {
         if (!challenge && !usernameParam && !opponentParam) return;
         prefillAppliedRef.current = true;
         setShowCustomForm(true);
+        setShowBotPanel(false);
         if (usernameParam) {
             setCustomOpponentQuery(usernameParam);
             fetchPublicAccount(usernameParam)
@@ -268,6 +286,32 @@ export default function HomePage() {
     }, [customFormat]);
 
     useEffect(() => {
+        if (!showBotPanel) return;
+        let active = true;
+        const loadBots = async () => {
+            setBotLoading(true);
+            setBotError(null);
+            try {
+                const data = await listBots(botMode);
+                if (!active) return;
+                setBots(data?.bots || []);
+            } catch (err) {
+                if (!active) return;
+                setBots([]);
+                setBotError('Failed to load bots.');
+            } finally {
+                if (active) {
+                    setBotLoading(false);
+                }
+            }
+        };
+        loadBots();
+        return () => {
+            active = false;
+        };
+    }, [showBotPanel, botMode]);
+
+    useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem('boardTheme', String(boardThemeIndex));
         }
@@ -282,6 +326,9 @@ export default function HomePage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(LOCAL_STORAGE_SOUND, String(soundEnabled));
+            window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT, {
+                detail: { key: LOCAL_STORAGE_SOUND, value: String(soundEnabled) },
+            }));
         }
     }, [soundEnabled]);
 
@@ -295,6 +342,9 @@ export default function HomePage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(LOCAL_STORAGE_AUTO_QUEEN, String(autoQueenEnabled));
+            window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT, {
+                detail: { key: LOCAL_STORAGE_AUTO_QUEEN, value: String(autoQueenEnabled) },
+            }));
         }
     }, [autoQueenEnabled]);
 
@@ -303,6 +353,42 @@ export default function HomePage() {
             setNotificationError(null);
         }
     }, [showNotifications]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined' || (!showSettings && !showNotifications)) return undefined;
+        const handleOutside = (event) => {
+            const target = event.target;
+            if (showSettings) {
+                const clickedSettingsButton = settingsButtonRef.current?.contains(target);
+                const clickedSettingsPanel = settingsPanelRef.current?.contains(target);
+                if (!clickedSettingsButton && !clickedSettingsPanel) {
+                    setShowSettings(false);
+                }
+            }
+            if (showNotifications) {
+                const clickedNotificationsButton = notificationsButtonRef.current?.contains(target);
+                const clickedNotificationsPanel = notificationsPanelRef.current?.contains(target);
+                if (!clickedNotificationsButton && !clickedNotificationsPanel) {
+                    setShowNotifications(false);
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleOutside);
+        document.addEventListener('touchstart', handleOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleOutside);
+            document.removeEventListener('touchstart', handleOutside);
+        };
+    }, [showSettings, showNotifications]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined' || !isPlayModalOpen) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isPlayModalOpen]);
 
     const handleQuickPlay = async (timeControl) => {
         if (!isAuthenticated) {
@@ -408,6 +494,52 @@ export default function HomePage() {
         }
     };
 
+    const handleCreateBotGame = async (botId) => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+        setBotSubmittingId(botId);
+        setBotError(null);
+        try {
+            const game = await createBotGame(botId, { time_control: botMode, preferred_color: 'auto' });
+            if (game?.id) {
+                navigate(`/game/${game.id}`);
+            }
+        } catch (err) {
+            setBotError(err.message || 'Failed to create bot game.');
+        } finally {
+            setBotSubmittingId(null);
+        }
+    };
+
+    const toggleCustomForm = () => {
+        setCustomError(null);
+        setShowCustomForm((prev) => {
+            const next = !prev;
+            if (next) {
+                setShowBotPanel(false);
+            }
+            return next;
+        });
+    };
+
+    const toggleBotPanel = () => {
+        setBotError(null);
+        setShowBotPanel((prev) => {
+            const next = !prev;
+            if (next) {
+                setShowCustomForm(false);
+            }
+            return next;
+        });
+    };
+
+    const closePlayModal = () => {
+        setShowCustomForm(false);
+        setShowBotPanel(false);
+    };
+
     const handleNotificationAction = async (notification, decision) => {
         if (!notification) return;
         try {
@@ -452,13 +584,15 @@ export default function HomePage() {
 
     return (
         <Layout showHeader={false}>
-            <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-                <header className="sticky top-0 z-30 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md p-4 border-b dark:border-gray-800 border-gray-200 shadow-sm">
-                    <div className="grid w-full grid-cols-[auto_auto] grid-rows-[auto_auto] items-center gap-y-2 gap-x-3 sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1">
+            <>
+                <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+                <header className="sticky top-0 z-30 border-b border-slate-200/70 dark:border-slate-800/70 bg-gradient-to-b from-background-light/95 to-background-light/85 dark:from-background-dark/95 dark:to-background-dark/85 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4 shadow-sm">
+                    <div className="mx-auto w-full max-w-[1500px] rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/75 dark:bg-slate-900/55 shadow-[0_10px_35px_rgba(15,23,42,0.15)] dark:shadow-[0_12px_36px_rgba(2,6,23,0.5)] px-3 py-2 sm:px-4 sm:py-3">
+                        <div className="grid w-full grid-cols-[1fr_auto] grid-rows-[auto_auto] items-center gap-y-2 gap-x-2 sm:grid-cols-[auto_1fr_auto] sm:grid-rows-1 sm:gap-x-3">
                         <div
                             role="button"
                             tabIndex={0}
-                            className="flex items-center gap-2 sm:gap-3 text-left min-w-0"
+                            className="group flex items-center gap-2 sm:gap-3 text-left min-w-0 rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
                             onClick={() => navigate('/profile')}
                             onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
@@ -469,7 +603,7 @@ export default function HomePage() {
                         >
                             <div className="relative">
                                 <div
-                                    className={`rounded-full size-10 border-2 border-primary ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
+                                    className={`rounded-full size-10 border-2 border-primary/90 shadow-sm ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
                                     style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
                                 >
                                     {!avatarUrl ? initials : null}
@@ -477,11 +611,11 @@ export default function HomePage() {
                                 <div className="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-sm font-bold leading-tight truncate">{user?.username || 'Guest'}</h1>
-                                <div className="flex items-center gap-1">
+                                <h1 className="text-sm font-bold leading-tight truncate text-slate-900 dark:text-slate-100">{user?.username || 'Guest'}</h1>
+                                <div className="flex items-center gap-1.5">
                                     <span className="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
                                     {user ? (
-                                        <span className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <span className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
                                             {user.rating_blitz}
                                         </span>
                                     ) : (
@@ -505,12 +639,20 @@ export default function HomePage() {
                             </div>
                         </div>
                         <div className="col-span-2 row-start-2 flex justify-center sm:col-span-1 sm:row-start-1 sm:col-start-2">
-                            <span
-                                className="text-xl sm:text-2xl md:text-3xl font-black tracking-[0.04em] text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-300 drop-shadow-sm"
-                                style={{ fontFamily: '"Calibri", "Lexend", sans-serif' }}
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                className="inline-flex items-center gap-2.5 rounded-full border border-slate-300/80 dark:border-slate-600/70 bg-slate-100/80 dark:bg-slate-800/70 px-3 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                             >
-                                DIGICHESS
-                            </span>
+                                <span className="text-base leading-none text-primary">♞</span>
+                                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                                    DigiChess
+                                </span>
+                                <span className="hidden md:inline-block h-3 w-px bg-slate-300 dark:bg-slate-600" />
+                                <span className="hidden md:inline text-[10px] uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                    Live Arena
+                                </span>
+                            </button>
                         </div>
                         <div className="flex items-center justify-end gap-2 sm:col-start-3">
                             {!isAuthenticated ? (
@@ -524,7 +666,8 @@ export default function HomePage() {
                             ) : (
                                 <>
                                     <button
-                                        className="flex items-center justify-center size-9 sm:size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative"
+                                        ref={notificationsButtonRef}
+                                        className="relative flex items-center justify-center size-9 sm:size-10 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                         type="button"
                                         onClick={() => {
                                             setShowNotifications((prev) => {
@@ -541,7 +684,7 @@ export default function HomePage() {
                                         ) : null}
                                     </button>
                                     <button
-                                        className="flex items-center justify-center px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full bg-slate-200 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold"
+                                        className="flex items-center justify-center px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-slate-200/90 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
                                         type="button"
                                         onClick={logout}
                                     >
@@ -550,7 +693,8 @@ export default function HomePage() {
                                 </>
                             )}
                             <button
-                                className="flex items-center justify-center size-9 sm:size-10 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                                ref={settingsButtonRef}
+                                className="flex items-center justify-center size-9 sm:size-10 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 type="button"
                                 onClick={() => setShowSettings((prev) => !prev)}
                             >
@@ -558,8 +702,9 @@ export default function HomePage() {
                             </button>
                         </div>
                     </div>
+                    </div>
                     {showSettings ? (
-                        <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
+                        <div ref={settingsPanelRef} className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(90vw,20rem)] sm:w-72 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-4">
                             <div>
                                 <div className="text-xs font-semibold text-slate-500 mb-2">App theme</div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -648,7 +793,7 @@ export default function HomePage() {
                         </div>
                     ) : null}
                     {showNotifications ? (
-                        <div className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(92vw,24rem)] sm:w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
+                        <div ref={notificationsPanelRef} className="absolute top-16 left-4 right-4 sm:left-auto sm:right-4 z-40 w-[min(92vw,24rem)] sm:w-80 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-semibold">Notifications</h4>
                                     <button
@@ -800,17 +945,17 @@ export default function HomePage() {
                 ) : null}
 
                     <div className="flex gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
-                    {stats.map((stat) => (
-                        <div
-                            key={stat.label}
+                        {stats.map((stat) => (
+                            <div
+                                key={stat.label}
                                 className="flex min-w-[90px] sm:min-w-[100px] flex-col gap-1 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 p-3 items-center text-center shadow-sm"
-                        >
-                            <span className={`material-symbols-outlined text-[20px] ${stat.color}`}>{stat.icon}</span>
-                            <p className="text-slate-900 dark:text-white text-lg font-bold leading-tight">{stat.value}</p>
-                            <p className="text-slate-500 dark:text-gray-400 text-xs font-normal">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
+                            >
+                                <span className={`material-symbols-outlined text-[20px] ${stat.color}`}>{stat.icon}</span>
+                                <p className="text-slate-900 dark:text-white text-lg font-bold leading-tight">{stat.value}</p>
+                                <p className="text-slate-500 dark:text-gray-400 text-xs font-normal">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
 
                 <section className="px-4 py-2">
                     <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
@@ -841,178 +986,26 @@ export default function HomePage() {
                             </button>
                         ))}
                     </div>
-                    <button
-                        onClick={() => setShowCustomForm((prev) => !prev)}
-                        className="mt-4 w-full py-3 rounded-xl bg-gradient-to-r from-primary/80 to-blue-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
-                        type="button"
-                    >
-                        <span className="material-symbols-outlined">add_circle</span>
-                        Create Custom Game
-                        <span className="material-symbols-outlined text-base">
-                            {showCustomForm ? 'expand_less' : 'expand_more'}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => navigate('/tournaments')}
-                        className="mt-3 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all"
-                        type="button"
-                    >
-                        <span className="material-symbols-outlined">trophy</span>
-                        Create or Join Tournament
-                    </button>
-                    {showCustomForm ? (
-                        <div className="mt-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 p-4 shadow-sm space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-base font-bold">Custom Challenge</h3>
-                                <button
-                                    type="button"
-                                    className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                                    onClick={() => setShowCustomForm(false)}
-                                >
-                                    Close
-                                </button>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-2">
-                                    <div className="text-xs font-semibold text-slate-500">Opponent</div>
-                                    <input
-                                        value={customOpponentQuery}
-                                        onChange={(event) => setCustomOpponentQuery(event.target.value)}
-                                        placeholder="Search username"
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                    />
-                                    {customOpponentQuery.trim().length >= 2 ? (
-                                        <div className="mt-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 max-h-40 overflow-y-auto">
-                                            {customSearchLoading ? (
-                                                <div className="px-3 py-2 text-[11px] text-slate-500">Searching...</div>
-                                            ) : customSearchResults.length ? (
-                                                customSearchResults.map((result) => (
-                                                    <button
-                                                        key={result.id}
-                                                        type="button"
-                                                        className="w-full px-3 py-2 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between"
-                                                        onClick={() => {
-                                                            setCustomOpponent(result);
-                                                            setCustomOpponentQuery(result.username || '');
-                                                            setCustomSearchResults([]);
-                                                            setCustomSearchError(null);
-                                                        }}
-                                                    >
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                                            {result.username}
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {result.rating_blitz ?? '--'}
-                                                        </span>
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <div className="px-3 py-2 text-[11px] text-slate-500">
-                                                    {customSearchError || 'No users found.'}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : null}
-                                    {customOpponent ? (
-                                        <div className="text-[11px] text-slate-500 flex items-center justify-between">
-                                            <span>Selected: {customOpponent.username}</span>
-                                            <button
-                                                type="button"
-                                                className="text-[11px] text-slate-400 hover:text-slate-700"
-                                                onClick={() => {
-                                                    setCustomOpponent(null);
-                                                    setCustomOpponentQuery('');
-                                                }}
-                                            >
-                                                Clear
-                                            </button>
-                                        </div>
-                                    ) : null}
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="text-xs font-semibold text-slate-500">Color</div>
-                                    <select
-                                        value={customColor}
-                                        onChange={(event) => setCustomColor(event.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                    >
-                                        <option value="auto">Random</option>
-                                        <option value="white">White</option>
-                                        <option value="black">Black</option>
-                                    </select>
-                                    <div className="text-xs font-semibold text-slate-500 mt-4">Rated</div>
-                                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
-                                            checked={customRated}
-                                            onChange={(event) => {
-                                                if (customFormat === 'custom') return;
-                                                setCustomRated(event.target.checked);
-                                            }}
-                                            disabled={customFormat === 'custom'}
-                                        />
-                                        {customFormat === 'custom' ? 'Custom games are unrated' : 'Rated'}
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-xs font-semibold text-slate-500">Format type</div>
-                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                    {customFormatOptions.map((option) => (
-                                        <button
-                                            key={option.id}
-                                            type="button"
-                                            onClick={() => setCustomFormat(option.id)}
-                                            className={`px-3 py-2 rounded-lg text-xs font-semibold border ${
-                                                customFormat === option.id
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300'
-                                            }`}
-                                        >
-                                            <div className="text-xs font-semibold">{option.label}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="space-y-1">
-                                    <div className="text-xs font-semibold text-slate-500">Initial time (minutes)</div>
-                                    <input
-                                        type="number"
-                                        min={0.5}
-                                        step={0.5}
-                                        value={customMinutes}
-                                        onChange={(event) => setCustomMinutes(event.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="text-xs font-semibold text-slate-500">Increment (seconds)</div>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        max={60}
-                                        step={1}
-                                        value={customIncrement}
-                                        onChange={(event) => setCustomIncrement(event.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                    />
-                                </div>
-                            </div>
-                            {customError ? (
-                                <div className="text-xs text-red-500">{customError}</div>
-                            ) : null}
-                            <button
-                                type="button"
-                                className="w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25 disabled:opacity-60"
-                                onClick={handleCreateCustomGame}
-                                disabled={customSubmitting}
-                            >
-                                {customSubmitting ? 'Creating...' : 'Send Challenge'}
-                            </button>
-                        </div>
-                    ) : null}
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                            onClick={toggleCustomForm}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary/80 to-blue-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
+                            type="button"
+                        >
+                            <span className="material-symbols-outlined">add_circle</span>
+                            Create Custom Game
+                        </button>
+                        <button
+                            onClick={toggleBotPanel}
+                            className="group relative w-full overflow-hidden rounded-xl border border-sky-300/35 bg-gradient-to-r from-[#0f4fd8] via-[#0d78dc] to-[#11b8e8] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition-all hover:brightness-105 hover:shadow-sky-400/40 active:scale-[0.99] flex items-center justify-center gap-2.5"
+                            type="button"
+                        >
+                            <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-black/20 ring-1 ring-white/35">
+                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
+                            </span>
+                            <span>Play a Bot</span>
+                        </button>
+                    </div>
                     {queueingControl ? (
                         <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                             <div className="text-xs text-slate-600 dark:text-slate-300">
@@ -1106,10 +1099,258 @@ export default function HomePage() {
                     )}
                 </section>
 
-                {error ? (
-                    <div className="px-4 pb-4 text-sm text-red-500">{error}</div>
+                    {error ? (
+                        <div className="px-4 pb-4 text-sm text-red-500">{error}</div>
+                    ) : null}
+                </div>
+                {isPlayModalOpen ? (
+                    <div
+                        className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+                        onClick={closePlayModal}
+                    >
+                        <div
+                            className={`w-full ${showCustomForm ? 'max-w-6xl' : 'max-w-3xl'} max-h-[90dvh] overflow-y-auto no-scrollbar`}
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            {showCustomForm ? (
+                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 shadow-[0_24px_55px_rgba(7,11,24,0.45)] space-y-4 text-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">Create custom game</h3>
+                                        <button
+                                            type="button"
+                                        className="size-9 rounded-full border border-[#3d5580] bg-[#0d1730] text-slate-400 hover:text-white hover:border-[#4d6aa0] flex items-center justify-center transition-colors"
+                                            onClick={closePlayModal}
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-2 items-start">
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold text-slate-400">Opponent</div>
+                                            <div className="relative">
+                                                <input
+                                                    value={customOpponentQuery}
+                                                    onChange={(event) => setCustomOpponentQuery(event.target.value)}
+                                                    placeholder="Search username"
+                                                    className="h-12 w-full rounded-xl border border-[#2c3f64] bg-[#0d1730] px-4 text-sm font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                                {customOpponentQuery.trim().length >= 2 ? (
+                                                    <div className="absolute z-30 left-0 right-0 top-[calc(100%+8px)] rounded-xl border border-[#2c3f64] bg-[#111d38] max-h-48 overflow-y-auto shadow-2xl shadow-black/30">
+                                                        {customSearchLoading ? (
+                                                            <div className="px-3 py-2 text-[11px] text-slate-400">Searching...</div>
+                                                        ) : customSearchResults.length ? (
+                                                            customSearchResults.map((result) => (
+                                                                <button
+                                                                    key={result.id}
+                                                                    type="button"
+                                                                    className="w-full px-3 py-2 text-left text-xs hover:bg-[#1c2c50] flex items-center justify-between"
+                                                                    onClick={() => {
+                                                                        setCustomOpponent(result);
+                                                                        setCustomOpponentQuery(result.username || '');
+                                                                        setCustomSearchResults([]);
+                                                                        setCustomSearchError(null);
+                                                                    }}
+                                                                >
+                                                                    <span className="font-semibold text-slate-100">
+                                                                        {result.username}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-slate-400">
+                                                                        {result.rating_blitz ?? '--'}
+                                                                    </span>
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="px-3 py-2 text-[11px] text-slate-400">
+                                                                {customSearchError || 'No users found.'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                            <div className="min-h-[18px]">
+                                                {customOpponent ? (
+                                                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                                                        <span>Selected: {customOpponent.username}</span>
+                                                        <button
+                                                            type="button"
+                                                            className="text-[11px] text-slate-300 hover:text-white"
+                                                            onClick={() => {
+                                                                setCustomOpponent(null);
+                                                                setCustomOpponentQuery('');
+                                                            }}
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <div className="text-xs font-semibold text-slate-400">Color</div>
+                                                <select
+                                                    value={customColor}
+                                                    onChange={(event) => setCustomColor(event.target.value)}
+                                                    className="h-12 w-full rounded-xl border border-[#2c3f64] bg-[#0d1730] px-4 text-sm font-semibold text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                >
+                                                    <option value="auto">Random</option>
+                                                    <option value="white">White</option>
+                                                    <option value="black">Black</option>
+                                                </select>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-2">
+                                                    <div className="text-xs font-semibold text-slate-400">Format</div>
+                                                    <select
+                                                        value={customFormat}
+                                                        onChange={(event) => setCustomFormat(event.target.value)}
+                                                        className="h-12 w-full rounded-xl border border-[#2c3f64] bg-[#0d1730] px-4 text-sm font-semibold text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                    >
+                                                        {customFormatOptions.map((option) => (
+                                                            <option key={option.id} value={option.id}>
+                                                                {option.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="text-xs font-semibold text-slate-400">Rated</div>
+                                                    <label className="h-12 rounded-xl border border-[#2c3f64] bg-[#0d1730] px-3 sm:px-4 flex items-center gap-2 sm:gap-3 text-sm font-semibold text-slate-100">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 rounded border-slate-500 text-primary focus:ring-primary/40"
+                                                            checked={customRated}
+                                                            onChange={(event) => {
+                                                                if (customFormat === 'custom') return;
+                                                                setCustomRated(event.target.checked);
+                                                            }}
+                                                            disabled={customFormat === 'custom'}
+                                                        />
+                                                        <span>{customFormat === 'custom' ? 'Unrated (Custom)' : 'Rated'}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold text-slate-400">Minutes</div>
+                                            <input
+                                                type="number"
+                                                min={0.5}
+                                                step={0.5}
+                                                value={customMinutes}
+                                                onChange={(event) => setCustomMinutes(event.target.value)}
+                                                className="h-12 w-full rounded-xl border border-[#2c3f64] bg-[#0d1730] px-4 text-lg font-semibold text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold text-slate-400">Increment (s)</div>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={60}
+                                                step={1}
+                                                value={customIncrement}
+                                                onChange={(event) => setCustomIncrement(event.target.value)}
+                                                className="h-12 w-full rounded-xl border border-[#2c3f64] bg-[#0d1730] px-4 text-lg font-semibold text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            />
+                                        </div>
+                                    </div>
+                                    {customError ? (
+                                        <div className="text-sm text-red-300">{customError}</div>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        className="w-full h-12 rounded-xl bg-primary text-white text-base font-semibold shadow-lg shadow-primary/25 disabled:opacity-60"
+                                        onClick={handleCreateCustomGame}
+                                        disabled={customSubmitting}
+                                    >
+                                        {customSubmitting ? 'Creating...' : 'Send Challenge'}
+                                    </button>
+                                </div>
+                            ) : null}
+                            {showBotPanel ? (
+                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-4 text-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                                            <span className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-[#1a2f4f] ring-1 ring-[#35507f]">
+                                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
+                                            </span>
+                                            Play a Bot
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            className="text-slate-400 hover:text-white"
+                                            onClick={closePlayModal}
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-semibold text-slate-400">Time control</span>
+                                        <select
+                                            value={botMode}
+                                            onChange={(event) => setBotMode(event.target.value)}
+                                            className="text-xs font-semibold rounded-xl border border-[#2c3f64] bg-[#0d1730] px-3 py-2 text-slate-100"
+                                        >
+                                            {botModeOptions.map((option) => (
+                                                <option key={option.id} value={option.id}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {botLoading ? (
+                                        <div className="text-sm text-slate-400">Loading bots...</div>
+                                    ) : (
+                                        <div className="grid gap-3">
+                                            {bots.map((bot) => (
+                                                <div
+                                                    key={bot.id}
+                                                    className="flex items-center justify-between gap-3 rounded-xl border border-[#2c3f64] bg-[#0d1730] p-3"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="size-10 rounded-lg bg-[#263a5e] flex items-center justify-center text-lg shrink-0">
+                                                            {bot.bot_avatar ? (
+                                                                typeof bot.bot_avatar === 'string' && (bot.bot_avatar.startsWith('http') || bot.bot_avatar.startsWith('/')) ? (
+                                                                    <img src={bot.bot_avatar} alt={`${bot.first_name || bot.username || 'Bot'} avatar`} className="h-full w-full object-cover" />
+                                                                ) : (
+                                                                    bot.bot_avatar
+                                                                )
+                                                            ) : (
+                                                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold text-sm truncate">
+                                                                {bot.first_name || bot.username || 'Bot'}
+                                                            </p>
+                                                            <p className="text-xs text-slate-400">Rating {bot.rating ?? '--'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60"
+                                                        type="button"
+                                                        onClick={() => handleCreateBotGame(bot.id)}
+                                                        disabled={botSubmittingId === bot.id}
+                                                    >
+                                                        {botSubmittingId === bot.id ? 'Starting...' : 'Play'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {!bots.length && !botLoading ? (
+                                                <div className="text-sm text-slate-400">No bots available.</div>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                    {botError ? <p className="text-sm text-red-300">{botError}</p> : null}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
                 ) : null}
-            </div>
+            </>
         </Layout>
     );
 }

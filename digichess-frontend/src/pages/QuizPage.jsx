@@ -13,6 +13,11 @@ import { tokenStorage } from '../api/client';
 const TAB_UPCOMING = 'upcoming';
 const TAB_LIVE = 'live';
 const TAB_RESULTS = 'results';
+const QUIZ_TABS = [
+    { id: TAB_UPCOMING, label: 'Upcoming', icon: 'calendar_month', iconClass: 'text-sky-400' },
+    { id: TAB_LIVE, label: 'Live', icon: 'fiber_manual_record', iconClass: 'text-red-400' },
+    { id: TAB_RESULTS, label: 'Results', icon: 'emoji_events', iconClass: 'text-amber-400' },
+];
 
 const STATE_POLL_MS = 4000;
 const LIVE_POLL_MS = 1200;
@@ -1198,46 +1203,47 @@ export default function QuizPage() {
                         <div className={`text-xs px-2 py-1 rounded-full border ${chip.className}`}>{chip.label}</div>
                     </div>
                     <div className="px-4 pb-3">
-                        <div className="inline-flex rounded-lg p-1 bg-slate-200 dark:bg-surface-dark">
-                            <button
-                                type="button"
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-md ${activeTab === TAB_UPCOMING ? 'bg-white dark:bg-primary text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-                                onClick={() => setTabOverride(TAB_UPCOMING)}
-                            >
-                                Upcoming
-                            </button>
-                            <button
-                                type="button"
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
-                                    activeTab === TAB_LIVE
-                                        ? 'bg-white dark:bg-primary text-slate-900 dark:text-white'
-                                        : liveTabEnabled
-                                            ? 'text-slate-500 dark:text-slate-400'
-                                            : 'text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-70'
-                                }`}
-                                onClick={() => {
-                                    if (!liveTabEnabled) return;
-                                    setTabOverride(TAB_LIVE);
-                                }}
-                                disabled={!liveTabEnabled}
-                                title={liveTabEnabled ? 'Live round' : 'Join Quiz first to access live page'}
-                            >
-                                Live
-                            </button>
-                            <button
-                                type="button"
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-md ${activeTab === TAB_RESULTS ? 'bg-white dark:bg-primary text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-                                onClick={() => setTabOverride(TAB_RESULTS)}
-                            >
-                                Results
-                            </button>
+                        <div className="mt-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                            {QUIZ_TABS.map((tab) => {
+                                const isLiveTab = tab.id === TAB_LIVE;
+                                const tabEnabled = isLiveTab ? liveTabEnabled : true;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                            isActive
+                                                ? 'bg-primary text-white shadow-md shadow-primary/25'
+                                                : tabEnabled
+                                                    ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                                                    : 'bg-slate-100 dark:bg-slate-900/70 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-75'
+                                        }`}
+                                        onClick={() => {
+                                            if (!tabEnabled) return;
+                                            setTabOverride(tab.id);
+                                        }}
+                                        disabled={!tabEnabled}
+                                        title={isLiveTab && !tabEnabled ? 'Join Quiz first to access live page' : tab.label}
+                                    >
+                                        <span
+                                            className={`material-symbols-outlined leading-none ${
+                                                tab.id === TAB_LIVE ? 'text-[12px]' : 'text-[16px]'
+                                            } ${isActive ? 'text-white' : tab.iconClass}`}
+                                        >
+                                            {tab.icon}
+                                        </span>
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </header>
 
                 <div className={activeTab === TAB_LIVE
-                    ? 'px-4 py-3 md:px-6 max-w-7xl mx-auto'
-                    : 'px-4 py-4 md:px-6 max-w-7xl mx-auto space-y-4'}
+                    ? 'px-4 py-3 md:px-6'
+                    : 'px-4 py-4 md:px-6 space-y-4'}
                 >
                     {stateLoading ? (
                         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark p-5 text-sm text-slate-500 dark:text-slate-400">
