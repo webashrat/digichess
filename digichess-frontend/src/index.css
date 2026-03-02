@@ -73,3 +73,15 @@
 .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Hide native datetime icon so custom picker button is the only visible icon */
+.tournament-datetime-input::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    display: none;
+    -webkit-appearance: none;
+}
+
+.tournament-datetime-input::-webkit-clear-button,
+.tournament-datetime-input::-webkit-inner-spin-button {
+    display: none;
+}

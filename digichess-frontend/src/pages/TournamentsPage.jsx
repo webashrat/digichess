@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import { createTournament, listTournaments } from '../api';
@@ -23,6 +23,13 @@ const timeControlOptions = [
     { id: 'rapid', label: 'Rapid' },
     { id: 'classical', label: 'Classical' },
 ];
+
+const timeControlDefaults = {
+    bullet: { minutes: 1, increment: 0 },
+    blitz: { minutes: 3, increment: 0 },
+    rapid: { minutes: 10, increment: 0 },
+    classical: { minutes: 30, increment: 0 },
+};
 
 const normalizeStatus = (status) => {
     if (!status) return 'pending';
@@ -58,7 +65,7 @@ const defaultForm = {
     description: '',
     type: 'arena',
     time_control: 'blitz',
-    initial_time_seconds: 300,
+    initial_time_minutes: 3,
     increment_seconds: 0,
     start_at: '',
     swiss_rounds: 3,
@@ -91,6 +98,7 @@ export default function TournamentsPage() {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState(null);
     const [form, setForm] = useState(defaultForm);
+    const startAtInputRef = useRef(null);
 
     const loadTournaments = useCallback(async () => {
         try {
@@ -118,6 +126,17 @@ export default function TournamentsPage() {
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        if (!showCreate) return undefined;
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setShowCreate(false);
+            }
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [showCreate]);
+
     const filtered = useMemo(
         () => tournaments.filter((tournament) => normalizeStatus(tournament.status) === statusFilter),
         [tournaments, statusFilter],
@@ -135,6 +154,16 @@ export default function TournamentsPage() {
 
     const updateForm = (key, value) => {
         setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleTimeControlChange = (value) => {
+        const preset = timeControlDefaults[value];
+        setForm((prev) => ({
+            ...prev,
+            time_control: value,
+            initial_time_minutes: preset ? preset.minutes : prev.initial_time_minutes,
+            increment_seconds: preset ? preset.increment : prev.increment_seconds,
+        }));
     };
 
     const onSubmitCreate = async (event) => {
@@ -155,7 +184,7 @@ export default function TournamentsPage() {
             description: form.description.trim(),
             type: form.type,
             time_control: form.time_control,
-            initial_time_seconds: Number(form.initial_time_seconds),
+            initial_time_seconds: Number(form.initial_time_minutes) * 60,
             increment_seconds: Number(form.increment_seconds),
             start_at: startAtIso,
             rated: Boolean(form.rated),
@@ -183,7 +212,7 @@ export default function TournamentsPage() {
     };
 
     return (
-        <Layout showHeader={false}>
+        <Layout showHeader={false} showBottomNav={!showCreate}>
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
                     <button
@@ -284,133 +313,265 @@ export default function TournamentsPage() {
             </div>
 
             {showCreate ? (
-                <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm p-4 flex items-end sm:items-center justify-center">
+                <div
+                    className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm p-3 sm:p-4 flex items-end sm:items-center justify-center overflow-y-auto"
+                    onPointerDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setShowCreate(false);
+                        }
+                    }}
+                >
                     <form
-                        className="w-full sm:max-w-xl bg-white dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3"
+                        className="w-full sm:max-w-2xl lg:max-w-4xl max-h-[calc(100dvh-7rem)] sm:max-h-[min(90dvh,56rem)] overflow-y-auto no-scrollbar bg-white dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4 space-y-3"
                         onSubmit={onSubmitCreate}
+                        onPointerDown={(event) => event.stopPropagation()}
                         data-testid="tournament-create-modal"
                     >
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Create Tournament</h2>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Create Tournament</h2>
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                                    Configure format, clock and schedule before publishing.
+                                </p>
+                            </div>
                             <button
                                 type="button"
-                                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-800 hover:border-slate-400 dark:hover:text-slate-100 dark:hover:border-slate-500 transition-colors"
                                 onClick={() => setShowCreate(false)}
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <span className="material-symbols-outlined text-[22px]">close</span>
                             </button>
                         </div>
 
-                        <input
-                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                            placeholder="Tournament name"
-                            value={form.name}
-                            onChange={(e) => updateForm('name', e.target.value)}
-                            maxLength={255}
-                            data-testid="create-tournament-name"
-                            required
-                        />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <section className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/35 p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                    <span className="material-symbols-outlined text-[18px] text-primary">edit_note</span>
+                                    Basic details
+                                </div>
+                                <label className="block space-y-1.5">
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Tournament name</span>
+                                    <input
+                                        className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+                                        placeholder="Enter tournament name"
+                                        value={form.name}
+                                        onChange={(e) => updateForm('name', e.target.value)}
+                                        maxLength={255}
+                                        data-testid="create-tournament-name"
+                                        required
+                                    />
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Description</span>
+                                    <textarea
+                                        className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm min-h-[72px]"
+                                        placeholder="Short tournament description"
+                                        value={form.description}
+                                        onChange={(e) => updateForm('description', e.target.value)}
+                                        data-testid="create-tournament-description"
+                                    />
+                                </label>
+                            </section>
 
-                        <textarea
-                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm min-h-[70px]"
-                            placeholder="Description"
-                            value={form.description}
-                            onChange={(e) => updateForm('description', e.target.value)}
-                            data-testid="create-tournament-description"
-                        />
+                            <section className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/35 p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                    <span className="material-symbols-outlined text-[18px] text-primary">tune</span>
+                                    Format
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label className="block space-y-1.5">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Tournament type</span>
+                                        <select
+                                            className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+                                            value={form.type}
+                                            onChange={(e) => updateForm('type', e.target.value)}
+                                            data-testid="create-tournament-type"
+                                        >
+                                            {tournamentTypeOptions.map((option) => (
+                                                <option key={option.id} value={option.id}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="block space-y-1.5">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Time control</span>
+                                        <select
+                                            className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+                                            value={form.time_control}
+                                            onChange={(e) => handleTimeControlChange(e.target.value)}
+                                            data-testid="create-tournament-time-control"
+                                        >
+                                            {timeControlOptions.map((option) => (
+                                                <option key={option.id} value={option.id}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <select
-                                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.type}
-                                onChange={(e) => updateForm('type', e.target.value)}
-                                data-testid="create-tournament-type"
-                            >
-                                {tournamentTypeOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>{option.label}</option>
-                                ))}
-                            </select>
-                            <select
-                                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.time_control}
-                                onChange={(e) => updateForm('time_control', e.target.value)}
-                                data-testid="create-tournament-time-control"
-                            >
-                                {timeControlOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>{option.label}</option>
-                                ))}
-                            </select>
+                                <label className="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-3 py-2">
+                                    <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        <span className="material-symbols-outlined text-[18px] text-amber-500">workspace_premium</span>
+                                        Rated tournament
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={form.rated}
+                                        onChange={(e) => updateForm('rated', e.target.checked)}
+                                        className="h-4 w-4 accent-primary"
+                                    />
+                                </label>
+                            </section>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                            <input
-                                type="number"
-                                min="30"
-                                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.initial_time_seconds}
-                                onChange={(e) => updateForm('initial_time_seconds', e.target.value)}
-                                placeholder="Initial sec"
-                                data-testid="create-tournament-initial-seconds"
-                            />
-                            <input
-                                type="number"
-                                min="0"
-                                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.increment_seconds}
-                                onChange={(e) => updateForm('increment_seconds', e.target.value)}
-                                placeholder="Increment"
-                                data-testid="create-tournament-increment-seconds"
-                            />
-                            <input
-                                type="datetime-local"
-                                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.start_at}
-                                onChange={(e) => updateForm('start_at', e.target.value)}
-                                data-testid="create-tournament-start-at"
-                                required
-                            />
-                        </div>
+                        <section className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/35 p-3 space-y-2.5">
+                            <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
+                                Clock & schedule
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className="block space-y-1.5">
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">timer</span>
+                                        Initial time
+                                    </span>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            inputMode="numeric"
+                                            className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 pr-16 text-sm"
+                                            value={form.initial_time_minutes}
+                                            onChange={(e) => updateForm('initial_time_minutes', e.target.value)}
+                                            placeholder="3"
+                                            data-testid="create-tournament-initial-seconds"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                                            min
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Blitz default: 3 min</p>
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">add_alarm</span>
+                                        Increment / move
+                                    </span>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            inputMode="numeric"
+                                            className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 pr-14 text-sm"
+                                            value={form.increment_seconds}
+                                            onChange={(e) => updateForm('increment_seconds', e.target.value)}
+                                            placeholder="0"
+                                            data-testid="create-tournament-increment-seconds"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                                            sec
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Blitz default: 0 sec</p>
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">calendar_month</span>
+                                        Start date & time
+                                    </span>
+                                    <div className="relative">
+                                        <input
+                                            ref={startAtInputRef}
+                                            type="datetime-local"
+                                            className="tournament-datetime-input w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-11 py-2 text-sm"
+                                            value={form.start_at}
+                                            onChange={(e) => updateForm('start_at', e.target.value)}
+                                            data-testid="create-tournament-start-at"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                            onClick={() => {
+                                                if (startAtInputRef.current?.showPicker) {
+                                                    startAtInputRef.current.showPicker();
+                                                } else {
+                                                    startAtInputRef.current?.focus();
+                                                }
+                                            }}
+                                            aria-label="Open date and time picker"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">event</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Pick your local start date and time</p>
+                                </label>
 
-                        {form.type === 'arena' ? (
-                            <input
-                                type="number"
-                                min="1"
-                                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.arena_duration_minutes}
-                                onChange={(e) => updateForm('arena_duration_minutes', e.target.value)}
-                                placeholder="Arena duration (minutes)"
-                                data-testid="create-tournament-arena-duration"
-                            />
-                        ) : null}
+                                {form.type === 'arena' ? (
+                                    <label className="block space-y-1.5">
+                                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                            <span className="material-symbols-outlined text-[16px] text-slate-400">sports_score</span>
+                                            Arena duration
+                                        </span>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                inputMode="numeric"
+                                                className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 pr-14 text-sm"
+                                                value={form.arena_duration_minutes}
+                                                onChange={(e) => updateForm('arena_duration_minutes', e.target.value)}
+                                                placeholder="30"
+                                                data-testid="create-tournament-arena-duration"
+                                            />
+                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                                                min
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">Duration in minutes (default: 30)</p>
+                                    </label>
+                                ) : null}
 
-                        {form.type === 'swiss' ? (
-                            <input
-                                type="number"
-                                min="1"
-                                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                                value={form.swiss_rounds}
-                                onChange={(e) => updateForm('swiss_rounds', e.target.value)}
-                                placeholder="Swiss rounds"
-                                data-testid="create-tournament-swiss-rounds"
-                            />
-                        ) : null}
+                                {form.type === 'swiss' ? (
+                                    <label className="block space-y-1.5">
+                                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                            <span className="material-symbols-outlined text-[16px] text-slate-400">format_list_numbered</span>
+                                            Swiss rounds
+                                        </span>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            inputMode="numeric"
+                                            className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm"
+                                            value={form.swiss_rounds}
+                                            onChange={(e) => updateForm('swiss_rounds', e.target.value)}
+                                            placeholder="5"
+                                            data-testid="create-tournament-swiss-rounds"
+                                        />
+                                    </label>
+                                ) : null}
+                            </div>
+                        </section>
 
-                        <input
-                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                            value={form.password}
-                            onChange={(e) => updateForm('password', e.target.value)}
-                            placeholder="Entry code (optional)"
-                            data-testid="create-tournament-password"
-                        />
-
-                        <label className="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                            <input
-                                type="checkbox"
-                                checked={form.rated}
-                                onChange={(e) => updateForm('rated', e.target.checked)}
-                            />
-                            Rated tournament
-                        </label>
+                        <section className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/35 p-3 space-y-2.5">
+                            <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                <span className="material-symbols-outlined text-[18px] text-primary">lock</span>
+                                Access
+                            </div>
+                            <label className="block space-y-1.5">
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Entry code (optional)</span>
+                                <div className="relative">
+                                    <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">
+                                        key
+                                    </span>
+                                    <input
+                                        className="w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3 py-2 text-sm"
+                                        value={form.password}
+                                        onChange={(e) => updateForm('password', e.target.value)}
+                                        placeholder="Leave empty for public tournament"
+                                        data-testid="create-tournament-password"
+                                    />
+                                </div>
+                            </label>
+                        </section>
 
                         {createError ? <p className="text-xs text-red-500">{createError}</p> : null}
 
