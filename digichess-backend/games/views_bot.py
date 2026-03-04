@@ -12,12 +12,29 @@ from .models import Game
 from .serializers import GameSerializer
 
 
+TIER_RANGES = [
+    ('beginner', 0, 1200),
+    ('intermediate', 1201, 1600),
+    ('advanced', 1601, 2000),
+    ('expert', 2001, 2400),
+    ('master', 2401, 9999),
+]
+
+
+def _rating_tier(rating: int) -> str:
+    for label, lo, hi in TIER_RANGES:
+        if lo <= rating <= hi:
+            return label
+    return 'beginner'
+
+
 class BotListView(APIView):
-    """List all available bots"""
+    """List all available bots with full metadata."""
     permission_classes = [permissions.AllowAny]
-    
+
     def get(self, request):
         mode = request.query_params.get('mode', 'blitz')
+        tier = request.query_params.get('tier', '')
         rating_field_map = {
             'bullet': 'rating_bullet',
             'blitz': 'rating_blitz',
@@ -25,27 +42,33 @@ class BotListView(APIView):
             'classical': 'rating_classical',
         }
         rating_field = rating_field_map.get(mode, 'rating_blitz')
-        
-        # Only show DIGI, JDR, and RAJ bots
-        allowed_bot_names = ['DIGI', 'JDR', 'RAJ']
+
         bots = User.objects.filter(
-            is_bot=True, 
+            is_bot=True,
             is_active=True,
-            first_name__in=allowed_bot_names
         ).order_by(rating_field)
-        
+
         bot_list = []
         for bot in bots:
             rating = getattr(bot, rating_field, 800)
+            bot_tier = _rating_tier(rating)
+
+            if tier and bot_tier != tier:
+                continue
+
             bot_list.append({
                 'id': bot.id,
                 'username': bot.username,
                 'first_name': bot.first_name,
-                'bot_avatar': bot.bot_avatar or '🤖',
+                'bot_avatar': bot.bot_avatar or '\U0001f916',
                 'rating': rating,
                 'mode': mode,
+                'bio': bot.bio or '',
+                'bot_engine': bot.bot_engine or 'maia',
+                'bot_play_style': bot.bot_play_style or '',
+                'difficulty_tier': bot_tier,
             })
-        
+
         return Response({'bots': bot_list})
 
 

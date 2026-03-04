@@ -201,19 +201,22 @@ export default function GamePage() {
         const computeSize = () => {
             const topHeight = topBarRef.current?.getBoundingClientRect().height || 0;
             const bottomHeight = bottomBarRef.current?.getBoundingClientRect().height || 0;
+            const headerHeight = 52;
             const verticalPadding = 16;
-            const availableHeight = window.innerHeight - topHeight - bottomHeight - verticalPadding;
-            const size = Math.floor(Math.min(window.innerWidth, availableHeight));
+            const availableHeight = window.innerHeight - topHeight - bottomHeight - headerHeight - verticalPadding;
+            const maxWidth = window.innerWidth;
+            const size = Math.floor(Math.min(maxWidth, Math.max(200, availableHeight)));
             setMobileBoardSize(size > 0 ? size : null);
         };
-        computeSize();
+        const raf = requestAnimationFrame(computeSize);
         window.addEventListener('resize', computeSize);
         window.addEventListener('orientationchange', computeSize);
         return () => {
+            cancelAnimationFrame(raf);
             window.removeEventListener('resize', computeSize);
             window.removeEventListener('orientationchange', computeSize);
         };
-    }, [isMobileLayout]);
+    }, [isMobileLayout, game?.id]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;

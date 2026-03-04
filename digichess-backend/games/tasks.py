@@ -216,6 +216,7 @@ def make_bot_move_async(game_id: int):
     }
     rating_field = rating_field_map.get(game.time_control, 'rating_blitz')
     bot_rating = getattr(current_player, rating_field, 800)
+    bot_engine = getattr(current_player, 'bot_engine', None) or 'maia'
     
     # Get bot move - use Lichess APIs for optimization
     move_list = (game.moves or "").strip().split()
@@ -226,7 +227,8 @@ def make_bot_move_async(game_id: int):
             board, 
             bot_rating,
             time_control=game.time_control,
-            ply_count=ply_count
+            ply_count=ply_count,
+            engine=bot_engine,
         )
         move_san = board.san(bot_move)
         
