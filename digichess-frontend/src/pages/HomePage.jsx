@@ -898,7 +898,7 @@ export default function HomePage() {
                         onClick={closePlayModal}
                     >
                         <div
-                            className={`w-full ${showCustomForm ? 'max-w-6xl' : 'max-w-3xl'} max-h-[90dvh] overflow-y-auto no-scrollbar`}
+                            className={`w-full ${showCustomForm ? 'max-w-6xl' : 'max-w-3xl'} max-h-[90dvh] overflow-y-auto no-scrollbar pb-6`}
                             onClick={(event) => event.stopPropagation()}
                         >
                             {showCustomForm ? (
@@ -1060,10 +1060,12 @@ export default function HomePage() {
                                 </div>
                             ) : null}
                             {showBotPanel ? (
-                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-4 text-slate-100">
+                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 mb-4 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-4 text-slate-100">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-sky-400">smart_toy</span>
+                                            <span className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-[#1a2f4f] ring-1 ring-[#35507f]">
+                                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
+                                            </span>
                                             Play a Bot
                                         </h3>
                                         <button type="button" className="text-slate-400 hover:text-white" onClick={closePlayModal}>
@@ -1106,7 +1108,7 @@ export default function HomePage() {
                                     {botLoading ? (
                                         <div className="text-sm text-slate-400 py-4 text-center">Loading bots...</div>
                                     ) : (
-                                        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1 scrollbar-thin">
+                                        <div className="space-y-4 pr-1 pb-4">
                                             {TIER_ORDER.map((tier) => {
                                                 const tierBots = groupedBots[tier];
                                                 if (!tierBots?.length) return null;
