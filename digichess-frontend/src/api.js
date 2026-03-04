@@ -17,6 +17,7 @@ export const resendOtp = (email) =>
 
 export const logout = () => api.post('/accounts/logout/');
 export const refreshSession = () => refreshAccessToken();
+export const pingPresence = () => api.post('/accounts/ping/');
 
 export const fetchMe = () => api.get('/accounts/me/');
 
