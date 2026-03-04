@@ -181,6 +181,7 @@ class GameMoveView(APIView):
         }
         rating_field = rating_field_map.get(game.time_control, "rating_blitz")
         bot_rating = getattr(bot_player, rating_field, 800)
+        bot_engine = getattr(bot_player, 'bot_engine', None) or 'maia'
 
         move_list = (game.moves or "").strip().split()
         ply_count = len(move_list)
@@ -191,6 +192,7 @@ class GameMoveView(APIView):
                 bot_rating,
                 time_control=game.time_control,
                 ply_count=ply_count,
+                engine=bot_engine,
             )
             move_san = board.san(bot_move)
         except Exception as e:

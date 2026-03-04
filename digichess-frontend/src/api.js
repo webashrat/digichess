@@ -152,7 +152,8 @@ export const cancelMatchmaking = (time_control) =>
 
 export const queueStatus = () => api.get('/games/matchmaking/status/');
 
-export const listBots = (mode = 'blitz') => api.get(`/games/bots/?mode=${mode}`);
+export const listBots = (mode = 'blitz', tier = '') =>
+    api.get(`/games/bots/?mode=${mode}${tier ? `&tier=${tier}` : ''}`);
 
 export const createBotGame = (botId, payload = {}) =>
     api.post('/games/bots/create-game/', { bot_id: botId, ...payload });

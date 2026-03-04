@@ -48,6 +48,15 @@ const customFormatPresets = {
 const botModeOptions = quickPlayCards.map((card) => ({ id: card.id, label: card.label }));
 const JIANG_BOT_IMAGE = '/images/jiang-bot.png';
 
+const TIER_ORDER = ['beginner', 'intermediate', 'advanced', 'expert', 'master'];
+const TIER_CONFIG = {
+    beginner:     { label: 'Beginner',      color: 'text-green-400',  bg: 'bg-green-500/20',  border: 'border-green-500/30' },
+    intermediate: { label: 'Intermediate',  color: 'text-amber-400',  bg: 'bg-amber-500/20',  border: 'border-amber-500/30' },
+    advanced:     { label: 'Advanced',      color: 'text-blue-400',   bg: 'bg-blue-500/20',   border: 'border-blue-500/30' },
+    expert:       { label: 'Expert',        color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30' },
+    master:       { label: 'Master',        color: 'text-red-400',    bg: 'bg-red-500/20',    border: 'border-red-500/30' },
+};
+
 
 const getRatingForControl = (user, control) => {
     if (!user) return null;
@@ -117,6 +126,7 @@ export default function HomePage() {
     const [customError, setCustomError] = useState(null);
     const [showBotPanel, setShowBotPanel] = useState(false);
     const [botMode, setBotMode] = useState('blitz');
+    const [botTier, setBotTier] = useState('');
     const [bots, setBots] = useState([]);
     const [botLoading, setBotLoading] = useState(false);
     const [botError, setBotError] = useState(null);
@@ -257,7 +267,7 @@ export default function HomePage() {
             setBotLoading(true);
             setBotError(null);
             try {
-                const data = await listBots(botMode);
+                const data = await listBots(botMode, botTier);
                 if (!active) return;
                 setBots(data?.bots || []);
             } catch (err) {
@@ -274,7 +284,17 @@ export default function HomePage() {
         return () => {
             active = false;
         };
-    }, [showBotPanel, botMode]);
+    }, [showBotPanel, botMode, botTier]);
+
+    const groupedBots = useMemo(() => {
+        const groups = {};
+        for (const bot of bots) {
+            const tier = bot.difficulty_tier || 'beginner';
+            if (!groups[tier]) groups[tier] = [];
+            groups[tier].push(bot);
+        }
+        return groups;
+    }, [bots]);
 
     useEffect(() => {
         if (showNotifications) {
@@ -1043,73 +1063,108 @@ export default function HomePage() {
                                 <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-4 text-slate-100">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                                            <span className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-[#1a2f4f] ring-1 ring-[#35507f]">
-                                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
-                                            </span>
+                                            <span className="material-symbols-outlined text-sky-400">smart_toy</span>
                                             Play a Bot
                                         </h3>
-                                        <button
-                                            type="button"
-                                            className="text-slate-400 hover:text-white"
-                                            onClick={closePlayModal}
-                                        >
+                                        <button type="button" className="text-slate-400 hover:text-white" onClick={closePlayModal}>
                                             <span className="material-symbols-outlined">close</span>
                                         </button>
                                     </div>
+
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="text-xs font-semibold text-slate-400">Time control</span>
                                         <select
                                             value={botMode}
-                                            onChange={(event) => setBotMode(event.target.value)}
+                                            onChange={(e) => setBotMode(e.target.value)}
                                             className="text-xs font-semibold rounded-xl border border-[#2c3f64] bg-[#0d1730] px-3 py-2 text-slate-100"
                                         >
-                                            {botModeOptions.map((option) => (
-                                                <option key={option.id} value={option.id}>
-                                                    {option.label}
-                                                </option>
+                                            {botModeOptions.map((opt) => (
+                                                <option key={opt.id} value={opt.id}>{opt.label}</option>
                                             ))}
                                         </select>
                                     </div>
+
+                                    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                                        <button
+                                            type="button"
+                                            onClick={() => setBotTier('')}
+                                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${!botTier ? 'bg-sky-500/30 text-sky-300 ring-1 ring-sky-400/40' : 'bg-[#0d1730] text-slate-400 hover:text-slate-200'}`}
+                                        >All</button>
+                                        {TIER_ORDER.map((t) => {
+                                            const cfg = TIER_CONFIG[t];
+                                            return (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setBotTier(t)}
+                                                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${botTier === t ? `${cfg.bg} ${cfg.color} ring-1 ${cfg.border}` : 'bg-[#0d1730] text-slate-400 hover:text-slate-200'}`}
+                                                >{cfg.label}</button>
+                                            );
+                                        })}
+                                    </div>
+
                                     {botLoading ? (
-                                        <div className="text-sm text-slate-400">Loading bots...</div>
+                                        <div className="text-sm text-slate-400 py-4 text-center">Loading bots...</div>
                                     ) : (
-                                        <div className="grid gap-3">
-                                            {bots.map((bot) => (
-                                                <div
-                                                    key={bot.id}
-                                                    className="flex items-center justify-between gap-3 rounded-xl border border-[#2c3f64] bg-[#0d1730] p-3"
-                                                >
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="size-10 rounded-lg bg-[#263a5e] flex items-center justify-center text-lg shrink-0">
-                                                            {bot.bot_avatar ? (
-                                                                typeof bot.bot_avatar === 'string' && (bot.bot_avatar.startsWith('http') || bot.bot_avatar.startsWith('/')) ? (
-                                                                    <img src={bot.bot_avatar} alt={`${bot.first_name || bot.username || 'Bot'} avatar`} className="h-full w-full object-cover" />
-                                                                ) : (
-                                                                    bot.bot_avatar
-                                                                )
-                                                            ) : (
-                                                                <img src={JIANG_BOT_IMAGE} alt="Jiang bot" className="h-full w-full object-cover" />
-                                                            )}
+                                        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1 scrollbar-thin">
+                                            {TIER_ORDER.map((tier) => {
+                                                const tierBots = groupedBots[tier];
+                                                if (!tierBots?.length) return null;
+                                                const cfg = TIER_CONFIG[tier];
+                                                return (
+                                                    <div key={tier}>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className={`text-[11px] font-bold uppercase tracking-wider ${cfg.color}`}>{cfg.label}</span>
+                                                            <div className="flex-1 h-px bg-[#2c3f64]" />
                                                         </div>
-                                                        <div className="min-w-0">
-                                                            <p className="font-semibold text-sm truncate">
-                                                                {bot.first_name || bot.username || 'Bot'}
-                                                            </p>
-                                                            <p className="text-xs text-slate-400">Rating {bot.rating ?? '--'}</p>
+                                                        <div className="grid gap-2">
+                                                            {tierBots.map((bot) => (
+                                                                <div
+                                                                    key={bot.id}
+                                                                    className="flex items-center gap-3 rounded-xl border border-[#2c3f64] bg-[#0d1730] p-2.5 hover:border-[#3d5a8a] transition-colors"
+                                                                >
+                                                                    <div className="size-11 rounded-lg bg-[#263a5e] flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                                                                        {bot.bot_avatar ? (
+                                                                            typeof bot.bot_avatar === 'string' && (bot.bot_avatar.startsWith('http') || bot.bot_avatar.startsWith('/')) ? (
+                                                                                <img src={bot.bot_avatar} alt={bot.first_name || 'Bot'} className="h-full w-full object-cover" />
+                                                                            ) : (
+                                                                                <span className="text-xl">{bot.bot_avatar}</span>
+                                                                            )
+                                                                        ) : (
+                                                                            <span className="text-xl">{'\u{1f916}'}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <p className="font-semibold text-sm truncate">{bot.first_name || bot.username || 'Bot'}</p>
+                                                                            {bot.bot_engine === 'stockfish' ? (
+                                                                                <span className="shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 ring-1 ring-red-500/30">SF</span>
+                                                                            ) : null}
+                                                                            {bot.bot_play_style ? (
+                                                                                <span className={`shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color}`}>{bot.bot_play_style}</span>
+                                                                            ) : null}
+                                                                        </div>
+                                                                        <p className="text-xs text-slate-400">{bot.rating ?? '--'} Rating</p>
+                                                                        {bot.bio ? (
+                                                                            <p className="text-[11px] text-slate-500 truncate mt-0.5">{bot.bio}</p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                    <button
+                                                                        className="shrink-0 bg-primary text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 hover:brightness-110 transition"
+                                                                        type="button"
+                                                                        onClick={() => handleCreateBotGame(bot.id)}
+                                                                        disabled={botSubmittingId === bot.id}
+                                                                    >
+                                                                        {botSubmittingId === bot.id ? 'Starting...' : 'Play'}
+                                                                    </button>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60"
-                                                        type="button"
-                                                        onClick={() => handleCreateBotGame(bot.id)}
-                                                        disabled={botSubmittingId === bot.id}
-                                                    >
-                                                        {botSubmittingId === bot.id ? 'Starting...' : 'Play'}
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                             {!bots.length && !botLoading ? (
-                                                <div className="text-sm text-slate-400">No bots available.</div>
+                                                <div className="text-sm text-slate-400 text-center py-4">No bots available.</div>
                                             ) : null}
                                         </div>
                                     )}
