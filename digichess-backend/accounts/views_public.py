@@ -93,4 +93,23 @@ class PublicUserDetailView(APIView):
         user = User.objects.filter(username__iexact=username, is_active=True).first()
         if not user:
             return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(UserDetailSerializer(user).data)
+        data = UserDetailSerializer(user).data
+        if request.user.is_authenticated and request.user.id != user.id:
+            from social.models import Friendship, FriendRequest
+            if Friendship.are_friends(request.user, user):
+                data["friendship_status"] = "friends"
+            elif FriendRequest.objects.filter(
+                from_user=request.user, to_user=user, status=FriendRequest.STATUS_PENDING
+            ).exists():
+                data["friendship_status"] = "request_sent"
+            elif FriendRequest.objects.filter(
+                from_user=user, to_user=request.user, status=FriendRequest.STATUS_PENDING
+            ).exists():
+                req = FriendRequest.objects.filter(
+                    from_user=user, to_user=request.user, status=FriendRequest.STATUS_PENDING
+                ).first()
+                data["friendship_status"] = "request_received"
+                data["incoming_request_id"] = req.id if req else None
+            else:
+                data["friendship_status"] = "none"
+        return Response(data)

@@ -642,22 +642,15 @@ export default function GamePage() {
         const isWhitePiece = piece === piece.toUpperCase();
         const targets = [];
         const addTarget = (r, c) => {
-            if (r < 0 || r > 7 || c < 0 || c > 7) return false;
-            const targetPiece = board?.[r]?.[c];
-            if (targetPiece) {
-                const targetIsWhite = targetPiece === targetPiece.toUpperCase();
-                if (targetIsWhite === isWhitePiece) return false;
+            if (r >= 0 && r <= 7 && c >= 0 && c <= 7) {
                 targets.push(`${FILES[c]}${8 - r}`);
-                return false;
             }
-            targets.push(`${FILES[c]}${8 - r}`);
-            return true;
         };
         const slide = (dr, dc) => {
             let r = row + dr;
             let c = col + dc;
             while (r >= 0 && r <= 7 && c >= 0 && c <= 7) {
-                if (!addTarget(r, c)) break;
+                addTarget(r, c);
                 r += dr;
                 c += dc;
             }
@@ -668,23 +661,10 @@ export default function GamePage() {
             const startRow = isWhitePiece ? 6 : 1;
             const oneRow = row + dir;
             if (oneRow >= 0 && oneRow <= 7) {
-                if (!board?.[oneRow]?.[col]) {
-                    addTarget(oneRow, col);
-                    const twoRow = row + dir * 2;
-                    if (row === startRow && !board?.[twoRow]?.[col]) {
-                        addTarget(twoRow, col);
-                    }
-                }
-                [-1, 1].forEach((dc) => {
-                    const c = col + dc;
-                    if (c < 0 || c > 7) return;
-                    const targetPiece = board?.[oneRow]?.[c];
-                    if (!targetPiece) return;
-                    const targetIsWhite = targetPiece === targetPiece.toUpperCase();
-                    if (targetIsWhite !== isWhitePiece) {
-                        targets.push(`${FILES[c]}${8 - oneRow}`);
-                    }
-                });
+                addTarget(oneRow, col);
+                if (row === startRow) addTarget(row + dir * 2, col);
+                if (col > 0) addTarget(oneRow, col - 1);
+                if (col < 7) addTarget(oneRow, col + 1);
             }
             break;
         }
@@ -1733,16 +1713,17 @@ export default function GamePage() {
         }
         setPendingMove(true);
         setError(null);
+        const local = applyLocalMove(uciMove, 'uci');
+        if (local) {
+            setOptimisticState({
+                fen: local.fen,
+                moves: local.moves,
+                legal_moves: local.legal_moves,
+            });
+            setLastMoveUci(local.uci);
+        }
+        setPendingMove(false);
         try {
-            const local = applyLocalMove(uciMove, 'uci');
-            if (local) {
-                setOptimisticState({
-                    fen: local.fen,
-                    moves: local.moves,
-                    legal_moves: local.legal_moves,
-                });
-                setLastMoveUci(local.uci);
-            }
             const sanMove = local?.san || moveMap.get(uciMove);
             if (!sanMove) {
                 throw new Error('Move not available yet. Please try again.');
@@ -1754,8 +1735,6 @@ export default function GamePage() {
                 setError(message);
             }
             setOptimisticState(null);
-        } finally {
-            setPendingMove(false);
         }
     }, [applyLocalMove, canInteract, currentStatus, gameId, isAuthenticated, moveMap, navigate, pendingMove]);
 

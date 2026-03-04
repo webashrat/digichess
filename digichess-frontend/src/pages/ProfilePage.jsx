@@ -10,7 +10,9 @@ import {
     fetchPublicAccount,
     fetchRatingHistory,
     fetchUserGames,
+    respondFriendRequest,
     sendFriendRequest,
+    unfriend,
     updateProfile,
 } from '../api';
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
@@ -272,6 +274,7 @@ export default function ProfilePage() {
     const [error, setError] = useState(null);
     const [friendState, setFriendState] = useState('idle');
     const [friendError, setFriendError] = useState(null);
+    const [incomingRequestId, setIncomingRequestId] = useState(null);
     const [activeGame, setActiveGame] = useState(null);
     const [activeGameLoading, setActiveGameLoading] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
@@ -313,7 +316,17 @@ export default function ProfilePage() {
         let active = true;
         fetchPublicAccount(profileUsername)
             .then((data) => {
-                if (active) setProfileUser(data);
+                if (!active) return;
+                setProfileUser(data);
+                const fs = data?.friendship_status;
+                if (fs === 'friends') setFriendState('friends');
+                else if (fs === 'request_sent') setFriendState('sent');
+                else if (fs === 'request_received') {
+                    setFriendState('received');
+                    setIncomingRequestId(data?.incoming_request_id || null);
+                } else {
+                    setFriendState('idle');
+                }
             })
             .catch(() => {
                 if (active) setProfileUser(null);
@@ -521,7 +534,7 @@ export default function ProfilePage() {
     const displayCountryCode = useMemo(() => normalizeCountryCode(displayUser?.country), [displayUser?.country]);
 
     const handleFriendRequest = async () => {
-        if (!displayUser?.id || friendState === 'loading' || friendState === 'sent') return;
+        if (!displayUser?.id || friendState === 'loading' || friendState === 'sent' || friendState === 'friends') return;
         setFriendError(null);
         setFriendState('loading');
         try {
@@ -530,6 +543,45 @@ export default function ProfilePage() {
         } catch (err) {
             setFriendState('idle');
             setFriendError(err?.message || 'Could not send request.');
+        }
+    };
+
+    const handleUnfriend = async () => {
+        if (!displayUser?.id || friendState === 'loading') return;
+        setFriendError(null);
+        setFriendState('loading');
+        try {
+            await unfriend(displayUser.id);
+            setFriendState('idle');
+        } catch (err) {
+            setFriendState('friends');
+            setFriendError(err?.message || 'Could not unfriend.');
+        }
+    };
+
+    const handleAcceptIncoming = async () => {
+        if (!incomingRequestId || friendState === 'loading') return;
+        setFriendError(null);
+        setFriendState('loading');
+        try {
+            await respondFriendRequest(incomingRequestId, 'accept');
+            setFriendState('friends');
+        } catch (err) {
+            setFriendState('received');
+            setFriendError(err?.message || 'Could not accept request.');
+        }
+    };
+
+    const handleDeclineIncoming = async () => {
+        if (!incomingRequestId || friendState === 'loading') return;
+        setFriendError(null);
+        setFriendState('loading');
+        try {
+            await respondFriendRequest(incomingRequestId, 'decline');
+            setFriendState('idle');
+        } catch (err) {
+            setFriendState('received');
+            setFriendError(err?.message || 'Could not decline request.');
         }
     };
 
@@ -691,17 +743,57 @@ export default function ProfilePage() {
                                 <div className="flex flex-col gap-2 w-full max-w-sm mt-4">
                                     <div className="flex gap-3">
                                         {canFriend ? (
-                                            <button
-                                                className="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-                                                type="button"
-                                                onClick={handleFriendRequest}
-                                                disabled={friendState === 'loading' || friendState === 'sent'}
-                                            >
-                                                <span className="material-symbols-outlined text-lg">
-                                                    {friendState === 'sent' ? 'check' : 'person_add'}
-                                                </span>
-                                                {friendState === 'sent' ? 'Request sent' : 'Add friend'}
-                                            </button>
+                                            friendState === 'friends' ? (
+                                                <button
+                                                    className="flex-1 bg-emerald-500/10 hover:bg-red-500/10 text-emerald-600 hover:text-red-500 dark:text-emerald-400 dark:hover:text-red-400 font-semibold py-2.5 px-4 rounded-lg border border-emerald-500/30 hover:border-red-500/30 transition-colors flex items-center justify-center gap-2 text-sm group"
+                                                    type="button"
+                                                    onClick={handleUnfriend}
+                                                >
+                                                    <span className="material-symbols-outlined text-lg group-hover:hidden">check_circle</span>
+                                                    <span className="material-symbols-outlined text-lg hidden group-hover:inline">person_remove</span>
+                                                    <span className="group-hover:hidden">Friends</span>
+                                                    <span className="hidden group-hover:inline">Unfriend</span>
+                                                </button>
+                                            ) : friendState === 'sent' ? (
+                                                <button
+                                                    className="flex-1 bg-surface-light dark:bg-surface-dark text-slate-500 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-sm cursor-default"
+                                                    type="button"
+                                                    disabled
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">schedule</span>
+                                                    Request sent
+                                                </button>
+                                            ) : friendState === 'received' ? (
+                                                <div className="flex-1 flex gap-2">
+                                                    <button
+                                                        className="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        type="button"
+                                                        onClick={handleAcceptIncoming}
+                                                        disabled={friendState === 'loading'}
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">check</span>
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        className="bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        type="button"
+                                                        onClick={handleDeclineIncoming}
+                                                        disabled={friendState === 'loading'}
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">close</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    className="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                    type="button"
+                                                    onClick={handleFriendRequest}
+                                                    disabled={friendState === 'loading'}
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">person_add</span>
+                                                    Add friend
+                                                </button>
+                                            )
                                         ) : null}
                                         {canMessage ? (
                                             <button
