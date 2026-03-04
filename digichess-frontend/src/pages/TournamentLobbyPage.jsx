@@ -417,7 +417,7 @@ export default function TournamentLobbyPage() {
                                                 const standing = standings[cfg.rank - 1];
                                                 if (!winner) return <div key={cfg.rank} className="flex-1" />;
                                                 return (
-                                                    <div key={cfg.rank} className="flex-1 flex flex-col items-center max-w-[140px]">
+                                                    <div key={cfg.rank} className="flex-1 flex flex-col items-center max-w-[140px] cursor-pointer" onClick={() => navigate(`/profile/${winner}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/profile/${winner}`)}>
                                                         {cfg.rank === 1 ? (
                                                             <span className="material-symbols-outlined text-[#FFD700] mb-1" style={{ fontSize: 28, fontVariationSettings: "'FILL' 1" }}>crown</span>
                                                         ) : (
@@ -426,7 +426,7 @@ export default function TournamentLobbyPage() {
                                                         <div className={`${cfg.avatarSize} rounded-full bg-slate-200 dark:bg-slate-700 ${cfg.ring} flex items-center justify-center font-bold text-slate-600 dark:text-slate-200 ${cfg.rank === 1 ? 'text-base' : 'text-sm'} shadow-md`}>
                                                             {winner.slice(0, 2).toUpperCase()}
                                                         </div>
-                                                        <p className={`font-semibold truncate text-center w-full mt-2 ${cfg.rank === 1 ? 'text-sm' : 'text-xs'}`}>{winner}</p>
+                                                        <p className={`font-semibold truncate text-center w-full mt-2 hover:text-primary transition-colors ${cfg.rank === 1 ? 'text-sm' : 'text-xs'}`}>{winner}</p>
                                                         <p className={`text-primary font-bold ${cfg.rank === 1 ? 'text-sm' : 'text-xs'}`}>{standing?.score ?? '--'} pts</p>
 
                                                         <div className={`w-full ${cfg.blockH} mt-2 rounded-t-xl border-t border-x ${cfg.blockColor} flex items-start justify-center pt-2.5`}>
@@ -535,7 +535,7 @@ export default function TournamentLobbyPage() {
                                                         const isMe = user && (row.user_id === user.id || row.username === user.username);
                                                         const rankColor = index === 0 ? 'text-[#FFD700]' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-[#CD7F32]' : 'text-slate-400';
                                                         return (
-                                                            <div key={row.user_id} className={`flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/50 last:border-b-0 ${isMe ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
+                                                            <div key={row.user_id} className={`flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/50 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${isMe ? 'bg-primary/5 dark:bg-primary/10' : ''}`} onClick={() => navigate(`/profile/${row.username}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/profile/${row.username}`)}>
                                                                 <span className={`w-6 text-center text-sm font-bold ${rankColor}`}>{index + 1}</span>
                                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${isMe ? 'bg-primary/15 text-primary' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                                                                     {row.username?.slice(0, 2).toUpperCase()}

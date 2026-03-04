@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import {
     fetchDigiQuizLiveQuestion,
@@ -159,7 +160,7 @@ function rankCell(rank) {
     return rank;
 }
 
-function StandingsTable({ rows, yourRow, questionCount, compact = false }) {
+function StandingsTable({ rows, yourRow, questionCount, compact = false, onPlayerClick }) {
     const yourUserId = yourRow?.user_id || null;
     return (
         <table className="w-full text-sm text-left">
@@ -177,16 +178,20 @@ function StandingsTable({ rows, yourRow, questionCount, compact = false }) {
                     return (
                         <tr
                             key={`${row.rank}-${row.user_id}`}
-                            className={isYou
+                            className={`cursor-pointer ${isYou
                                 ? 'bg-primary/12 border-l-2 border-primary'
                                 : row.rank <= 3
-                                    ? 'bg-slate-50/70 dark:bg-slate-900/45'
-                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors'}
+                                    ? 'bg-slate-50/70 dark:bg-slate-900/45 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'} transition-colors`}
+                            onClick={() => onPlayerClick?.(row.username)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && onPlayerClick?.(row.username)}
                         >
                             <td className={`px-3 py-2.5 text-center font-bold ${isYou ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
                                 {rankCell(row.rank)}
                             </td>
-                            <td className={`px-3 py-2.5 font-medium ${isYou ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}>
+                            <td className={`px-3 py-2.5 font-medium hover:text-primary transition-colors ${isYou ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}>
                                 {row.username}
                             </td>
                             <td className={`px-3 py-2.5 text-right font-bold ${isYou ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>
@@ -205,43 +210,45 @@ function StandingsTable({ rows, yourRow, questionCount, compact = false }) {
     );
 }
 
-function Podium({ podium }) {
+function Podium({ podium, onPlayerClick }) {
     const first = (podium || []).find((row) => row.rank === 1);
     const second = (podium || []).find((row) => row.rank === 2);
     const third = (podium || []).find((row) => row.rank === 3);
+
+    const clickable = (username) => username ? { onClick: () => onPlayerClick?.(username), role: 'button', tabIndex: 0, onKeyDown: (e) => e.key === 'Enter' && onPlayerClick?.(username), className: 'cursor-pointer' } : {};
 
     return (
         <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-primary/10 to-transparent dark:from-primary/10 dark:to-surface-dark p-5 md:p-7 overflow-hidden">
             <h3 className="text-lg md:text-xl font-bold text-center text-slate-900 dark:text-white">Top Performers</h3>
             <div className="mt-8 flex items-end justify-center gap-3 md:gap-8">
-                <div className="flex flex-col items-center w-[30%] md:w-40">
+                <div className="flex flex-col items-center w-[30%] md:w-40" {...clickable(second?.username)}>
                     <div className="size-14 md:size-16 rounded-full border-2 border-slate-400 dark:border-slate-500 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
                         {second?.username?.slice(0, 2).toUpperCase() || '2'}
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white truncate max-w-full">{second?.username || '---'}</div>
+                    <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white truncate max-w-full hover:text-primary transition-colors">{second?.username || '---'}</div>
                     <div className="text-xs font-bold text-slate-500 dark:text-slate-300">{(second?.points || 0).toLocaleString()} pts</div>
                     <div className="mt-3 h-20 md:h-24 w-full rounded-t-lg bg-slate-200 dark:bg-slate-700/60 border border-slate-300 dark:border-slate-600 flex items-end justify-center pb-2">
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300">#2</span>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center w-[34%] md:w-44 -mt-4">
+                <div className="flex flex-col items-center w-[34%] md:w-44 -mt-4" {...clickable(first?.username)}>
                     <span className="material-symbols-outlined text-yellow-500 text-3xl md:text-4xl">crown</span>
                     <div className="size-16 md:size-20 rounded-full border-2 border-yellow-500 ring-4 ring-yellow-500/20 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-base font-bold text-slate-900 dark:text-white">
                         {first?.username?.slice(0, 2).toUpperCase() || '1'}
                     </div>
-                    <div className="mt-2 text-base md:text-lg font-bold text-slate-900 dark:text-white truncate max-w-full">{first?.username || '---'}</div>
+                    <div className="mt-2 text-base md:text-lg font-bold text-slate-900 dark:text-white truncate max-w-full hover:text-primary transition-colors">{first?.username || '---'}</div>
                     <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400">{(first?.points || 0).toLocaleString()} pts</div>
                     <div className="mt-3 h-28 md:h-36 w-full rounded-t-lg bg-gradient-to-t from-yellow-500/30 to-yellow-500/10 border border-yellow-500/30 flex items-end justify-center pb-2">
                         <span className="text-xs font-bold text-yellow-700 dark:text-yellow-300">#1</span>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center w-[30%] md:w-40">
+                <div className="flex flex-col items-center w-[30%] md:w-40" {...clickable(third?.username)}>
                     <div className="size-14 md:size-16 rounded-full border-2 border-amber-700 dark:border-amber-600 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
                         {third?.username?.slice(0, 2).toUpperCase() || '3'}
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white truncate max-w-full">{third?.username || '---'}</div>
+                    <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white truncate max-w-full hover:text-primary transition-colors">{third?.username || '---'}</div>
                     <div className="text-xs font-bold text-amber-700 dark:text-amber-500">{(third?.points || 0).toLocaleString()} pts</div>
                     <div className="mt-3 h-16 md:h-20 w-full rounded-t-lg bg-amber-700/15 border border-amber-700/30 flex items-end justify-center pb-2">
                         <span className="text-xs font-bold text-amber-700 dark:text-amber-500">#3</span>
@@ -271,6 +278,7 @@ function EmptyRoundsPanel({ title = 'No rounds played yet', subtitle }) {
 }
 
 export default function QuizPage() {
+    const navigate = useNavigate();
     const resultsDateInputRef = useRef(null);
 
     const [nowMs, setNowMs] = useState(Date.now());
@@ -897,7 +905,7 @@ export default function QuizPage() {
                     {previewError ? (
                         <div className="text-sm text-red-500">{previewError}</div>
                     ) : null}
-                    {!previewLoading && !previewError && hasFinishedRounds ? <Podium podium={previewPodium} /> : null}
+                    {!previewLoading && !previewError && hasFinishedRounds ? <Podium podium={previewPodium} onPlayerClick={(u) => navigate(`/profile/${u}`)} /> : null}
                     {!previewLoading && !previewError && !hasFinishedRounds ? (
                         <EmptyRoundsPanel
                             title="No rounds played yet"
@@ -920,9 +928,9 @@ export default function QuizPage() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
                                         {previewRows.map((row) => (
-                                            <tr key={`${row.rank}-${row.user_id}`} className={row.rank <= 3 ? 'bg-slate-50/40 dark:bg-slate-900/30' : ''}>
+                                            <tr key={`${row.rank}-${row.user_id}`} className={`cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors ${row.rank <= 3 ? 'bg-slate-50/40 dark:bg-slate-900/30' : ''}`} onClick={() => navigate(`/profile/${row.username}`)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate(`/profile/${row.username}`)}>
                                                 <td className="px-4 py-3 font-bold text-slate-500 dark:text-slate-400">{rankCell(row.rank)}</td>
-                                                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{row.username}</td>
+                                                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200 hover:text-primary transition-colors">{row.username}</td>
                                                 <td className="px-4 py-3 hidden sm:table-cell text-slate-500 dark:text-slate-400">{typeof row.accuracy === 'number' ? `${Math.round(row.accuracy)}%` : '--'}</td>
                                                 <td className="px-4 py-3 hidden md:table-cell text-slate-500 dark:text-slate-400">{formatAnswerTime(row.total_answer_time_ms)}</td>
                                                 <td className="px-4 py-3 text-right font-bold text-primary">{(row.points || 0).toLocaleString()}</td>
@@ -1150,6 +1158,7 @@ export default function QuizPage() {
                         rows={standingsData?.rows || []}
                         yourRow={standingsData?.your_row || null}
                         questionCount={questionCount}
+                        onPlayerClick={(u) => navigate(`/profile/${u}`)}
                     />
                 </div>
             </aside>
@@ -1200,7 +1209,7 @@ export default function QuizPage() {
                 </div>
             ) : null}
 
-            {!resultsLoading && !resultsError && resultsData?.round ? <Podium podium={resultPodium} /> : null}
+            {!resultsLoading && !resultsError && resultsData?.round ? <Podium podium={resultPodium} onPlayerClick={(u) => navigate(`/profile/${u}`)} /> : null}
 
             {!resultsLoading && !resultsError && !resultsData?.round && !hasFinishedRounds ? (
                 <EmptyRoundsPanel
@@ -1231,10 +1240,14 @@ export default function QuizPage() {
                                     return (
                                         <tr
                                             key={`${row.rank}-${row.user_id}`}
-                                            className={isYou ? 'bg-primary/10 border-l-2 border-primary' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}
+                                            className={`cursor-pointer transition-colors ${isYou ? 'bg-primary/10 border-l-2 border-primary' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
+                                            onClick={() => navigate(`/profile/${row.username}`)}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => e.key === 'Enter' && navigate(`/profile/${row.username}`)}
                                         >
                                             <td className={`px-4 py-3 font-bold ${isYou ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>{rankCell(row.rank)}</td>
-                                            <td className={`px-4 py-3 font-medium ${isYou ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'}`}>{row.username}</td>
+                                            <td className={`px-4 py-3 font-medium hover:text-primary transition-colors ${isYou ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'}`}>{row.username}</td>
                                             <td className="px-4 py-3 hidden sm:table-cell text-slate-500 dark:text-slate-400">{typeof row.accuracy === 'number' ? `${Math.round(row.accuracy)}%` : '--'}</td>
                                             <td className="px-4 py-3 hidden md:table-cell text-slate-500 dark:text-slate-400">{formatAnswerTime(row.total_answer_time_ms)}</td>
                                             <td className="px-4 py-3 text-right font-bold text-primary">{(row.points || 0).toLocaleString()}</td>
@@ -1380,6 +1393,7 @@ export default function QuizPage() {
                                 yourRow={standingsData?.your_row || null}
                                 questionCount={questionCount}
                                 compact
+                                onPlayerClick={(u) => navigate(`/profile/${u}`)}
                             />
                         </div>
                     </div>
