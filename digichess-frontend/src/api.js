@@ -203,6 +203,9 @@ export const respondFriendRequest = (requestId, decision) =>
 export const getFriends = () =>
     api.get('/social/friends/');
 
+export const unfriend = (userId) =>
+    api.post(`/social/friends/${userId}/unfriend/`);
+
 export const createThread = (participantId) =>
     api.post('/social/chat/threads/', { participant_id: participantId });
 

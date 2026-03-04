@@ -67,46 +67,43 @@ class GameMoveView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def _broadcast_game_state(self, game: Game, state: dict, legal_moves: List[str]):
-        channel_layer = get_channel_layer()
-        if not channel_layer:
-            return
-        payload = {
-            "type": "gameState",
-            "game_id": game.id,
-            **state,
-            "legal_moves": legal_moves,
-        }
         try:
-            from games.lichess_game_flow import get_game_state_export
-            game_state = get_game_state_export(
-                state.get("fen") or chess.STARTING_FEN,
-                state.get("moves") or "",
-                "standard",
-            )
-            if game_state:
-                payload["game_state"] = game_state
-        except Exception:
-            pass
-
-        try:
+            channel_layer = get_channel_layer()
+            if not channel_layer:
+                return
+            payload = {
+                "type": "gameState",
+                "game_id": game.id,
+                **state,
+                "legal_moves": legal_moves,
+            }
+            try:
+                from games.lichess_game_flow import get_game_state_export
+                game_state = get_game_state_export(
+                    state.get("fen") or chess.STARTING_FEN,
+                    state.get("moves") or "",
+                    "standard",
+                )
+                if game_state:
+                    payload["game_state"] = game_state
+            except Exception:
+                pass
             async_to_sync(channel_layer.group_send)(
                 f"game_{game.id}",
-                {
-                    "type": "game.event",
-                    "payload": payload,
-                },
+                {"type": "game.event", "payload": payload},
             )
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to broadcast game state via WebSocket: {e}")
+        except Exception:
+            pass
+        finally:
+            from django.db import close_old_connections
+            close_old_connections()
 
     def _broadcast_game_finished(self, game: Game, reason: Optional[str]):
-        channel_layer = get_channel_layer()
-        if not channel_layer:
-            return
-        game_data = GameSerializer(game).data
         try:
+            channel_layer = get_channel_layer()
+            if not channel_layer:
+                return
+            game_data = GameSerializer(game).data
             async_to_sync(channel_layer.group_send)(
                 f"game_{game.id}",
                 {
@@ -122,28 +119,32 @@ class GameMoveView(APIView):
             )
         except Exception:
             pass
+        finally:
+            from django.db import close_old_connections
+            close_old_connections()
 
     def _apply_and_broadcast(self, game_id: int, player, move_san: str) -> MoveResult:
+        import threading
+
         result = apply_move(game_id, player, move_san)
         if result.state and result.game:
-            self._broadcast_game_state(result.game, result.state, result.legal_moves or [])
+            threading.Thread(
+                target=self._broadcast_game_state,
+                args=(result.game, result.state, result.legal_moves or []),
+                daemon=True,
+            ).start()
             if result.draw_offer_cleared:
-                try:
-                    channel_layer = get_channel_layer()
-                    if channel_layer:
-                        async_to_sync(channel_layer.group_send)(
-                            f"game_{result.game.id}",
-                            {
-                                "type": "game.event",
-                                "payload": {
-                                    "type": "draw_response",
-                                    "game_id": result.game.id,
-                                    "decision": "auto_decline",
-                                },
-                            },
-                        )
-                except Exception:
-                    pass
+                def _send_draw_decline(gid):
+                    try:
+                        cl = get_channel_layer()
+                        if cl:
+                            async_to_sync(cl.group_send)(
+                                f"game_{gid}",
+                                {"type": "game.event", "payload": {"type": "draw_response", "game_id": gid, "decision": "auto_decline"}},
+                            )
+                    except Exception:
+                        pass
+                threading.Thread(target=_send_draw_decline, args=(result.game.id,), daemon=True).start()
         if result.game and result.finished:
             result.game.refresh_from_db()
             if result.game.rated and result.game.result in {
@@ -152,7 +153,11 @@ class GameMoveView(APIView):
                 Game.RESULT_DRAW,
             }:
                 FinishGameView().update_ratings(result.game, result.game.result)
-            self._broadcast_game_finished(result.game, result.finish_reason)
+            threading.Thread(
+                target=self._broadcast_game_finished,
+                args=(result.game, result.finish_reason),
+                daemon=True,
+            ).start()
         return result
 
     def _make_bot_move(self, game: Game, bot_player):

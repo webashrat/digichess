@@ -71,6 +71,19 @@ class FriendsListView(APIView):
         return Response(serializer.data)
 
 
+class UnfriendView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, user_id: int):
+        User = get_user_model()
+        other = get_object_or_404(User, id=user_id)
+        u1, u2 = Friendship.normalize_pair(request.user, other)
+        deleted, _ = Friendship.objects.filter(user1=u1, user2=u2).delete()
+        if not deleted:
+            return Response({"detail": "Not friends."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "unfriended"})
+
+
 class ChatThreadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
