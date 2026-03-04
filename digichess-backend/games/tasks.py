@@ -486,9 +486,12 @@ def check_first_move_timeouts():
     """
     now = timezone.now()
     channel_layer = get_channel_layer()
+    tournament_game_ids = set(TournamentGame.objects.values_list("game_id", flat=True))
     games = Game.objects.filter(status=Game.STATUS_ACTIVE)
 
     for game in games:
+        if game.id in tournament_game_ids:
+            continue
         move_count = len((game.moves or "").strip().split()) if game.moves else 0
 
         if move_count == 0:

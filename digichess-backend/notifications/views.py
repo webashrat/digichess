@@ -124,6 +124,14 @@ class NotificationDeleteView(APIView):
         return Response({'status': 'deleted'}, status=status.HTTP_200_OK)
 
 
+class NotificationClearAllView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        count, _ = Notification.objects.filter(user=request.user).delete()
+        return Response({'status': 'cleared', 'deleted_count': count}, status=status.HTTP_200_OK)
+
+
 def create_notification(user, notification_type, title, message, data=None, expires_in_hours=None):
     """Helper function to create a notification"""
     if notification_type == "game_challenge" and data:

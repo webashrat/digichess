@@ -729,22 +729,29 @@ export default function MessagesPage() {
                                                     className="flex items-center gap-3 min-w-0 text-left"
                                                     onClick={() => handleProfileClick(activePartner?.username)}
                                                 >
-                                                    <div
-                                                        className="size-10 rounded-full bg-slate-300 dark:bg-slate-700 bg-cover bg-center flex items-center justify-center text-xs font-bold text-slate-800 dark:text-slate-100 shrink-0"
-                                                        style={activePartner?.profile_pic ? { backgroundImage: `url('${activePartner.profile_pic}')` } : undefined}
-                                                    >
-                                                        {!activePartner?.profile_pic ? getInitials(activePartner?.username) : null}
+                                                    <div className="relative shrink-0">
+                                                        <div
+                                                            className="size-10 rounded-full bg-slate-300 dark:bg-slate-700 bg-cover bg-center flex items-center justify-center text-xs font-bold text-slate-800 dark:text-slate-100 ring-2 ring-white dark:ring-slate-700 shadow-sm"
+                                                            style={activePartner?.profile_pic ? { backgroundImage: `url('${activePartner.profile_pic}')` } : undefined}
+                                                        >
+                                                            {!activePartner?.profile_pic ? getInitials(activePartner?.username) : null}
+                                                        </div>
+                                                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-light dark:border-surface-dark ${activePartner?.is_online ? 'bg-green-500' : 'bg-gray-400'}`} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h3 className="text-sm font-semibold truncate">{messagesTitle}</h3>
-                                                        <div className="text-xs text-slate-500">
-                                                            {activePartner?.is_online ? 'Online' : 'Offline'}
+                                                        <h3 className="text-sm font-bold truncate leading-tight">{messagesTitle}</h3>
+                                                        <div className="flex items-center gap-1">
+                                                            {activePartner?.is_online ? (
+                                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Online</span>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Offline</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    className="p-2 rounded-full text-slate-500 hover:text-primary hover:bg-primary/10"
+                                                    className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                                                     onClick={() => activePartner?.username && handleProfileClick(activePartner.username)}
                                                     title="Open profile"
                                                 >
@@ -752,45 +759,75 @@ export default function MessagesPage() {
                                                 </button>
                                             </div>
 
-                                            <div className="flex-1 overflow-y-auto bg-slate-100/80 dark:bg-[#0b111d] px-4 py-4 space-y-3">
+                                            <div className="flex-1 overflow-y-auto bg-slate-100/50 dark:bg-[#0d121c] px-4 py-4 space-y-4 overscroll-contain">
                                                 {messagesLoading ? (
                                                     <div className="text-sm text-slate-500">Loading messages...</div>
                                                 ) : messages.length === 0 ? (
-                                                    <div className="text-sm text-slate-500">No messages yet.</div>
+                                                    <div className="flex flex-col items-center justify-center h-full text-center">
+                                                        <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 mb-2">chat_bubble_outline</span>
+                                                        <p className="text-sm text-slate-500">No messages yet. Say hello!</p>
+                                                    </div>
                                                 ) : (
-                                                    messages.map((msg) => {
+                                                    messages.map((msg, msgIndex) => {
                                                         const mine = Boolean(user && msg.sender?.id === user.id);
                                                         const timeLabel = formatClock(msg.created_at);
+                                                        const showDateSep = msgIndex === 0 || (
+                                                            new Date(msg.created_at).toDateString() !== new Date(messages[msgIndex - 1]?.created_at).toDateString()
+                                                        );
                                                         return (
-                                                            <div key={msg.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                                                                <div
-                                                                    className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl border shadow-sm ${
-                                                                        mine
-                                                                            ? 'bg-[#d9fdd3] dark:bg-[#1f6f4a] text-slate-900 dark:text-slate-100 border-[#b7e7ad] dark:border-[#2f8f62] rounded-br-md'
-                                                                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700 rounded-bl-md'
-                                                                    }`}
-                                                                >
-                                                                    <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
-                                                                    <div className={`mt-1 text-[10px] ${mine ? 'text-slate-600 dark:text-slate-300 text-right' : 'text-slate-400'}`}>
-                                                                        {timeLabel}
+                                                            <React.Fragment key={msg.id}>
+                                                                {showDateSep ? (
+                                                                    <div className="flex justify-center my-2">
+                                                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-full uppercase tracking-wider">
+                                                                            {new Date(msg.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                                        </span>
                                                                     </div>
-                                                                </div>
-                                                            </div>
+                                                                ) : null}
+                                                                {mine ? (
+                                                                    <div className="flex flex-row-reverse items-end gap-2">
+                                                                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-[9px] font-bold shrink-0 mb-1 shadow-md">ME</div>
+                                                                        <div className="flex flex-col items-end gap-1 max-w-[82%]">
+                                                                            <div className="bg-primary text-white p-3 rounded-2xl rounded-br-none shadow-md shadow-primary/20 text-sm">
+                                                                                <p className="leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1 mr-1">
+                                                                                <span className="text-[10px] text-slate-400">{timeLabel}</span>
+                                                                                <span className="material-symbols-outlined text-primary text-[14px]">done_all</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-end gap-2">
+                                                                        <div
+                                                                            className="w-8 h-8 rounded-full bg-slate-300 dark:bg-slate-700 bg-cover bg-center shrink-0 mb-1 ring-1 ring-slate-200 dark:ring-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-600 dark:text-slate-300"
+                                                                            style={activePartner?.profile_pic ? { backgroundImage: `url('${activePartner.profile_pic}')` } : undefined}
+                                                                        >
+                                                                            {!activePartner?.profile_pic ? getInitials(activePartner?.username) : null}
+                                                                        </div>
+                                                                        <div className="flex flex-col items-start gap-1 max-w-[82%]">
+                                                                            <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 p-3 rounded-2xl rounded-bl-none shadow-sm border border-slate-200 dark:border-slate-700 text-sm">
+                                                                                <p className="leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+                                                                            </div>
+                                                                            <span className="text-[10px] text-slate-400 ml-1">{timeLabel}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </React.Fragment>
                                                         );
                                                     })
                                                 )}
                                             </div>
 
-                                            <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90">
+                                            <div className="p-3 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 z-10">
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative shrink-0" ref={emojiPopoverRef}>
                                                         <button
                                                             type="button"
-                                                            className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-primary hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
+                                                            className="p-2 text-slate-400 hover:text-primary transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                                                             onClick={() => setShowEmojiPicker((prev) => !prev)}
                                                             title="Add emoji"
                                                         >
-                                                            <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+                                                            <span className="material-symbols-outlined">add_circle</span>
                                                         </button>
                                                         {showEmojiPicker ? (
                                                             <div className="absolute bottom-12 left-0 z-20 w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 shadow-xl">
@@ -809,29 +846,38 @@ export default function MessagesPage() {
                                                             </div>
                                                         ) : null}
                                                     </div>
-                                                    <input
-                                                        ref={inputRef}
-                                                        type="text"
-                                                        className="w-full rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-primary/40 focus:ring-2 focus:ring-primary/30 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
-                                                        placeholder="Type a message..."
-                                                        value={input}
-                                                        onChange={(event) => setInput(event.target.value)}
-                                                        onKeyDown={(event) => {
-                                                            if (event.key === 'Enter') {
-                                                                handleSend();
-                                                            }
-                                                            if (event.key === 'Escape') {
-                                                                setShowEmojiPicker(false);
-                                                            }
-                                                        }}
-                                                    />
+                                                    <div className="flex-1 relative">
+                                                        <input
+                                                            ref={inputRef}
+                                                            type="text"
+                                                            className="w-full pl-4 pr-10 py-2.5 rounded-full bg-slate-100 dark:bg-slate-900 border-none focus:ring-2 focus:ring-primary/50 text-sm placeholder-slate-400 dark:text-white"
+                                                            placeholder="Type a message..."
+                                                            value={input}
+                                                            onChange={(event) => setInput(event.target.value)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === 'Enter') {
+                                                                    handleSend();
+                                                                }
+                                                                if (event.key === 'Escape') {
+                                                                    setShowEmojiPicker(false);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-primary transition-colors"
+                                                            onClick={() => setShowEmojiPicker((prev) => !prev)}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+                                                        </button>
+                                                    </div>
                                                     <button
                                                         type="button"
-                                                        className="size-11 shrink-0 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-600 transition-colors disabled:opacity-60"
+                                                        className="p-2.5 bg-primary text-white rounded-full hover:bg-blue-600 transition-colors shadow-lg shadow-primary/30 flex items-center justify-center disabled:opacity-60"
                                                         onClick={handleSend}
                                                         disabled={!input.trim() || sending}
                                                     >
-                                                        <span className="material-symbols-outlined">send</span>
+                                                        <span className="material-symbols-outlined text-[20px]">send</span>
                                                     </button>
                                                 </div>
                                             </div>

@@ -72,6 +72,31 @@ class TournamentDetailView(APIView):
         tournament = get_object_or_404(Tournament.objects.annotate(participants_count=models.Count("participants")), id=pk)
         return Response(TournamentSerializer(tournament).data)
 
+    def patch(self, request, pk: int):
+        if not request.user or not request.user.is_authenticated:
+            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        tournament = get_object_or_404(Tournament, id=pk)
+        if request.user != tournament.creator:
+            raise PermissionDenied("Only the creator can edit the tournament.")
+        if tournament.status != Tournament.STATUS_PENDING:
+            return Response({"detail": "Only upcoming tournaments can be edited."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = TournamentSerializer(tournament, data=request.data, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        tournament = Tournament.objects.annotate(participants_count=models.Count("participants")).get(id=pk)
+        return Response(TournamentSerializer(tournament).data)
+
+    def delete(self, request, pk: int):
+        if not request.user or not request.user.is_authenticated:
+            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        tournament = get_object_or_404(Tournament, id=pk)
+        if request.user != tournament.creator:
+            raise PermissionDenied("Only the creator can delete the tournament.")
+        if tournament.status != Tournament.STATUS_PENDING:
+            return Response({"detail": "Only upcoming tournaments can be deleted."}, status=status.HTTP_400_BAD_REQUEST)
+        tournament.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class TournamentRegisterView(APIView):
     permission_classes = [permissions.IsAuthenticated]

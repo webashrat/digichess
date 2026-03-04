@@ -46,6 +46,21 @@ const formatResult = (game, username) => {
     return 'In Progress';
 };
 
+const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    if (Number.isNaN(diff)) return '';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString();
+};
+
 const buildDigiQuizHistory = (payload, rangeParams = {}) => {
     const points = Array.isArray(payload?.points) ? payload.points : [];
     let history = points
@@ -66,87 +81,174 @@ const buildDigiQuizHistory = (payload, rangeParams = {}) => {
 };
 
 const RatingChart = ({ history }) => {
+    const [hoveredIdx, setHoveredIdx] = useState(null);
+    const chartRef = React.useRef(null);
+
     if (!history || history.length < 2) {
         return (
-            <div className="text-sm text-slate-500">Not enough data to show chart.</div>
+            <div className="flex flex-col items-center justify-center h-full text-center">
+                <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-slate-600 mb-1">show_chart</span>
+                <p className="text-sm text-slate-500">Not enough data to show chart.</p>
+            </div>
         );
     }
     const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
     const values = sorted.map((point) => point.rating);
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const range = Math.max(1, max - min);
-    const paddingY = 8;
+    const isFlat = min === max;
+    const range = isFlat ? 1 : max - min;
+    const paddingY = 10;
     const chartHeight = 100 - paddingY * 2;
     const coords = sorted.map((point, index) => {
         const x = (index / (sorted.length - 1)) * 100;
-        const normalized = (point.rating - min) / range;
-        const y = paddingY + (1 - normalized) * chartHeight;
+        const y = isFlat ? 50 : paddingY + (1 - (point.rating - min) / range) * chartHeight;
         return { x, y };
     });
-    const linePath = coords.map((point, index) => (
-        `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
-    )).join(' ');
-    const areaPath = `${linePath} L ${coords[coords.length - 1].x} 100 L ${coords[0].x} 100 Z`;
+
+    const monotonePath = (points) => {
+        const n = points.length;
+        if (n < 2) return '';
+        if (n === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+        const dx = [];
+        const dy = [];
+        const slopes = [];
+        for (let i = 0; i < n - 1; i++) {
+            dx.push(points[i + 1].x - points[i].x);
+            dy.push(points[i + 1].y - points[i].y);
+            slopes.push(dx[i] === 0 ? 0 : dy[i] / dx[i]);
+        }
+        const tangents = [slopes[0]];
+        for (let i = 1; i < n - 1; i++) {
+            if (slopes[i - 1] * slopes[i] <= 0) { tangents.push(0); }
+            else { tangents.push((slopes[i - 1] + slopes[i]) / 2); }
+        }
+        tangents.push(slopes[n - 2]);
+        for (let i = 0; i < n - 1; i++) {
+            if (Math.abs(slopes[i]) < 1e-6) { tangents[i] = 0; tangents[i + 1] = 0; continue; }
+            const a = tangents[i] / slopes[i];
+            const b = tangents[i + 1] / slopes[i];
+            const s = a * a + b * b;
+            if (s > 9) { const t = 3 / Math.sqrt(s); tangents[i] = t * a * slopes[i]; tangents[i + 1] = t * b * slopes[i]; }
+        }
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 0; i < n - 1; i++) {
+            const seg = dx[i] / 3;
+            d += ` C ${points[i].x + seg} ${points[i].y + tangents[i] * seg}, ${points[i + 1].x - seg} ${points[i + 1].y - tangents[i + 1] * seg}, ${points[i + 1].x} ${points[i + 1].y}`;
+        }
+        return d;
+    };
+
+    const linePath = monotonePath(coords);
+    const last = coords[coords.length - 1];
+    const first = coords[0];
+    const areaPath = `${linePath} L ${last.x} 100 L ${first.x} 100 Z`;
 
     const roundStep = 50;
-    const topLabel = Math.ceil(max / roundStep) * roundStep;
-    const bottomLabel = Math.floor(min / roundStep) * roundStep;
-    const midLabel = Math.round((topLabel + bottomLabel) / 2);
+    const topLabel = isFlat ? min + 50 : Math.ceil(max / roundStep) * roundStep;
+    const bottomLabel = isFlat ? Math.max(0, min - 50) : Math.floor(min / roundStep) * roundStep;
+    const gridLines = [paddingY, 36, 64, 100 - paddingY];
 
-    const formatDateLabel = (value) => {
+    const formatMonth = (value) => {
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return '';
-        return date.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        }).toUpperCase();
+        return date.toLocaleDateString('en-US', { month: 'short' });
     };
-    const firstLabel = formatDateLabel(sorted[0]?.date);
-    const midLabelDate = formatDateLabel(sorted[Math.floor(sorted.length / 2)]?.date);
-    const lastLabel = formatDateLabel(sorted[sorted.length - 1]?.date);
-    const uniqueLabels = [...new Set([firstLabel, midLabelDate, lastLabel].filter(Boolean))];
-    let xAxisLabels = [];
-    if (uniqueLabels.length === 1) {
-        xAxisLabels = [uniqueLabels[0]];
-    } else if (uniqueLabels.length === 2) {
-        xAxisLabels = [uniqueLabels[0], uniqueLabels[1]];
-    } else {
-        const midUnique = uniqueLabels[Math.floor(uniqueLabels.length / 2)];
-        xAxisLabels = [uniqueLabels[0], midUnique, uniqueLabels[uniqueLabels.length - 1]];
+    const labelCount = Math.min(5, sorted.length);
+    const xAxisLabels = [];
+    for (let i = 0; i < labelCount; i++) {
+        const idx = Math.round((i / (labelCount - 1)) * (sorted.length - 1));
+        const label = formatMonth(sorted[idx]?.date);
+        if (label && !xAxisLabels.includes(label)) xAxisLabels.push(label);
     }
+
+    const handleMouseMove = (e) => {
+        if (!chartRef.current || sorted.length < 2) return;
+        const rect = chartRef.current.getBoundingClientRect();
+        const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+        let closest = 0;
+        let closestDist = Infinity;
+        for (let i = 0; i < coords.length; i++) {
+            const dist = Math.abs(coords[i].x - xPct);
+            if (dist < closestDist) { closestDist = dist; closest = i; }
+        }
+        setHoveredIdx(closest);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!chartRef.current || sorted.length < 2 || !e.touches[0]) return;
+        const rect = chartRef.current.getBoundingClientRect();
+        const xPct = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+        let closest = 0;
+        let closestDist = Infinity;
+        for (let i = 0; i < coords.length; i++) {
+            const dist = Math.abs(coords[i].x - xPct);
+            if (dist < closestDist) { closestDist = dist; closest = i; }
+        }
+        setHoveredIdx(closest);
+    };
+
+    const hovered = hoveredIdx != null ? { point: sorted[hoveredIdx], coord: coords[hoveredIdx] } : null;
+    const hoveredDate = hovered ? new Date(hovered.point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
     return (
         <div className="relative h-full w-full">
-            <div className="absolute inset-y-0 left-0 w-12 flex flex-col justify-between text-[11px] text-slate-400 font-mono">
+            <div className="absolute inset-y-0 left-0 w-10 flex flex-col justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono py-1">
                 <span>{topLabel}</span>
-                <span>{midLabel}</span>
                 <span>{bottomLabel}</span>
             </div>
-            <div className="absolute inset-0 pl-12 pr-2 pt-2 pb-8">
-                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <div
+                ref={chartRef}
+                className="absolute inset-0 pl-10 pr-2 pt-1 pb-7"
+                onMouseMove={handleMouseMove}
+                onTouchMove={handleTouchMove}
+                onMouseLeave={() => setHoveredIdx(null)}
+                onTouchEnd={() => setHoveredIdx(null)}
+            >
+                <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <defs>
                         <linearGradient id="ratingFill" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(79, 209, 197, 0.5)" />
-                            <stop offset="100%" stopColor="rgba(79, 209, 197, 0.1)" />
+                            <stop offset="0%" stopColor="#135bec" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#135bec" stopOpacity="0" />
                         </linearGradient>
                     </defs>
-                    <line x1="0" y1={paddingY} x2="100" y2={paddingY} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="0.5" />
-                    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="0.5" />
-                    <line x1="0" y1={100 - paddingY} x2="100" y2={100 - paddingY} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="0.5" />
+                    {gridLines.map((y) => (
+                        <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="currentColor" className="text-slate-200 dark:text-slate-700/50" strokeWidth="0.3" strokeDasharray="2,2" />
+                    ))}
                     <path d={areaPath} fill="url(#ratingFill)" />
                     <path
                         d={linePath}
                         fill="none"
-                        stroke="#4fd1c5"
-                        strokeWidth="0.8"
+                        stroke="#135bec"
+                        strokeWidth="0.5"
+                        vectorEffect="non-scaling-stroke"
                         strokeLinejoin="round"
                         strokeLinecap="round"
                     />
                 </svg>
+                {hovered ? (
+                    <>
+                        <div
+                            className="absolute top-0 bottom-0 w-px bg-primary/30 pointer-events-none"
+                            style={{ left: `${hovered.coord.x}%` }}
+                        />
+                        <div
+                            className="absolute w-2 h-2 rounded-full bg-primary border-2 border-white dark:border-slate-900 shadow -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                            style={{ left: `${hovered.coord.x}%`, top: `${hovered.coord.y}%` }}
+                        />
+                        <div
+                            className="absolute pointer-events-none -translate-x-1/2 z-10"
+                            style={{ left: `${hovered.coord.x}%`, top: `${Math.max(0, hovered.coord.y - 8)}%` }}
+                        >
+                            <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold py-1 px-2 rounded shadow-lg whitespace-nowrap -translate-y-full">
+                                <div>{hovered.point.rating}</div>
+                                <div className="font-normal text-[9px] opacity-70">{hoveredDate}</div>
+                            </div>
+                        </div>
+                    </>
+                ) : null}
             </div>
-            <div className={`absolute left-12 right-2 bottom-1 text-[11px] text-slate-400 font-mono flex ${
+            <div className={`absolute left-10 right-2 bottom-0 text-[10px] text-slate-400 dark:text-slate-500 font-mono flex ${
                 xAxisLabels.length === 1 ? 'justify-center' : 'justify-between'
             }`}>
                 {xAxisLabels.map((label, index) => (
@@ -198,9 +300,9 @@ export default function ProfilePage() {
     }, [timeRange]);
 
     const stats = useMemo(() => ([
-        { label: 'Bullet', value: displayUser?.rating_bullet || 800 },
-        { label: 'Blitz', value: displayUser?.rating_blitz || 800 },
-        { label: 'Rapid', value: displayUser?.rating_rapid || 800 },
+        { label: 'Bullet', value: displayUser?.rating_bullet || 800, icon: 'local_fire_department', color: 'text-orange-400' },
+        { label: 'Blitz', value: displayUser?.rating_blitz || 800, icon: 'flash_on', color: 'text-yellow-400' },
+        { label: 'Rapid', value: displayUser?.rating_rapid || 800, icon: 'timer', color: 'text-green-400' },
     ]), [displayUser]);
 
     useEffect(() => {
@@ -256,18 +358,20 @@ export default function ProfilePage() {
 
     const modeStats = useMemo(() => {
         if (!displayUser?.username) {
-            return { total: 0, winPct: 0, winPctWhite: 0, winPctBlack: 0 };
+            return { total: 0, wins: 0, losses: 0, draws: 0, winPct: 0, winPctWhite: 0, winPctBlack: 0, avgOppRating: 0 };
         }
         if (mode === 'digiquiz') {
             const correct = displayUser?.digiquiz_correct ?? 0;
             const wrong = displayUser?.digiquiz_wrong ?? 0;
             const total = correct + wrong;
             const accuracy = total ? Math.round((correct / total) * 100) : 0;
-            return { total, winPct: accuracy, winPctWhite: correct, winPctBlack: wrong };
+            return { total, wins: correct, losses: wrong, draws: 0, winPct: accuracy, winPctWhite: correct, winPctBlack: wrong, avgOppRating: 0 };
         }
         const modeGames = completedNonBotGames.filter((game) => game.time_control === mode);
         const total = modeGames.length;
         const wins = modeGames.filter((game) => formatResult(game, displayUser.username) === 'Win').length;
+        const losses = modeGames.filter((game) => formatResult(game, displayUser.username) === 'Loss').length;
+        const draws = modeGames.filter((game) => formatResult(game, displayUser.username) === 'Draw').length;
         const winPct = total ? Math.round((wins / total) * 100) : 0;
         const whiteGames = modeGames.filter((game) => game.white?.username === displayUser.username);
         const blackGames = modeGames.filter((game) => game.black?.username === displayUser.username);
@@ -275,55 +379,31 @@ export default function ProfilePage() {
         const blackWins = blackGames.filter((game) => game.result === '0-1').length;
         const winPctWhite = whiteGames.length ? Math.round((whiteWins / whiteGames.length) * 100) : 0;
         const winPctBlack = blackGames.length ? Math.round((blackWins / blackGames.length) * 100) : 0;
-        return { total, winPct, winPctWhite, winPctBlack };
+        const ratingKey = `rating_${mode}`;
+        const oppRatings = modeGames.map((game) => {
+            const opp = game.white?.username === displayUser.username ? game.black : game.white;
+            return opp?.[ratingKey] || opp?.rating_blitz || 0;
+        }).filter((r) => r > 0);
+        const avgOppRating = oppRatings.length ? Math.round(oppRatings.reduce((a, b) => a + b, 0) / oppRatings.length) : 0;
+        return { total, wins, losses, draws, winPct, winPctWhite, winPctBlack, avgOppRating };
     }, [completedNonBotGames, mode, displayUser]);
 
     const performanceCards = useMemo(() => {
         if (mode === 'digiquiz') {
             return [
-                {
-                    label: 'Total Answers',
-                    value: modeStats.total,
-                    valueClass: 'text-slate-500 dark:text-slate-300',
-                },
-                {
-                    label: 'Accuracy',
-                    value: modeStats.total ? `${modeStats.winPct}%` : '--',
-                    valueClass: 'text-green-500',
-                },
-                {
-                    label: 'Correct',
-                    value: modeStats.winPctWhite,
-                    valueClass: 'text-emerald-500',
-                },
-                {
-                    label: 'Wrong',
-                    value: modeStats.winPctBlack,
-                    valueClass: 'text-red-500',
-                },
+                { label: 'Answers', value: modeStats.total, valueClass: 'text-slate-700 dark:text-slate-300', icon: 'quiz', iconColor: 'text-primary' },
+                { label: 'Accuracy', value: modeStats.total ? `${modeStats.winPct}%` : '--', valueClass: 'text-green-500', icon: 'check_circle', iconColor: 'text-green-500' },
+                { label: 'Correct', value: modeStats.wins, valueClass: 'text-emerald-500', icon: 'done', iconColor: 'text-emerald-500' },
+                { label: 'Wrong', value: modeStats.losses, valueClass: 'text-red-500', icon: 'close', iconColor: 'text-red-500' },
             ];
         }
         return [
-            {
-                label: 'Total Games',
-                value: modeStats.total,
-                valueClass: 'text-slate-500 dark:text-slate-300',
-            },
-            {
-                label: 'Win %',
-                value: modeStats.total ? `${modeStats.winPct}%` : '--',
-                valueClass: 'text-green-500',
-            },
-            {
-                label: 'Win % White',
-                value: modeStats.total ? `${modeStats.winPctWhite}%` : '--',
-                valueClass: 'text-blue-500',
-            },
-            {
-                label: 'Win % Black',
-                value: modeStats.total ? `${modeStats.winPctBlack}%` : '--',
-                valueClass: 'text-purple-500',
-            },
+            { label: 'Win Rate', value: modeStats.total ? `${modeStats.winPct}%` : '--', valueClass: 'text-green-500', icon: 'trending_up', iconColor: 'text-green-500' },
+            { label: 'Games', value: modeStats.total, valueClass: 'text-slate-700 dark:text-slate-300', icon: 'sports_esports', iconColor: 'text-primary' },
+            { label: 'Wins', value: modeStats.wins, valueClass: 'text-green-500', icon: 'check_circle', iconColor: 'text-green-500' },
+            { label: 'Losses', value: modeStats.losses, valueClass: 'text-red-500', icon: 'cancel', iconColor: 'text-red-500' },
+            { label: 'Draws', value: modeStats.draws, valueClass: 'text-slate-500', icon: 'horizontal_rule', iconColor: 'text-slate-400' },
+            { label: 'Avg Opp', value: modeStats.avgOppRating || '--', valueClass: 'text-amber-500', icon: 'person', iconColor: 'text-amber-500' },
         ];
     }, [mode, modeStats]);
 
@@ -543,56 +623,59 @@ export default function ProfilePage() {
                     </div>
                 ) : (
                     <>
-                        <div className="px-4 py-6 flex flex-col items-center">
-                            <div className="relative mb-4">
-                                <div className="w-28 h-28 rounded-xl overflow-hidden shadow-lg ring-4 ring-surface-light dark:ring-surface-dark bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold">
-                                    {displayUser?.profile_pic ? (
-                                        <img src={displayUser.profile_pic} alt={`${displayUser?.username || 'User'} avatar`} className="w-full h-full object-cover" />
-                                    ) : (
-                                        displayUser?.username?.slice(0, 2).toUpperCase()
-                                    )}
-                                </div>
-                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-background-light dark:border-background-dark flex items-center justify-center">
-                                    <div className="w-full h-full rounded-full animate-ping opacity-20 bg-green-500 absolute"></div>
-                                </div>
-                            </div>
-                            <div className="text-center space-y-1">
-                                <div className="flex items-center justify-center gap-2">
-                                    {blitzTag ? (
-                                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${blitzTagClasses}`}>
-                                            {blitzTag}
-                                        </span>
-                                    ) : null}
-                                    <h2 className="text-2xl font-bold tracking-tight">{displayUser?.username}</h2>
-                                    <span className="text-lg">{displayCountryCode}</span>
-                                </div>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{displayUser?.bio || 'No bio yet.'}</p>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 w-full max-w-sm mt-6">
-                                {stats.map((stat) => (
-                                    <div key={stat.label} className="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <p className="text-lg font-bold">{stat.value}</p>
-                                        <p className="text-xs text-slate-500">{stat.label}</p>
+                        <div className="relative">
+                            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent dark:from-primary/15 dark:via-primary/5" />
+                            <div className="relative px-4 pt-6 pb-4 flex flex-col items-center">
+                                <div className="relative mb-4">
+                                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-2xl font-bold text-slate-500 dark:text-slate-300">
+                                        {displayUser?.profile_pic ? (
+                                            <img src={displayUser.profile_pic} alt={`${displayUser?.username || 'User'} avatar`} className="w-full h-full object-cover" />
+                                        ) : (
+                                            displayUser?.username?.slice(0, 2).toUpperCase()
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                            <div className="w-full max-w-sm mt-4">
-                                <div className="text-xs font-semibold text-slate-500 mb-2">DigiQuiz</div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <p className="text-lg font-bold">{displayUser?.rating_digiquiz ?? 0}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Rating</p>
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-white dark:border-slate-800" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <div className="flex items-center justify-center gap-2">
+                                        {blitzTag ? (
+                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${blitzTagClasses}`}>
+                                                {blitzTag}
+                                            </span>
+                                        ) : null}
+                                        <h2 className="text-2xl font-bold tracking-tight">{displayUser?.username}</h2>
+                                        <span className="text-lg">{displayCountryCode}</span>
                                     </div>
-                                    <div className="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <p className="text-lg font-bold text-emerald-500">{displayUser?.digiquiz_correct ?? 0}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Correct</p>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-xs">{displayUser?.bio || 'No bio yet.'}</p>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 w-full max-w-sm mt-5">
+                                    {stats.map((stat) => (
+                                        <div key={stat.label} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
+                                            <span className={`material-symbols-outlined text-[18px] ${stat.color}`}>{stat.icon}</span>
+                                            <p className="text-lg font-bold leading-tight">{stat.value}</p>
+                                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">{stat.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="w-full max-w-sm mt-3 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-primary">quiz</span>
+                                            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">DigiQuiz</span>
+                                        </div>
+                                        <span className="text-sm font-bold">{displayUser?.rating_digiquiz ?? 0}</span>
                                     </div>
-                                    <div className="text-center p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
-                                        <p className="text-lg font-bold text-red-500">{displayUser?.digiquiz_wrong ?? 0}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Wrong</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs">
+                                        <div className="flex items-center gap-1">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                            <span className="text-slate-500">{displayUser?.digiquiz_correct ?? 0} correct</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                                            <span className="text-slate-500">{displayUser?.digiquiz_wrong ?? 0} wrong</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
                             {isSelf ? (
                                 <div className="flex gap-3 w-full max-w-sm mt-4">
                                     <button
@@ -662,6 +745,7 @@ export default function ProfilePage() {
                             {friendError ? (
                                 <div className="mt-2 text-xs text-red-500">{friendError}</div>
                             ) : null}
+                            </div>
                         </div>
 
                         <div className="px-4 mb-4">
@@ -720,19 +804,20 @@ export default function ProfilePage() {
                             ) : error ? (
                                 <div className="text-sm text-red-500">{error}</div>
                             ) : (
-                                <div className="relative h-52 w-full mt-4 rounded-xl bg-slate-900/40 dark:bg-slate-900/70">
+                                <div className="relative h-48 w-full mt-4">
                                     <RatingChart history={history} />
                                 </div>
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 px-4 mt-4">
+                        <div className="grid grid-cols-3 gap-3 px-4 mt-4">
                             {performanceCards.map((card) => (
                                 <div
                                     key={card.label}
-                                    className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center"
+                                    className="bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-border-light dark:border-border-dark flex flex-col items-center gap-1"
                                 >
-                                    <span className={`font-bold text-lg ${card.valueClass}`}>{card.value}</span>
+                                    <span className={`material-symbols-outlined text-[16px] ${card.iconColor}`}>{card.icon}</span>
+                                    <span className={`font-bold text-lg leading-tight ${card.valueClass}`}>{card.value}</span>
                                     <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{card.label}</span>
                                 </div>
                             ))}
@@ -753,33 +838,42 @@ export default function ProfilePage() {
                                 {recentPreview.map((game) => {
                                     const opponent = game.white?.username === displayUser.username ? game.black : game.white;
                                     const outcome = formatResult(game, displayUser.username);
+                                    const outcomeColor = outcome === 'Win' ? 'text-green-500' : outcome === 'Loss' ? 'text-red-500' : 'text-slate-500';
+                                    const barColor = outcome === 'Win' ? 'bg-green-500' : outcome === 'Loss' ? 'bg-red-500' : 'bg-slate-400';
+                                    const resultLabel = outcome === 'Draw' ? 'Draw (½-½)' : `${outcome} (${game.result || '*'})`;
                                     return (
                                         <button
                                             key={game.id}
                                             type="button"
                                             onClick={() => navigate(`/game/${game.id}`)}
-                                            className="w-full bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-slate-200 dark:border-slate-800 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                                            className="w-full bg-surface-light dark:bg-surface-dark rounded-xl p-3 flex items-center gap-3 border border-slate-200 dark:border-slate-800 text-left hover:border-primary/50 transition-all cursor-pointer shadow-sm"
                                         >
-                                            <div className={`w-1.5 h-12 rounded-full ${outcome === 'Win' ? 'bg-green-500' : outcome === 'Loss' ? 'bg-red-500' : 'bg-slate-400'}`}></div>
-                                            <MiniChessBoard fen={game.current_fen} size={56} />
-                                            <div className="flex flex-col items-center gap-1 shrink-0">
-                                                <span className="text-xs font-bold uppercase">{outcome}</span>
-                                                <div className="bg-slate-200 dark:bg-slate-700 w-8 h-8 rounded flex items-center justify-center text-xs font-bold">
-                                                    {game.result || '*'}
-                                                </div>
-                                            </div>
+                                            <div className={`w-1.5 self-stretch rounded-full shrink-0 ${barColor}`} />
+                                            <MiniChessBoard fen={game.current_fen} size={52} />
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm truncate">vs. {opponent?.username || 'Opponent'}</p>
-                                                <p className="text-xs text-slate-500 truncate">{game.time_control}</p>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <p className="font-bold text-sm truncate">vs. {opponent?.username || 'Opponent'}</p>
+                                                    {opponent?.rating_blitz ? (
+                                                        <span className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded text-slate-600 dark:text-slate-400">{opponent.rating_blitz}</span>
+                                                    ) : null}
+                                                </div>
+                                                <span className={`text-xs font-bold ${outcomeColor}`}>{resultLabel}</span>
+                                                <p className="text-[11px] text-slate-500 truncate mt-0.5">{game.time_control}</p>
                                             </div>
-                                            <div className="text-xs text-slate-400 whitespace-nowrap">
-                                                {new Date(game.created_at).toLocaleDateString()}
+                                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                <span className="text-[10px] text-slate-400 whitespace-nowrap">{formatTimeAgo(game.created_at)}</span>
+                                                <div className="w-7 h-7 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                    <span className="material-symbols-outlined text-[16px]">query_stats</span>
+                                                </div>
                                             </div>
                                         </button>
                                     );
                                 })}
                                 {!recentPreview.length && !loading ? (
-                                    <p className="text-sm text-slate-500">No games yet.</p>
+                                    <div className="flex flex-col items-center py-8 text-center">
+                                        <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-slate-600 mb-2">sports_esports</span>
+                                        <p className="text-sm text-slate-500">No games yet. Play your first game!</p>
+                                    </div>
                                 ) : null}
                             </div>
                         </div>
@@ -826,23 +920,26 @@ export default function ProfilePage() {
                                 {pagedGames.map((game) => {
                                     const opponent = game.white?.username === displayUser.username ? game.black : game.white;
                                     const outcome = formatResult(game, displayUser.username);
+                                    const outcomeColor = outcome === 'Win' ? 'text-green-500' : outcome === 'Loss' ? 'text-red-500' : 'text-slate-500';
+                                    const barColor = outcome === 'Win' ? 'bg-green-500' : outcome === 'Loss' ? 'bg-red-500' : 'bg-slate-400';
                                     return (
                                         <button
                                             key={game.id}
                                             type="button"
                                             onClick={() => navigate(`/game/${game.id}`)}
-                                            className="bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                                            className="group bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-left hover:border-primary/50 transition-all shadow-sm"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <MiniChessBoard fen={game.current_fen} size={72} />
-                                                <div>
-                                                    <div className="text-xs font-bold uppercase">{outcome}</div>
+                                                <div className={`w-1 self-stretch rounded-full shrink-0 ${barColor}`} />
+                                                <MiniChessBoard fen={game.current_fen} size={80} />
+                                                <div className="min-w-0">
+                                                    <div className={`text-xs font-bold uppercase ${outcomeColor}`}>{outcome}</div>
                                                     <div className="text-sm font-semibold truncate">vs. {opponent?.username || 'Opponent'}</div>
                                                     <div className="text-xs text-slate-500">{game.time_control}</div>
+                                                    <div className="text-[10px] text-slate-400 mt-1">
+                                                        {new Date(game.created_at).toLocaleDateString()}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="text-[10px] text-slate-400 mt-2">
-                                                {new Date(game.created_at).toLocaleDateString()}
                                             </div>
                                         </button>
                                     );
