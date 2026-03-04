@@ -1815,8 +1815,7 @@ export default function GamePage() {
             setLegalTargets(new Set(resolveTargets(squareCoord)));
         }
     };
-    squareClickRef.current = handleSquareClick;
-    piecePointerDownRef.current = handlePiecePointerDown;
+
     const stableSquareClick = useCallback((coord) => squareClickRef.current?.(coord), []);
     const stablePiecePointerDown = useCallback((e, coord) => piecePointerDownRef.current?.(e, coord), []);
 
@@ -1996,6 +1995,9 @@ export default function GamePage() {
         submitMoveFromUci,
         updateDragPosition,
     ]);
+
+    squareClickRef.current = handleSquareClick;
+    piecePointerDownRef.current = handlePiecePointerDown;
 
     const clampPreviewIndex = useCallback((value) => {
         const next = Math.max(0, Math.min(maxPreviewIndex, value));
