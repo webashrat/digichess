@@ -215,13 +215,13 @@ function Podium({ podium, onPlayerClick }) {
     const second = (podium || []).find((row) => row.rank === 2);
     const third = (podium || []).find((row) => row.rank === 3);
 
-    const clickable = (username) => username ? { onClick: () => onPlayerClick?.(username), role: 'button', tabIndex: 0, onKeyDown: (e) => e.key === 'Enter' && onPlayerClick?.(username), className: 'cursor-pointer' } : {};
+    const clickProps = (username) => username ? { onClick: () => onPlayerClick?.(username), role: 'button', tabIndex: 0, onKeyDown: (e) => e.key === 'Enter' && onPlayerClick?.(username) } : {};
 
     return (
         <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-primary/10 to-transparent dark:from-primary/10 dark:to-surface-dark p-5 md:p-7 overflow-hidden">
             <h3 className="text-lg md:text-xl font-bold text-center text-slate-900 dark:text-white">Top Performers</h3>
             <div className="mt-8 flex items-end justify-center gap-3 md:gap-8">
-                <div className="flex flex-col items-center w-[30%] md:w-40" {...clickable(second?.username)}>
+                <div className="flex flex-col items-center w-[30%] md:w-40 cursor-pointer" {...clickProps(second?.username)}>
                     <div className="size-14 md:size-16 rounded-full border-2 border-slate-400 dark:border-slate-500 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
                         {second?.username?.slice(0, 2).toUpperCase() || '2'}
                     </div>
@@ -232,7 +232,7 @@ function Podium({ podium, onPlayerClick }) {
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center w-[34%] md:w-44 -mt-4" {...clickable(first?.username)}>
+                <div className="flex flex-col items-center w-[34%] md:w-44 -mt-4 cursor-pointer" {...clickProps(first?.username)}>
                     <span className="material-symbols-outlined text-yellow-500 text-3xl md:text-4xl">crown</span>
                     <div className="size-16 md:size-20 rounded-full border-2 border-yellow-500 ring-4 ring-yellow-500/20 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-base font-bold text-slate-900 dark:text-white">
                         {first?.username?.slice(0, 2).toUpperCase() || '1'}
@@ -244,7 +244,7 @@ function Podium({ podium, onPlayerClick }) {
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center w-[30%] md:w-40" {...clickable(third?.username)}>
+                <div className="flex flex-col items-center w-[30%] md:w-40 cursor-pointer" {...clickProps(third?.username)}>
                     <div className="size-14 md:size-16 rounded-full border-2 border-amber-700 dark:border-amber-600 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
                         {third?.username?.slice(0, 2).toUpperCase() || '3'}
                     </div>

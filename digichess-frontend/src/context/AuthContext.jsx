@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { tokenStorage } from '../api/client';
-import { fetchMe, login as loginRequest, logout as logoutRequest, refreshSession } from '../api';
+import { fetchMe, login as loginRequest, logout as logoutRequest, pingPresence, refreshSession } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -74,6 +74,13 @@ export function AuthProvider({ children }) {
         }, 10 * 60 * 1000);
         return () => window.clearInterval(interval);
     }, [token, applyAuth, isAuthFailure]);
+
+    useEffect(() => {
+        if (!token) return undefined;
+        pingPresence().catch(() => {});
+        const id = window.setInterval(() => { pingPresence().catch(() => {}); }, 60_000);
+        return () => window.clearInterval(id);
+    }, [token]);
 
     const login = useCallback(async (identifier, password) => {
         setLoading(true);
