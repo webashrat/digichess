@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
-import { createTournament, listTournaments } from '../api';
+import { createTournament, listTournaments, registerTournament, tournamentMyGame } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const statusOptions = [
@@ -99,25 +99,90 @@ export default function TournamentsPage() {
     const [createError, setCreateError] = useState(null);
     const [form, setForm] = useState(defaultForm);
     const startAtInputRef = useRef(null);
+    const [registeredIds, setRegisteredIds] = useState(new Set());
+    const [registeringId, setRegisteringId] = useState(null);
+    const [listPage, setListPage] = useState(1);
+
+    const handleQuickRegister = async (event, tournamentId) => {
+        event.stopPropagation();
+        if (!isAuthenticated) { navigate('/login'); return; }
+        setRegisteringId(tournamentId);
+        try {
+            await registerTournament(tournamentId);
+            setRegisteredIds((prev) => new Set(prev).add(tournamentId));
+            await loadTournaments();
+        } catch (err) {
+            setError(err?.message || 'Failed to register.');
+        } finally {
+            setRegisteringId(null);
+        }
+    };
+
+    const initialTabSet = useRef(false);
+    const regCheckedRef = useRef(false);
+
+    const extractResults = (data) => Array.isArray(data) ? data : (data?.results ?? []);
 
     const loadTournaments = useCallback(async () => {
         try {
-            const data = await listTournaments({ page_size: 20 });
-            setTournaments(data.results || []);
+            const [liveData, pendingData, completedData] = await Promise.all([
+                listTournaments({ status: 'active', page_size: 50 }),
+                listTournaments({ status: 'pending', page_size: 50 }),
+                listTournaments({ status: 'completed', page_size: 50 }),
+            ]);
+            const liveResults = extractResults(liveData);
+            const pendingResults = extractResults(pendingData);
+            const completedResults = extractResults(completedData);
+            const all = [...liveResults, ...pendingResults, ...completedResults];
+            setTournaments(all);
             setError(null);
-        } catch {
-            setError('Failed to load tournaments.');
+
+            if (!initialTabSet.current) {
+                initialTabSet.current = true;
+                if (liveResults.length > 0) setStatusFilter('live');
+                else if (pendingResults.length > 0) setStatusFilter('pending');
+            }
+
+            const ids = new Set();
+            all.forEach((t) => { if (t.is_registered) ids.add(t.id); });
+
+            if (!regCheckedRef.current && isAuthenticated) {
+                regCheckedRef.current = true;
+                const nonCompleted = [...liveResults, ...pendingResults];
+                if (nonCompleted.length > 0) {
+                    const regChecks = await Promise.allSettled(
+                        nonCompleted.map((t) => tournamentMyGame(t.id).then((res) => ({ id: t.id, registered: res?.is_registered })))
+                    );
+                    regChecks.forEach((result) => {
+                        if (result.status === 'fulfilled' && result.value?.registered) {
+                            ids.add(result.value.id);
+                        }
+                    });
+                }
+            }
+
+            setRegisteredIds((prev) => {
+                const merged = new Set(prev);
+                ids.forEach((id) => merged.add(id));
+                return merged;
+            });
+        } catch (err) {
+            if (err?.status === 401 || err?.status === 403) {
+                setError('Please log in to view tournaments.');
+            } else {
+                setError(err?.message || 'Failed to load tournaments.');
+            }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         setLoading(true);
         loadTournaments();
         const polling = setInterval(() => {
             loadTournaments();
-        }, 10000);
+        }, 30000);
         return () => clearInterval(polling);
     }, [loadTournaments]);
 
@@ -141,6 +206,18 @@ export default function TournamentsPage() {
         () => tournaments.filter((tournament) => normalizeStatus(tournament.status) === statusFilter),
         [tournaments, statusFilter],
     );
+
+    const minDatetime = useMemo(() => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    }, []);
+
+    const statusCounts = useMemo(() => {
+        const counts = { live: 0, pending: 0, completed: 0 };
+        tournaments.forEach((t) => { counts[normalizeStatus(t.status)] = (counts[normalizeStatus(t.status)] || 0) + 1; });
+        return counts;
+    }, [tournaments]);
 
     const handleCreate = () => {
         if (!isAuthenticated) {
@@ -177,6 +254,10 @@ export default function TournamentsPage() {
             setCreateError('Start time is required.');
             return;
         }
+        if (new Date(form.start_at) <= new Date()) {
+            setCreateError('Start time must be in the future.');
+            return;
+        }
 
         const startAtIso = new Date(form.start_at).toISOString();
         const payload = {
@@ -202,6 +283,7 @@ export default function TournamentsPage() {
         try {
             const created = await createTournament(payload);
             setShowCreate(false);
+            setStatusFilter('pending');
             await loadTournaments();
             navigate(`/tournaments/${created.id}`);
         } catch (err) {
@@ -214,64 +296,71 @@ export default function TournamentsPage() {
     return (
         <Layout showHeader={false} showBottomNav={!showCreate}>
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
-                    <button
-                        className="flex items-center justify-center p-2 -ml-2 rounded-full active:bg-slate-200 dark:active:bg-slate-800 transition-colors"
-                        type="button"
-                        onClick={() => navigate('/')}
-                    >
-                        <span className="material-symbols-outlined text-2xl">arrow_back</span>
-                    </button>
-                    <h1 className="text-lg font-bold tracking-tight">Tournaments Hub</h1>
-                    <div className="w-6" />
-                </header>
-
-                <main className="flex-1 overflow-y-auto p-4 pb-24 space-y-6 no-scrollbar">
-                    <button
-                        className="w-full relative group overflow-hidden rounded-xl bg-primary p-4 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all"
-                        type="button"
-                        onClick={handleCreate}
-                        data-testid="tournaments-create-button"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                        <div className="flex items-center justify-center gap-3">
-                            <span className="material-symbols-outlined text-white text-3xl">add_circle</span>
-                            <span className="text-white text-lg font-bold tracking-wide">Create Tournament</span>
-                        </div>
-                    </button>
-
-                    <div className="flex gap-2 overflow-x-auto pb-2">
+                <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <button
+                            className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-slate-600 dark:text-slate-300"
+                            type="button"
+                            onClick={() => navigate('/')}
+                        >
+                            <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                        </button>
+                        <h1 className="text-base font-bold tracking-tight">Tournaments</h1>
+                        <button
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+                            type="button"
+                            onClick={handleCreate}
+                            data-testid="tournaments-create-button"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">add</span>
+                            Create
+                        </button>
+                    </div>
+                    <div className="flex gap-1.5 px-4 pb-3">
                         {statusOptions.map((option) => (
                             <button
                                 key={option.id}
                                 type="button"
-                                onClick={() => setStatusFilter(option.id)}
-                                className={`px-4 py-1.5 rounded-full text-sm font-semibold border ${
+                                onClick={() => { setStatusFilter(option.id); setListPage(1); }}
+                                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
                                     statusFilter === option.id
-                                        ? 'bg-primary text-white border-primary'
-                                        : 'bg-white dark:bg-surface-dark border-slate-200 dark:border-slate-700 text-slate-500'
+                                        ? 'bg-primary text-white shadow-sm'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                             >
                                 {option.label}
                             </button>
                         ))}
                     </div>
+                </header>
 
+                <main className="flex-1 overflow-y-auto p-4 pb-24 space-y-4 no-scrollbar">
                     {loading ? (
-                        <div className="text-sm text-slate-500">Loading tournaments...</div>
+                        <div className="flex items-center justify-center py-16">
+                            <div className="text-sm text-slate-500">Loading tournaments...</div>
+                        </div>
                     ) : error ? (
-                        <div className="text-sm text-red-500">{error}</div>
-                    ) : (
+                        <div className="flex items-center justify-center py-16">
+                            <div className="text-sm text-red-500">{error}</div>
+                        </div>
+                    ) : (() => {
+                        const LIST_PAGE_SIZE = 20;
+                        const totalListPages = Math.max(1, Math.ceil(filtered.length / LIST_PAGE_SIZE));
+                        const safeListPage = Math.min(listPage, totalListPages);
+                        const pagedFiltered = filtered.slice((safeListPage - 1) * LIST_PAGE_SIZE, safeListPage * LIST_PAGE_SIZE);
+                        return (
+                        <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filtered.map((tournament) => {
+                            {pagedFiltered.map((tournament) => {
                                 const normalized = normalizeStatus(tournament.status);
                                 const style = statusStyles[normalized];
                                 const countdown = formatCountdown(tournament.start_at, nowMs);
+                                const registered = registeredIds.has(tournament.id) || Boolean(tournament.is_registered);
+                                const isRegistering = registeringId === tournament.id;
                                 return (
-                                    <button
+                                    <div
                                         key={tournament.id}
-                                        className={`bg-gradient-to-r ${style.gradient} rounded-xl p-4 text-white relative overflow-hidden text-left`}
-                                        type="button"
+                                        className={`bg-gradient-to-r ${style.gradient} rounded-xl p-4 text-white relative overflow-hidden text-left cursor-pointer`}
                                         onClick={() => navigate(`/tournaments/${tournament.id}`)}
                                         data-testid={`tournament-card-${tournament.id}`}
                                     >
@@ -295,20 +384,84 @@ export default function TournamentsPage() {
                                                 <span className="material-symbols-outlined" style={{ fontSize: 56 }}>trophy</span>
                                             </div>
                                         </div>
-                                        <div className="relative z-10 mt-4">
-                                            <span className="inline-flex bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                                                {style.button}
-                                            </span>
+                                        <div className="relative z-10 mt-4 flex items-center gap-2">
+                                            {registered && normalized !== 'completed' ? (
+                                                <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                                    Registered
+                                                </span>
+                                            ) : normalized !== 'completed' ? (
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex items-center gap-1.5 bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-100 transition-colors disabled:opacity-60"
+                                                    onClick={(e) => handleQuickRegister(e, tournament.id)}
+                                                    disabled={isRegistering}
+                                                >
+                                                    {isRegistering ? 'Registering...' : style.button}
+                                                </button>
+                                            ) : null}
+                                            <button
+                                                type="button"
+                                                className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${tournament.id}`); }}
+                                            >
+                                                {normalized === 'completed' ? 'Results' : 'View Details'}
+                                            </button>
                                         </div>
                                         <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-                                    </button>
+                                    </div>
                                 );
                             })}
                             {!filtered.length ? (
-                                <div className="text-sm text-slate-500">No tournaments found.</div>
+                                <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                                    <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 mb-3">emoji_events</span>
+                                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                                        {statusFilter === 'live' ? 'No live tournaments right now' : statusFilter === 'pending' ? 'No upcoming tournaments' : 'No completed tournaments yet'}
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                        {statusFilter === 'pending' ? 'Create one to get started!' : 'Check back later.'}
+                                    </p>
+                                    {statusFilter === 'pending' ? (
+                                        <button
+                                            type="button"
+                                            className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+                                            onClick={handleCreate}
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">add</span>
+                                            Create Tournament
+                                        </button>
+                                    ) : null}
+                                </div>
                             ) : null}
                         </div>
-                    )}
+                        {totalListPages > 1 ? (
+                            <div className="flex items-center justify-between mt-4">
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:bg-transparent transition-colors"
+                                    onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                                    disabled={safeListPage <= 1}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                    Previous
+                                </button>
+                                <span className="text-sm text-slate-500">
+                                    Page {safeListPage} of {totalListPages}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-primary hover:bg-primary/5 disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:bg-transparent transition-colors"
+                                    onClick={() => setListPage((p) => Math.min(totalListPages, p + 1))}
+                                    disabled={safeListPage >= totalListPages}
+                                >
+                                    Next
+                                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                </button>
+                            </div>
+                        ) : null}
+                        </>
+                        );
+                    })()}
                 </main>
             </div>
 
@@ -481,6 +634,7 @@ export default function TournamentsPage() {
                                         <input
                                             ref={startAtInputRef}
                                             type="datetime-local"
+                                            min={minDatetime}
                                             className="tournament-datetime-input w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-11 py-2 text-sm"
                                             value={form.start_at}
                                             onChange={(e) => updateForm('start_at', e.target.value)}

@@ -9,7 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from utils.redis_client import get_redis
-from .models import Game
+from .models import Game, TournamentGame
 from .move_optimizer import process_move_optimized
 
 logger = logging.getLogger(__name__)
@@ -214,15 +214,17 @@ def _build_state(
     seq: Optional[int],
 ) -> Dict[str, Any]:
     move_count = len((game.moves or "").strip().split()) if game.moves else 0
+    is_tournament = TournamentGame.objects.filter(game_id=game.id).exists()
     first_move_deadline = None
     first_move_color = None
-    if move_count == 0 and game.status == Game.STATUS_ACTIVE and game.started_at:
-        first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
-        first_move_color = "white"
-    elif move_count == 1 and game.status == Game.STATUS_ACTIVE and game.started_at:
-        anchor = game.last_move_at or game.started_at
-        first_move_deadline = int((anchor + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
-        first_move_color = "black"
+    if not is_tournament:
+        if move_count == 0 and game.status == Game.STATUS_ACTIVE and game.started_at:
+            first_move_deadline = int((game.started_at + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+            first_move_color = "white"
+        elif move_count == 1 and game.status == Game.STATUS_ACTIVE and game.started_at:
+            anchor = game.last_move_at or game.started_at
+            first_move_deadline = int((anchor + timedelta(seconds=FIRST_MOVE_GRACE_SECONDS)).timestamp())
+            first_move_color = "black"
 
     return {
         "seq": seq,

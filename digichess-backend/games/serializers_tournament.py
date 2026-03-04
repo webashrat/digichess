@@ -12,6 +12,7 @@ class TournamentSerializer(serializers.ModelSerializer):
     participants_count = serializers.IntegerField(read_only=True)
     creator = serializers.SerializerMethodField()
     is_private = serializers.SerializerMethodField()
+    is_registered = serializers.SerializerMethodField()
 
     class Meta:
         model = Tournament
@@ -37,8 +38,9 @@ class TournamentSerializer(serializers.ModelSerializer):
             "rated",
             "password",
             "is_private",
+            "is_registered",
         )
-        read_only_fields = ("status", "started_at", "finished_at", "winners", "participants_count", "created_at", "is_private")
+        read_only_fields = ("status", "started_at", "finished_at", "winners", "participants_count", "created_at", "is_private", "is_registered")
         extra_kwargs = {
             "password": {"write_only": True}  # Don't expose password in GET requests
         }
@@ -48,6 +50,12 @@ class TournamentSerializer(serializers.ModelSerializer):
     
     def get_is_private(self, obj):
         return bool(obj.password)
+
+    def get_is_registered(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        return TournamentParticipant.objects.filter(tournament=obj, user=request.user).exists()
 
     def validate(self, attrs):
         start_at = attrs.get("start_at")

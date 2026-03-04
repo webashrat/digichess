@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import clsx from 'clsx';
 import useNotifications from '../../hooks/useNotifications';
+import useSettings from '../../hooks/useSettings';
 import { acceptGame, acceptRematch, rejectGame, rejectRematch, respondFriendRequest } from '../../api';
 import { useNavigate } from 'react-router-dom';
+import ProfileMenu from './ProfileMenu';
 
 const defaultSegments = [
     { id: 'bullet', label: 'Bullet' },
@@ -26,6 +28,7 @@ export default function Header({
         unreadCount,
         notifications,
         markAllRead,
+        clearAll,
         removeNotification,
         page: notificationsPage,
         totalPages: notificationsTotalPages,
@@ -35,6 +38,7 @@ export default function Header({
     const [showNotifications, setShowNotifications] = useState(false);
     const [notificationError, setNotificationError] = useState(null);
     const navigate = useNavigate();
+    const settings = useSettings();
     const handleBack = onBack || (() => window.history.back());
     const showRightAction = Boolean(rightAction);
     const showBadge = rightBadge ?? (rightAction === 'notifications' && unreadCount > 0);
@@ -105,21 +109,22 @@ export default function Header({
                     <div className="w-10" />
                 )}
                 <h1 className="text-lg font-bold tracking-tight">{title}</h1>
-                {showRightAction ? (
-                    <button
-                        className="p-2 -mr-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 relative transition-colors"
-                        type="button"
-                        aria-label="Header action"
-                        onClick={handleRight}
-                    >
-                        <span className="material-symbols-outlined text-[24px]">{rightAction}</span>
-                        {showBadge ? (
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
-                        ) : null}
-                    </button>
-                ) : (
-                    <div className="w-10" />
-                )}
+                <div className="flex items-center gap-1">
+                    {showRightAction ? (
+                        <button
+                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 relative transition-colors"
+                            type="button"
+                            aria-label="Header action"
+                            onClick={handleRight}
+                        >
+                            <span className="material-symbols-outlined text-[24px]">{rightAction}</span>
+                            {showBadge ? (
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
+                            ) : null}
+                        </button>
+                    ) : null}
+                    <ProfileMenu settings={settings} />
+                </div>
             </div>
 
             {showNotifications && rightAction === 'notifications' ? (
@@ -127,13 +132,27 @@ export default function Header({
                     <div className="bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">Notifications</h4>
-                            <button
-                                className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
-                                type="button"
-                                onClick={() => setShowNotifications(false)}
-                            >
-                                <span className="material-symbols-outlined text-base">close</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                                {notifications.length > 0 && (
+                                    <button
+                                        className="px-2 py-1 rounded-lg text-[10px] font-semibold text-red-500 hover:bg-red-500/10 transition-colors"
+                                        type="button"
+                                        onClick={() => {
+                                            clearAll();
+                                            setShowNotifications(false);
+                                        }}
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
+                                <button
+                                    className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+                                    type="button"
+                                    onClick={() => setShowNotifications(false)}
+                                >
+                                    <span className="material-symbols-outlined text-base">close</span>
+                                </button>
+                            </div>
                         </div>
                         {notificationError ? (
                             <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>

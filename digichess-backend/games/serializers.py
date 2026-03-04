@@ -5,7 +5,7 @@ import chess
 from datetime import timedelta
 
 from accounts.serializers import UserSerializer
-from .models import Game
+from .models import Game, TournamentGame
 from .game_core import FIRST_MOVE_GRACE_SECONDS, CHALLENGE_EXPIRY_MINUTES
 from utils.email import send_email_notification
 
@@ -45,6 +45,7 @@ class GameSerializer(serializers.ModelSerializer):
     white_rating_delta = serializers.IntegerField(read_only=True)
     black_rating_delta = serializers.IntegerField(read_only=True)
 
+    tournament_id = serializers.SerializerMethodField()
     rematch_requested_by = serializers.SerializerMethodField()
     rematch_requested_at = serializers.DateTimeField(read_only=True)
     draw_offer_by = serializers.SerializerMethodField()
@@ -85,6 +86,7 @@ class GameSerializer(serializers.ModelSerializer):
             "move_count",
             "white_rating_delta",
             "black_rating_delta",
+            "tournament_id",
         )
         read_only_fields = (
             "status",
@@ -146,6 +148,13 @@ class GameSerializer(serializers.ModelSerializer):
 
     def get_draw_offer_by(self, obj):
         return obj.draw_offer_by.id if obj.draw_offer_by else None
+
+    def get_tournament_id(self, obj):
+        try:
+            tg = TournamentGame.objects.filter(game=obj).only('tournament_id').first()
+            return tg.tournament_id if tg else None
+        except Exception:
+            return None
 
     def _validate_time_settings(
         self,

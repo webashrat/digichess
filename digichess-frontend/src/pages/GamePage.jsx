@@ -551,7 +551,8 @@ export default function GamePage() {
         : (game?.draw_offer_by ?? null);
     const canOfferDraw = isAuthenticated && isUserPlayer && currentStatus === 'active' && !drawOfferBy;
     const canResign = isAuthenticated && isUserPlayer && currentStatus === 'active';
-    const canAbort = isAuthenticated && isUserPlayer && currentStatus === 'active' && moveCount < 2;
+    const isTournamentGame = Boolean(game?.tournament_id);
+    const canAbort = isAuthenticated && isUserPlayer && currentStatus === 'active' && moveCount < 2 && !isTournamentGame;
     const clockTurn = state?.turn || fenTurn;
     const clockSource = useMemo(() => {
         const whiteRaw = state?.white_time_left ?? game?.white_time_left;
@@ -1205,7 +1206,8 @@ export default function GamePage() {
     const rematchWindowExpired = rematchWindowEndMs ? Date.now() > rematchWindowEndMs : false;
     const showRematchActions = isUserPlayer
         && (currentStatus === 'finished' || currentStatus === 'aborted')
-        && !rematchWindowExpired;
+        && !rematchWindowExpired
+        && !isTournamentGame;
 
     useEffect(() => {
         if (!rematchWindowEndMs) return;
@@ -1266,7 +1268,7 @@ export default function GamePage() {
     const bottomColor = isUserWhite ? 'white' : 'black';
     const topTag = topPlayer?.is_bot ? null : getBlitzTag(topPlayer?.rating_blitz);
     const bottomTag = bottomPlayer?.is_bot ? null : getBlitzTag(bottomPlayer?.rating_blitz);
-    const showFirstMoveCountdown = firstMoveRemaining != null && currentStatus === 'active' && moveCount < 2;
+    const showFirstMoveCountdown = firstMoveRemaining != null && currentStatus === 'active' && moveCount < 2 && !isTournamentGame;
     const isFirstMoveUrgent = firstMoveRemaining != null && firstMoveRemaining <= 10;
     const showMoveHints = Boolean(selectedSquare);
     const topClockDisplay = topClock;
@@ -3067,6 +3069,19 @@ export default function GamePage() {
                                                     {rematchNotice}
                                                 </div>
                                             ) : null}
+                                        </div>
+                                    ) : null}
+                                    {isTournamentGame && (currentStatus === 'finished' || currentStatus === 'aborted') ? (
+                                        <div className="mt-3">
+                                            <button
+                                                className="w-full px-3 py-2.5 rounded-lg bg-primary text-white text-xs font-semibold flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors"
+                                                type="button"
+                                                onClick={() => navigate(`/tournaments/${game.tournament_id}`)}
+                                                data-testid="back-to-tournament"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">emoji_events</span>
+                                                Back to Tournament
+                                            </button>
                                         </div>
                                     ) : null}
                                     {currentStatus === 'finished' ? (

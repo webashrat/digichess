@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+import ProfileMenu from '../components/layout/ProfileMenu';
 import MiniChessBoard from '../components/chess/MiniChessBoard';
 import {
     acceptGame,
@@ -19,8 +20,7 @@ import {
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import useNotifications from '../hooks/useNotifications';
-import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
-import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
+import useSettings from '../hooks/useSettings';
 
 const quickPlayCards = [
     { id: 'bullet', label: 'Bullet', time: '1+0', icon: 'local_fire_department', color: 'text-orange-400' },
@@ -48,11 +48,6 @@ const botModeOptions = quickPlayCards.map((card) => ({ id: card.id, label: card.
 const JIANG_BOT_IMAGE = '/images/jiang-bot.png';
 
 
-const LOCAL_STORAGE_SOUND = 'soundEnabled';
-const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
-const LOCAL_STORAGE_UI_THEME = 'uiTheme';
-const SETTINGS_CHANGE_EVENT = 'digichess-settings-change';
-
 const getRatingForControl = (user, control) => {
     if (!user) return null;
     const map = {
@@ -76,7 +71,8 @@ const getEvalSplit = (game) => {
 export default function HomePage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { user, isAuthenticated, logout } = useAuth();
+    const { user, isAuthenticated } = useAuth();
+    const settings = useSettings();
     const [queueingControl, setQueueingControl] = useState(null);
     const [queueLoading, setQueueLoading] = useState(false);
     const [queueError, setQueueError] = useState(null);
@@ -84,6 +80,7 @@ export default function HomePage() {
         unreadCount,
         notifications,
         markAllRead,
+        clearAll,
         removeNotification,
         page: notificationsPage,
         totalPages: notificationsTotalPages,
@@ -101,34 +98,8 @@ export default function HomePage() {
     const [liveGames, setLiveGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showSettings, setShowSettings] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [notificationError, setNotificationError] = useState(null);
-    const [uiTheme, setUiTheme] = useState(() => {
-        if (typeof window === 'undefined') return 'dark';
-        const stored = localStorage.getItem(LOCAL_STORAGE_UI_THEME);
-        if (stored === 'light' || stored === 'dark') return stored;
-        return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    });
-    const [boardThemeIndex, setBoardThemeIndex] = useState(() => {
-        if (typeof window === 'undefined') return 6;
-        const stored = Number(localStorage.getItem('boardTheme'));
-        return Number.isFinite(stored) ? stored : 6;
-    });
-    const [pieceSet, setPieceSet] = useState(() => {
-        if (typeof window === 'undefined') return 'cburnett';
-        return localStorage.getItem('pieceSet') || 'cburnett';
-    });
-    const [soundEnabled, setSoundEnabled] = useState(() => {
-        if (typeof window === 'undefined') return true;
-        const stored = localStorage.getItem(LOCAL_STORAGE_SOUND);
-        return stored ? stored === 'true' : true;
-    });
-    const [autoQueenEnabled, setAutoQueenEnabled] = useState(() => {
-        if (typeof window === 'undefined') return true;
-        const stored = localStorage.getItem(LOCAL_STORAGE_AUTO_QUEEN);
-        return stored ? stored === 'true' : true;
-    });
     const [activeGameId, setActiveGameId] = useState(null);
     const [showCustomForm, setShowCustomForm] = useState(false);
     const [customOpponentQuery, setCustomOpponentQuery] = useState('');
@@ -150,8 +121,6 @@ export default function HomePage() {
     const [botError, setBotError] = useState(null);
     const [botSubmittingId, setBotSubmittingId] = useState(null);
     const prefillAppliedRef = useRef(false);
-    const settingsButtonRef = useRef(null);
-    const settingsPanelRef = useRef(null);
     const notificationsButtonRef = useRef(null);
     const notificationsPanelRef = useRef(null);
 
@@ -161,11 +130,6 @@ export default function HomePage() {
         { label: 'Rapid', value: user?.rating_rapid || 800, icon: 'timer', color: 'text-green-400' },
     ]), [user]);
 
-    const avatarUrl = user?.profile_pic || user?.avatar || user?.image || '';
-    const initials = user?.username?.slice(0, 2).toUpperCase() || 'DC';
-
-    const blitzTag = getBlitzTag(user?.rating_blitz);
-    const boardTheme = BOARD_THEMES[boardThemeIndex] || BOARD_THEMES[6] || BOARD_THEMES[0];
     const isPlayModalOpen = showCustomForm || showBotPanel;
 
     const loadLiveGames = useCallback(async (showSpinner = false) => {
@@ -312,65 +276,18 @@ export default function HomePage() {
     }, [showBotPanel, botMode]);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('boardTheme', String(boardThemeIndex));
-        }
-    }, [boardThemeIndex]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('pieceSet', pieceSet);
-        }
-    }, [pieceSet]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(LOCAL_STORAGE_SOUND, String(soundEnabled));
-            window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT, {
-                detail: { key: LOCAL_STORAGE_SOUND, value: String(soundEnabled) },
-            }));
-        }
-    }, [soundEnabled]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const isDark = uiTheme === 'dark';
-        document.documentElement.classList.toggle('dark', isDark);
-        localStorage.setItem(LOCAL_STORAGE_UI_THEME, uiTheme);
-    }, [uiTheme]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(LOCAL_STORAGE_AUTO_QUEEN, String(autoQueenEnabled));
-            window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT, {
-                detail: { key: LOCAL_STORAGE_AUTO_QUEEN, value: String(autoQueenEnabled) },
-            }));
-        }
-    }, [autoQueenEnabled]);
-
-    useEffect(() => {
         if (showNotifications) {
             setNotificationError(null);
         }
     }, [showNotifications]);
 
     useEffect(() => {
-        if (typeof document === 'undefined' || (!showSettings && !showNotifications)) return undefined;
+        if (typeof document === 'undefined' || !showNotifications) return undefined;
         const handleOutside = (event) => {
-            const target = event.target;
-            if (showSettings) {
-                const clickedSettingsButton = settingsButtonRef.current?.contains(target);
-                const clickedSettingsPanel = settingsPanelRef.current?.contains(target);
-                if (!clickedSettingsButton && !clickedSettingsPanel) {
-                    setShowSettings(false);
-                }
-            }
-            if (showNotifications) {
-                const clickedNotificationsButton = notificationsButtonRef.current?.contains(target);
-                const clickedNotificationsPanel = notificationsPanelRef.current?.contains(target);
-                if (!clickedNotificationsButton && !clickedNotificationsPanel) {
-                    setShowNotifications(false);
-                }
+            const clickedNotificationsButton = notificationsButtonRef.current?.contains(event.target);
+            const clickedNotificationsPanel = notificationsPanelRef.current?.contains(event.target);
+            if (!clickedNotificationsButton && !clickedNotificationsPanel) {
+                setShowNotifications(false);
             }
         };
         document.addEventListener('mousedown', handleOutside);
@@ -379,7 +296,7 @@ export default function HomePage() {
             document.removeEventListener('mousedown', handleOutside);
             document.removeEventListener('touchstart', handleOutside);
         };
-    }, [showSettings, showNotifications]);
+    }, [showNotifications]);
 
     useEffect(() => {
         if (typeof document === 'undefined' || !isPlayModalOpen) return undefined;
@@ -586,230 +503,70 @@ export default function HomePage() {
         <Layout showHeader={false}>
             <>
                 <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-                <header className="sticky top-0 z-30 border-b border-slate-200/70 dark:border-slate-800/70 bg-gradient-to-b from-background-light/95 to-background-light/85 dark:from-background-dark/95 dark:to-background-dark/85 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4 shadow-sm">
-                    <div className="mx-auto w-full max-w-[1500px] rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/75 dark:bg-slate-900/55 shadow-[0_10px_35px_rgba(15,23,42,0.15)] dark:shadow-[0_12px_36px_rgba(2,6,23,0.5)] px-3 py-2 sm:px-4 sm:py-3">
-                        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[auto_1fr_auto] sm:gap-x-3 sm:gap-y-0">
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            className="group flex items-center gap-2 sm:gap-3 text-left min-w-0 rounded-xl px-1 py-1 sm:px-2.5 sm:py-1.5 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
-                            onClick={() => navigate('/profile')}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    navigate('/profile');
-                                }
-                            }}
-                        >
-                            <div className="relative">
-                                <div
-                                    className={`rounded-full size-9 sm:size-10 border-2 border-primary/90 shadow-sm ${avatarUrl ? 'bg-cover bg-center' : 'bg-slate-700 flex items-center justify-center text-xs font-bold text-white'}`}
-                                    style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
-                                >
-                                    {!avatarUrl ? initials : null}
-                                </div>
-                                <div className="absolute bottom-0 right-0 size-3 bg-accent-green-bright rounded-full border-2 border-background-dark"></div>
+                <header className="sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-4 py-2.5 sm:py-3 shadow-sm">
+                    <div className="mx-auto w-full max-w-[1500px] flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary shadow-md shadow-primary/30">
+                                <span className="text-white text-lg font-bold leading-none">♞</span>
                             </div>
-                            <div className="min-w-0">
-                                <h1 className="text-sm font-bold leading-tight truncate text-slate-900 dark:text-slate-100">{user?.username || 'Guest'}</h1>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="material-symbols-outlined text-yellow-500 text-[14px]">bolt</span>
-                                    {user ? (
-                                        <span className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                            {user.rating_blitz}
-                                        </span>
-                                    ) : (
-                                        <button
-                                            className="text-[11px] sm:text-xs font-semibold text-primary hover:text-blue-400 hover:underline cursor-pointer"
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                navigate('/login');
-                                            }}
-                                        >
-                                            Login to play
-                                        </button>
-                                    )}
-                                    {blitzTag ? (
-                                        <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${getRatingTagClasses(blitzTag)}`}>
-                                            {blitzTag}
-                                        </span>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-span-2 row-start-2 mt-1 flex justify-center sm:col-span-1 sm:row-start-1 sm:col-start-2 sm:mt-0">
-                            <button
-                                type="button"
-                                onClick={() => navigate('/')}
-                                className="inline-flex items-center gap-2.5 rounded-full border border-slate-300/80 dark:border-slate-600/70 bg-slate-100/80 dark:bg-slate-800/70 px-3 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            >
-                                <span className="text-base leading-none text-primary">♞</span>
-                                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                            <div className="flex flex-col">
+                                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
                                     DigiChess
                                 </span>
-                                <span className="hidden md:inline-block h-3 w-px bg-slate-300 dark:bg-slate-600" />
-                                <span className="hidden md:inline text-[10px] uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">
                                     Live Arena
                                 </span>
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-end sm:col-start-3">
-                            <div className="inline-flex items-center gap-1 rounded-full border border-slate-300/70 dark:border-slate-700/80 bg-slate-100/75 dark:bg-slate-800/55 p-1 shadow-sm">
-                            {!isAuthenticated ? (
-                                <button
-                                    className="h-8 sm:h-9 px-3 rounded-full bg-primary text-white text-[11px] sm:text-xs font-semibold shadow-sm hover:bg-blue-600 transition-colors active:scale-95"
-                                    type="button"
-                                    onClick={() => navigate('/signup')}
-                                >
-                                    Sign up
-                                </button>
-                            ) : (
-                                <>
-                                    <button
-                                        ref={notificationsButtonRef}
-                                        className="relative flex items-center justify-center size-[34px] sm:size-9 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                        type="button"
-                                        onClick={() => {
-                                            setShowSettings(false);
-                                            setShowNotifications((prev) => {
-                                                const next = !prev;
-                                                if (next) setNotificationsPage(1);
-                                                return next;
-                                            });
-                                            markAllRead();
-                                        }}
-                                    >
-                                        <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
-                                        {unreadCount > 0 ? (
-                                            <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
-                                        ) : null}
-                                    </button>
-                                    <button
-                                        className="inline-flex h-[34px] sm:h-9 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-full bg-slate-200/90 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
-                                        type="button"
-                                        onClick={logout}
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">logout</span>
-                                        <span className="max-[380px]:hidden">Logout</span>
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                ref={settingsButtonRef}
-                                className="flex items-center justify-center size-[34px] sm:size-9 rounded-full border border-slate-300/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                type="button"
-                                onClick={() => {
-                                    setShowNotifications(false);
-                                    setShowSettings((prev) => !prev);
-                                }}
-                            >
-                                <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">settings</span>
-                            </button>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {isAuthenticated ? (
+                                <button
+                                    ref={notificationsButtonRef}
+                                    className="relative flex items-center justify-center size-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                    type="button"
+                                    onClick={() => {
+                                        setShowNotifications((prev) => {
+                                            const next = !prev;
+                                            if (next) setNotificationsPage(1);
+                                            return next;
+                                        });
+                                        markAllRead();
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined text-[20px] text-slate-600 dark:text-slate-300">notifications</span>
+                                    {unreadCount > 0 ? (
+                                        <span className="absolute top-1 right-1 size-2.5 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
+                                    ) : null}
+                                </button>
+                            ) : null}
+                            <ProfileMenu settings={settings} />
                         </div>
                     </div>
-                    </div>
-                    {showSettings ? (
-                        <div ref={settingsPanelRef} className="fixed inset-x-3 top-24 z-40 max-h-[calc(100dvh-7.5rem)] overflow-y-auto rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 shadow-2xl p-4 space-y-4 sm:absolute sm:inset-x-auto sm:top-16 sm:right-4 sm:max-h-none sm:w-72">
-                            <div>
-                                <div className="text-xs font-semibold text-slate-500 mb-2">App theme</div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        type="button"
-                                        className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                                            uiTheme === 'light'
-                                                ? 'bg-primary text-white border-primary'
-                                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                                        }`}
-                                        onClick={() => setUiTheme('light')}
-                                    >
-                                        Light
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                                            uiTheme === 'dark'
-                                                ? 'bg-primary text-white border-primary'
-                                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                                        }`}
-                                        onClick={() => setUiTheme('dark')}
-                                    >
-                                        Dark
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="text-xs font-semibold text-slate-500 mb-2">Board theme</div>
-                                <div className="flex items-center gap-3">
-                                    <div className="grid grid-cols-2 grid-rows-2 w-8 h-8 rounded overflow-hidden border border-slate-200 dark:border-slate-700">
-                                        <div style={{ backgroundColor: boardTheme.light }} />
-                                        <div style={{ backgroundColor: boardTheme.dark }} />
-                                        <div style={{ backgroundColor: boardTheme.dark }} />
-                                        <div style={{ backgroundColor: boardTheme.light }} />
-                                    </div>
-                                    <select
-                                        value={boardThemeIndex}
-                                        onChange={(event) => setBoardThemeIndex(Number(event.target.value))}
-                                        className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                    >
-                                        {BOARD_THEMES.map((theme, idx) => (
-                                            <option key={theme.name} value={idx}>
-                                                {theme.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="text-xs font-semibold text-slate-500 mb-2">Piece set</div>
-                                <select
-                                    value={pieceSet}
-                                    onChange={(event) => setPieceSet(event.target.value)}
-                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
-                                >
-                                    {PIECE_SETS.map((set) => (
-                                        <option key={set.value} value={set.value}>
-                                            {set.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="text-xs font-semibold text-slate-500">Sound</div>
-                                <button
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${soundEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'}`}
-                                    type="button"
-                                    onClick={() => setSoundEnabled((prev) => !prev)}
-                                >
-                                    {soundEnabled ? 'Enabled' : 'Muted'}
-                                </button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="text-xs font-semibold text-slate-500">Auto queen</div>
-                                <button
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                                        autoQueenEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
-                                    }`}
-                                    type="button"
-                                    onClick={() => setAutoQueenEnabled((prev) => !prev)}
-                                >
-                                    {autoQueenEnabled ? 'Enabled' : 'Disabled'}
-                                </button>
-                            </div>
-                        </div>
-                    ) : null}
                     {showNotifications ? (
                         <div ref={notificationsPanelRef} className="fixed inset-x-3 top-24 z-40 max-h-[calc(100dvh-7.5rem)] overflow-y-auto rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 shadow-2xl p-4 sm:absolute sm:inset-x-auto sm:top-16 sm:right-4 sm:max-h-none sm:w-80">
                                 <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-semibold">Notifications</h4>
-                                    <button
-                                        className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
-                                        type="button"
-                                        onClick={() => setShowNotifications(false)}
-                                    >
-                                        <span className="material-symbols-outlined text-base">close</span>
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        {notifications.length > 0 && (
+                                            <button
+                                                className="px-2 py-1 rounded-lg text-[10px] font-semibold text-red-500 hover:bg-red-500/10 transition-colors"
+                                                type="button"
+                                                onClick={() => {
+                                                    clearAll();
+                                                    setShowNotifications(false);
+                                                }}
+                                            >
+                                                Clear All
+                                            </button>
+                                        )}
+                                        <button
+                                            className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+                                            type="button"
+                                            onClick={() => setShowNotifications(false)}
+                                        >
+                                            <span className="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                    </div>
                                 </div>
                             {notificationError ? (
                                 <div className="mb-2 text-[11px] text-amber-500">{notificationError}</div>
@@ -1062,8 +819,8 @@ export default function HomePage() {
                                                     <MiniChessBoard
                                                         fen={game.current_fen}
                                                         size={200}
-                                                        themeIndex={boardThemeIndex}
-                                                        pieceSet={pieceSet}
+                                                        themeIndex={settings.boardThemeIndex}
+                                                        pieceSet={settings.pieceSet}
                                                     />
                                             </div>
                                             <div className="absolute left-0 top-0 bottom-0 w-2 bg-slate-400 dark:bg-gray-700 flex flex-col">

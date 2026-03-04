@@ -1,0 +1,167 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic: DigiChess
+  - main [ref=e4]:
+    - generic [ref=e6]:
+      - complementary [ref=e7]:
+        - button "arrow_back" [ref=e9] [cursor=pointer]:
+          - generic [ref=e10]: arrow_back
+        - generic [ref=e11]:
+          - heading "Moves" [level=3] [ref=e12]
+          - generic [ref=e13]: 20 moves
+        - generic [ref=e15]:
+          - button "skip_previous" [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: skip_previous
+          - button "chevron_left" [ref=e18] [cursor=pointer]:
+            - generic [ref=e19]: chevron_left
+          - button "chevron_right" [disabled] [ref=e20]:
+            - generic [ref=e21]: chevron_right
+          - button "skip_next" [disabled] [ref=e22]:
+            - generic [ref=e23]: skip_next
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: "#"
+            - generic [ref=e28]: White
+            - generic [ref=e29]: Black
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: "1."
+              - button "e4" [ref=e33] [cursor=pointer]
+              - button "e5" [ref=e34] [cursor=pointer]
+            - generic [ref=e35]:
+              - generic [ref=e36]: "2."
+              - button "Nf3" [ref=e37] [cursor=pointer]
+              - button "Nc6" [ref=e38] [cursor=pointer]
+            - generic [ref=e39]:
+              - generic [ref=e40]: "3."
+              - button "Bc4" [ref=e41] [cursor=pointer]
+              - button "Bc5" [ref=e42] [cursor=pointer]
+            - generic [ref=e43]:
+              - generic [ref=e44]: "4."
+              - button "d3" [ref=e45] [cursor=pointer]
+              - button "Nf6" [ref=e46] [cursor=pointer]
+            - generic [ref=e47]:
+              - generic [ref=e48]: "5."
+              - button "Nc3" [ref=e49] [cursor=pointer]
+              - button "d6" [ref=e50] [cursor=pointer]
+            - generic [ref=e51]:
+              - generic [ref=e52]: "6."
+              - button "Be3" [ref=e53] [cursor=pointer]
+              - button "Bxe3" [ref=e54] [cursor=pointer]
+            - generic [ref=e55]:
+              - generic [ref=e56]: "7."
+              - button "fxe3" [ref=e57] [cursor=pointer]
+              - button "Be6" [ref=e58] [cursor=pointer]
+            - generic [ref=e59]:
+              - generic [ref=e60]: "8."
+              - button "Bxe6" [ref=e61] [cursor=pointer]
+              - button "fxe6" [ref=e62] [cursor=pointer]
+            - generic [ref=e63]:
+              - generic [ref=e64]: "9."
+              - button "O-O" [ref=e65] [cursor=pointer]
+              - button "O-O" [ref=e66] [cursor=pointer]
+            - generic [ref=e67]:
+              - generic [ref=e68]: "10."
+              - button "Qe2" [ref=e69] [cursor=pointer]
+              - button "a6" [ref=e70] [cursor=pointer]
+        - generic [ref=e71]:
+          - button "flag_circle Resign" [ref=e72] [cursor=pointer]:
+            - generic [ref=e73]: flag_circle
+            - generic [ref=e74]: Resign
+          - button "handshake Draw" [ref=e75] [cursor=pointer]:
+            - generic [ref=e76]: handshake
+            - generic [ref=e77]: Draw
+      - main [ref=e78]:
+        - generic [ref=e79]:
+          - button "KA kasanaruomoi 725 • CN" [ref=e80] [cursor=pointer]:
+            - generic [ref=e82]: KA
+            - generic [ref=e83]:
+              - paragraph [ref=e85]: kasanaruomoi
+              - paragraph [ref=e86]: 725 • CN
+          - generic [ref=e88]: 180:08
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]
+          - button [ref=e93] [cursor=pointer]
+          - button [ref=e95] [cursor=pointer]
+          - button [ref=e97] [cursor=pointer]
+          - button [ref=e98] [cursor=pointer]
+          - button [ref=e99] [cursor=pointer]
+          - button [ref=e100] [cursor=pointer]
+          - button [ref=e101] [cursor=pointer]
+          - button [ref=e103] [cursor=pointer]
+          - button [ref=e105] [cursor=pointer]
+          - button [ref=e107] [cursor=pointer]
+          - button [ref=e108] [cursor=pointer]
+          - button [ref=e110] [cursor=pointer]
+          - button [ref=e111] [cursor=pointer]
+          - button [ref=e113] [cursor=pointer]
+          - button [ref=e115] [cursor=pointer]
+          - button [ref=e117] [cursor=pointer]
+          - button [ref=e118] [cursor=pointer]
+          - button [ref=e119] [cursor=pointer]
+          - button [ref=e121] [cursor=pointer]
+          - button [ref=e123] [cursor=pointer]
+          - button [ref=e125] [cursor=pointer]
+          - button [ref=e127] [cursor=pointer]
+          - button [ref=e128] [cursor=pointer]
+          - button [ref=e129] [cursor=pointer]
+          - button [ref=e130] [cursor=pointer]
+          - button [ref=e131] [cursor=pointer]
+          - button [ref=e132] [cursor=pointer]
+          - button [ref=e134] [cursor=pointer]
+          - button [ref=e135] [cursor=pointer]
+          - button [ref=e136] [cursor=pointer]
+          - button [ref=e137] [cursor=pointer]
+          - button [ref=e138] [cursor=pointer]
+          - button [ref=e139] [cursor=pointer]
+          - button [ref=e140] [cursor=pointer]
+          - button [ref=e141] [cursor=pointer]
+          - button [ref=e143] [cursor=pointer]
+          - button [ref=e144] [cursor=pointer]
+          - button [ref=e145] [cursor=pointer]
+          - button [ref=e146] [cursor=pointer]
+          - button [ref=e147] [cursor=pointer]
+          - button [ref=e148] [cursor=pointer]
+          - button [ref=e149] [cursor=pointer]
+          - button [ref=e151] [cursor=pointer]
+          - button [ref=e153] [cursor=pointer]
+          - button [ref=e155] [cursor=pointer]
+          - button [ref=e157] [cursor=pointer]
+          - button [ref=e158] [cursor=pointer]
+          - button [ref=e161] [cursor=pointer]
+          - button [ref=e163] [cursor=pointer]
+          - button [ref=e165] [cursor=pointer]
+          - button [ref=e166] [cursor=pointer]
+          - button [ref=e167] [cursor=pointer]
+          - button [ref=e168] [cursor=pointer]
+          - button [ref=e170] [cursor=pointer]
+          - button [ref=e172] [cursor=pointer]
+          - button [ref=e174] [cursor=pointer]
+          - button [ref=e175] [cursor=pointer]
+          - button [ref=e177] [cursor=pointer]
+          - button [ref=e179] [cursor=pointer]
+          - button [ref=e180] [cursor=pointer]
+          - button [ref=e182] [cursor=pointer]
+          - button [ref=e183] [cursor=pointer]
+          - button [ref=e184] [cursor=pointer]
+        - generic [ref=e186]:
+          - button "AM amenotiomoi 867 • CN" [ref=e187] [cursor=pointer]:
+            - generic [ref=e189]: AM
+            - generic [ref=e190]:
+              - paragraph [ref=e192]: amenotiomoi
+              - paragraph [ref=e193]: 867 • CN
+          - generic [ref=e195]: 180:07
+      - complementary [ref=e196]:
+        - generic [ref=e197]:
+          - heading "Players Chat" [level=3] [ref=e199]
+          - button "settings" [ref=e200] [cursor=pointer]:
+            - generic [ref=e201]: settings
+        - generic [ref=e202]:
+          - generic [ref=e204]: No chat messages yet.
+          - generic [ref=e205]:
+            - textbox "Send a message..." [ref=e206]
+            - button "Send message" [disabled] [ref=e207]:
+              - generic [ref=e208]: send
+```

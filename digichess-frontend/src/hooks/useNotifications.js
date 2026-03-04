@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { deleteNotification, fetchNotifications, fetchUnreadNotifications, markAllNotificationsRead } from '../api';
+import { clearAllNotifications, deleteNotification, fetchNotifications, fetchUnreadNotifications, markAllNotificationsRead } from '../api';
 import { tokenStorage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -174,6 +174,20 @@ export default function useNotifications(options = {}) {
         }
     }, [isAuthenticated]);
 
+    const clearAll = useCallback(async () => {
+        if (!isAuthenticated) return;
+        try {
+            await clearAllNotifications();
+        } catch {
+            // ignore
+        } finally {
+            setNotifications([]);
+            setUnreadCount(0);
+            setTotal(0);
+            setPage(1);
+        }
+    }, [isAuthenticated]);
+
     const removeNotification = useCallback(async (notificationId) => {
         if (!notificationId) return;
         const target = notifications.find((n) => n.id === notificationId);
@@ -203,11 +217,12 @@ export default function useNotifications(options = {}) {
         unreadCount,
         notifications,
         markAllRead,
+        clearAll,
         removeNotification,
         page,
         pageSize,
         total,
         totalPages,
         setPage,
-    }), [unreadCount, notifications, markAllRead, removeNotification, page, pageSize, total, totalPages]);
+    }), [unreadCount, notifications, markAllRead, clearAll, removeNotification, page, pageSize, total, totalPages]);
 }

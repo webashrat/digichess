@@ -123,6 +123,12 @@ export const createTournament = (payload) =>
 
 export const getTournament = (tournamentId) => api.get(`/games/tournaments/${tournamentId}/`);
 
+export const updateTournament = (tournamentId, payload) =>
+    api.patch(`/games/tournaments/${tournamentId}/`, payload);
+
+export const deleteTournament = (tournamentId) =>
+    api.del(`/games/tournaments/${tournamentId}/`);
+
 export const registerTournament = (tournamentId, payload = {}) =>
     api.post(`/games/tournaments/${tournamentId}/register/`, payload);
 
@@ -225,3 +231,6 @@ export const markAllNotificationsRead = () =>
 
 export const deleteNotification = (notificationId) =>
     api.del(`/notifications/${notificationId}/`);
+
+export const clearAllNotifications = () =>
+    api.del('/notifications/clear-all/');
