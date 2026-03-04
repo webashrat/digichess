@@ -45,36 +45,59 @@ except ImportError:
         return False
 
 
-def get_stockfish_config(bot_rating: int):
+TIME_CONTROL_MULTIPLIER = {
+    'bullet': 0.35,
+    'blitz': 0.7,
+    'rapid': 1.0,
+    'classical': 1.0,
+}
+
+
+def get_stockfish_config(bot_rating: int, time_control: str = "blitz"):
     """
     Map bot rating (800-2800+) to Stockfish configuration.
-    Uses UCI_LimitStrength and UCI_Elo for 2000+ (accurate Elo matching).
-    Falls back to Skill Level for lower ratings.
-    Stockfish Elo range: 1320-3190.
+
+    Master tier (2500+): Full Stockfish strength, no Elo limiting.
+    Expert tier (2000-2499): UCI_LimitStrength with +300 Elo offset to match
+        FIDE-equivalent strength (Stockfish UCI_Elo is CCRL-scale, ~300 below
+        Lichess/FIDE ratings).  No depth cap — the Elo limiter handles weakness.
+    Below 2000: Skill Level system for Maia-engine bots.
+
+    Think time scales with time control: bullet=35%, blitz=70%, rapid/classical=100%.
     """
+    tc_mult = TIME_CONTROL_MULTIPLIER.get(time_control, 0.7)
+
+    if bot_rating >= 2500:
+        if bot_rating < 2700:
+            time_ms = 1500
+        else:
+            time_ms = 2000
+        return {
+            'use_elo_limit': False,
+            'skill': 20,
+            'depth': None,
+            'time': max(0.15, time_ms * tc_mult / 1000.0),
+        }
+
     if bot_rating >= 2000:
-        elo = max(1320, min(3190, bot_rating))
+        elo = max(1320, min(3190, bot_rating + 300))
 
         if bot_rating < 2100:
-            depth, time_ms = 10, 400
+            time_ms = 600
         elif bot_rating < 2200:
-            depth, time_ms = 12, 450
+            time_ms = 700
         elif bot_rating < 2300:
-            depth, time_ms = 12, 500
+            time_ms = 800
         elif bot_rating < 2400:
-            depth, time_ms = 14, 550
-        elif bot_rating < 2500:
-            depth, time_ms = 14, 600
-        elif bot_rating < 2700:
-            depth, time_ms = 16, 700
+            time_ms = 900
         else:
-            depth, time_ms = 20, 1000
+            time_ms = 1000
 
         return {
             'use_elo_limit': True,
             'elo': elo,
-            'depth': depth,
-            'time': time_ms / 1000.0
+            'depth': None,
+            'time': max(0.15, time_ms * tc_mult / 1000.0),
         }
 
     normalized = (bot_rating - 800) / 1200.0
@@ -107,7 +130,7 @@ def get_stockfish_config(bot_rating: int):
     }
 
 
-def _stockfish_move(board: chess.Board, bot_rating: int):
+def _stockfish_move(board: chess.Board, bot_rating: int, time_control: str = "blitz"):
     """Get a move from Stockfish with rating-appropriate configuration."""
     try:
         from games.stockfish_utils import get_stockfish_path, ensure_stockfish_works
@@ -116,7 +139,7 @@ def _stockfish_move(board: chess.Board, bot_rating: int):
         if not ok:
             logger.warning(f"Stockfish unavailable: {msg}")
             return None
-        config = get_stockfish_config(bot_rating)
+        config = get_stockfish_config(bot_rating, time_control)
         with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
             if config.get('use_elo_limit'):
                 engine.configure({
@@ -125,12 +148,13 @@ def _stockfish_move(board: chess.Board, bot_rating: int):
                 })
             else:
                 engine.configure({
-                    "Skill Level": config.get('skill', 10)
+                    "UCI_LimitStrength": False,
+                    "Skill Level": config.get('skill', 20),
                 })
-            limit = chess.engine.Limit(
-                time=config.get('time', 0.2),
-                depth=config.get('depth', 8),
-            )
+            limit_kwargs = {'time': config.get('time', 0.2)}
+            if config.get('depth'):
+                limit_kwargs['depth'] = config['depth']
+            limit = chess.engine.Limit(**limit_kwargs)
             result = engine.play(board, limit)
             if result and result.move in board.legal_moves:
                 return result.move
@@ -176,7 +200,7 @@ def get_bot_move(
 
     # Strategy 3: Engine-specific mid-game path
     if engine == "stockfish":
-        move = _stockfish_move(board, bot_rating)
+        move = _stockfish_move(board, bot_rating, time_control)
         if move:
             return move
     else:
@@ -190,7 +214,7 @@ def get_bot_move(
         else:
             logger.info("Maia unavailable or rating outside range; using Stockfish fallback.")
 
-        move = _stockfish_move(board, bot_rating)
+        move = _stockfish_move(board, bot_rating, time_control)
         if move:
             return move
 
