@@ -1060,7 +1060,7 @@ export default function HomePage() {
                                 </div>
                             ) : null}
                             {showBotPanel ? (
-                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 mb-4 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-4 text-slate-100">
+                                <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-3 sm:p-5 mb-4 shadow-[0_20px_45px_rgba(7,11,24,0.35)] space-y-3 sm:space-y-4 text-slate-100 overflow-hidden">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                                             <span className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-[#1a2f4f] ring-1 ring-[#35507f]">
@@ -1121,11 +1121,14 @@ export default function HomePage() {
                                                         </div>
                                                         <div className="grid gap-2">
                                                             {tierBots.map((bot) => (
-                                                                <div
+                                                                <button
                                                                     key={bot.id}
-                                                                    className="flex items-center gap-3 rounded-xl border border-[#2c3f64] bg-[#0d1730] p-2.5 hover:border-[#3d5a8a] transition-colors"
+                                                                    type="button"
+                                                                    className="flex items-center gap-2 sm:gap-3 rounded-xl border border-[#2c3f64] bg-[#0d1730] p-2 sm:p-2.5 hover:border-primary/50 hover:bg-[#111d38] transition-colors text-left w-full disabled:opacity-60"
+                                                                    onClick={() => handleCreateBotGame(bot.id)}
+                                                                    disabled={botSubmittingId === bot.id}
                                                                 >
-                                                                    <div className="size-11 rounded-lg bg-[#263a5e] flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                                                                    <div className="size-10 sm:size-11 rounded-lg bg-[#263a5e] flex items-center justify-center text-lg shrink-0 overflow-hidden">
                                                                         {bot.bot_avatar ? (
                                                                             typeof bot.bot_avatar === 'string' && (bot.bot_avatar.startsWith('http') || bot.bot_avatar.startsWith('/')) ? (
                                                                                 <img src={bot.bot_avatar} alt={bot.first_name || 'Bot'} className="h-full w-full object-cover" />
@@ -1137,29 +1140,21 @@ export default function HomePage() {
                                                                         )}
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-center gap-1.5">
+                                                                        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                                                                             <p className="font-semibold text-sm truncate">{bot.first_name || bot.username || 'Bot'}</p>
                                                                             {bot.bot_engine === 'stockfish' ? (
-                                                                                <span className="shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 ring-1 ring-red-500/30">SF</span>
+                                                                                <span className="shrink-0 text-[9px] font-bold uppercase px-1 sm:px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 ring-1 ring-red-500/30">SF</span>
                                                                             ) : null}
                                                                             {bot.bot_play_style ? (
-                                                                                <span className={`shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color}`}>{bot.bot_play_style}</span>
+                                                                                <span className={`shrink-0 text-[9px] font-bold uppercase px-1 sm:px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color}`}>{bot.bot_play_style}</span>
                                                                             ) : null}
                                                                         </div>
                                                                         <p className="text-xs text-slate-400">{bot.rating ?? '--'} Rating</p>
-                                                                        {bot.bio ? (
-                                                                            <p className="text-[11px] text-slate-500 truncate mt-0.5">{bot.bio}</p>
-                                                                        ) : null}
                                                                     </div>
-                                                                    <button
-                                                                        className="shrink-0 bg-primary text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 hover:brightness-110 transition"
-                                                                        type="button"
-                                                                        onClick={() => handleCreateBotGame(bot.id)}
-                                                                        disabled={botSubmittingId === bot.id}
-                                                                    >
-                                                                        {botSubmittingId === bot.id ? 'Starting...' : 'Play'}
-                                                                    </button>
-                                                                </div>
+                                                                    <span className="shrink-0 bg-primary text-white text-xs font-semibold px-3 py-2 rounded-lg">
+                                                                        {botSubmittingId === bot.id ? '...' : 'Play'}
+                                                                    </span>
+                                                                </button>
                                                             ))}
                                                         </div>
                                                     </div>
