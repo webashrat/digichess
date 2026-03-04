@@ -56,6 +56,12 @@ class TournamentListCreateView(APIView):
         type_filter = request.query_params.get("type")
         if type_filter:
             qs = qs.filter(type=type_filter)
+        if status_filter == "pending":
+            qs = qs.order_by("start_at", "id")
+        elif status_filter == "completed":
+            qs = qs.order_by("-finished_at", "-id")
+        else:
+            qs = qs.order_by("-started_at", "-id")
         return Response(paginate_queryset(qs, request, TournamentSerializer))
 
     def post(self, request):
