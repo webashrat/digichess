@@ -19,8 +19,10 @@ import {
     requestGameAnalysis,
 } from '../api';
 import ChessPiece from '../components/chess/ChessPiece';
+import ProfileMenu from '../components/layout/ProfileMenu';
 import { useAuth } from '../context/AuthContext';
 import useGameSync from '../hooks/useGameSync';
+import useSettings from '../hooks/useSettings';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
 
@@ -71,6 +73,7 @@ export default function GamePage() {
     const { gameId } = useParams();
     const navigate = useNavigate();
     const { isAuthenticated, token, user, loading: authLoading } = useAuth();
+    const settings = useSettings();
     const [error, setError] = useState(null);
     const [spectate, setSpectate] = useState(!isAuthenticated);
     const [pendingMove, setPendingMove] = useState(false);
@@ -2042,7 +2045,8 @@ export default function GamePage() {
     }, []);
 
     useEffect(() => {
-        if (!isMobileLayout) return;
+        return;
+        /* eslint-disable no-unreachable */
         const node = pageRef.current;
         if (!node) return;
         const EDGE_PX = 28;
@@ -2180,6 +2184,26 @@ export default function GamePage() {
                     </div>
                 ) : (
                     <>
+                        {isMobileLayout ? (
+                            <header className="lg:hidden sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-4 py-2.5 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary shadow-md shadow-primary/30 cursor-pointer" onClick={handleBack} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') handleBack(); }}>
+                                            <span className="text-white text-lg font-bold leading-none">&#9822;</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
+                                                DigiChess
+                                            </span>
+                                            <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">
+                                                Live Arena
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ProfileMenu settings={settings} />
+                                </div>
+                            </header>
+                        ) : null}
                         {isMobileLayout && drawerOpen ? (
                             <div
                                 className="fixed inset-0 bg-black/30 z-40"
@@ -2429,7 +2453,7 @@ export default function GamePage() {
                             </aside>
 
                             <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? '' : 'overflow-hidden'}`}>
-                                <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
+                                <div ref={topBarRef} className="px-2 py-1.5 lg:py-2 flex items-center justify-between shrink-0">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2717,9 +2741,6 @@ export default function GamePage() {
                                     <div className="lg:hidden flex flex-col gap-2 px-2 pb-4">
                                         {isUserPlayer && currentStatus === 'active' ? (
                                             <div className="flex items-center justify-center gap-1 py-1">
-                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back">
-                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
-                                                </button>
                                                 {canOfferDraw ? (
                                                     <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleOfferDraw} title="Offer draw">
                                                         <span className="material-symbols-outlined text-xl">handshake</span>
@@ -2741,17 +2762,8 @@ export default function GamePage() {
                                             </div>
                                         ) : !isUserPlayer && currentStatus === 'active' ? (
                                             <div className="flex items-center justify-center gap-1 py-1">
-                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back">
-                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
-                                                </button>
                                                 <button className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${mobileChatOpen ? 'bg-primary/10 text-primary' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500'}`} type="button" onClick={() => setMobileChatOpen((p) => !p)} title="Chat">
                                                     <span className="material-symbols-outlined text-xl">chat</span>
-                                                </button>
-                                            </div>
-                                        ) : isGameOver ? (
-                                            <div className="flex items-center justify-center gap-1 py-1">
-                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back to home">
-                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
                                                 </button>
                                             </div>
                                         ) : null}
@@ -2976,10 +2988,6 @@ export default function GamePage() {
                                             </div>
                                         ) : null}
 
-                                        <div className="flex items-center justify-center gap-3 text-[10px] text-slate-400 py-1">
-                                            <span>{game?.time_control || ''}</span>
-                                            {game?.rated !== undefined ? <span>{game.rated ? 'Rated' : 'Casual'}</span> : null}
-                                        </div>
                                     </div>
                                 ) : null}
                             </main>

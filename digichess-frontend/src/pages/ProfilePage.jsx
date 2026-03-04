@@ -4,6 +4,7 @@ import Layout from '../components/layout/Layout';
 import CountrySelect from '../components/common/CountrySelect';
 import MiniChessBoard from '../components/chess/MiniChessBoard';
 import { useAuth } from '../context/AuthContext';
+import AdBanner from '../components/common/AdBanner';
 import {
     createThread,
     fetchDigiQuizRatingHistory,
@@ -744,16 +745,21 @@ export default function ProfilePage() {
                                     <div className="flex gap-3">
                                         {canFriend ? (
                                             friendState === 'friends' ? (
-                                                <button
-                                                    className="flex-1 bg-emerald-500/10 hover:bg-red-500/10 text-emerald-600 hover:text-red-500 dark:text-emerald-400 dark:hover:text-red-400 font-semibold py-2.5 px-4 rounded-lg border border-emerald-500/30 hover:border-red-500/30 transition-colors flex items-center justify-center gap-2 text-sm group"
-                                                    type="button"
-                                                    onClick={handleUnfriend}
-                                                >
-                                                    <span className="material-symbols-outlined text-lg group-hover:hidden">check_circle</span>
-                                                    <span className="material-symbols-outlined text-lg hidden group-hover:inline">person_remove</span>
-                                                    <span className="group-hover:hidden">Friends</span>
-                                                    <span className="hidden group-hover:inline">Unfriend</span>
-                                                </button>
+                                                <>
+                                                    <div className="flex-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold py-2.5 px-4 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-2 text-sm">
+                                                        <span className="material-symbols-outlined text-lg">check_circle</span>
+                                                        Friends
+                                                    </div>
+                                                    <button
+                                                        className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-semibold py-2.5 px-4 rounded-lg border border-red-500/30 hover:border-red-500 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        type="button"
+                                                        onClick={handleUnfriend}
+                                                        disabled={friendState === 'loading'}
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">person_remove</span>
+                                                        Unfriend
+                                                    </button>
+                                                </>
                                             ) : friendState === 'sent' ? (
                                                 <button
                                                     className="flex-1 bg-surface-light dark:bg-surface-dark text-slate-500 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-sm cursor-default"
@@ -913,6 +919,10 @@ export default function ProfilePage() {
                                     <span className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{card.label}</span>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="mt-6 px-4">
+                            <AdBanner format="auto" className="rounded-xl overflow-hidden" />
                         </div>
 
                         <div className="mt-8 px-4">

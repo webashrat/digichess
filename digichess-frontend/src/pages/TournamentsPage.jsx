@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdBanner from '../components/common/AdBanner';
 import Layout from '../components/layout/Layout';
 import { createTournament, listTournaments, registerTournament, tournamentMyGame } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -445,6 +446,9 @@ export default function TournamentsPage() {
                                     ) : null}
                                 </div>
                             ) : null}
+                        </div>
+                        <div className="col-span-full mt-2">
+                            <AdBanner format="auto" className="rounded-xl overflow-hidden" />
                         </div>
                         {totalListPages > 1 ? (
                             <div className="flex items-center justify-between mt-4">

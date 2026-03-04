@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import AdBanner from '../components/common/AdBanner';
 import Layout from '../components/layout/Layout';
 import Podium from '../components/leaderboard/Podium';
 import PlayerList from '../components/leaderboard/PlayerList';
@@ -158,6 +159,9 @@ export default function LeaderboardPage() {
                             <>
                                 <Podium players={podiumPlayers} />
                                 <PlayerList players={listPlayers} startRank={4} />
+                                <div className="mt-4">
+                                    <AdBanner format="auto" className="rounded-xl overflow-hidden" />
+                                </div>
                             </>
                         )}
                     </div>
