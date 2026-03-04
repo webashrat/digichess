@@ -332,15 +332,6 @@ export default function TournamentsPage() {
                                     }`}
                                 >
                                     {option.label}
-                                    {count > 0 ? (
-                                        <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold leading-none px-1 ${
-                                            statusFilter === option.id
-                                                ? 'bg-white/20 text-white'
-                                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                                        }`}>
-                                            {count}
-                                        </span>
-                                    ) : null}
                                 </button>
                             );
                         })}

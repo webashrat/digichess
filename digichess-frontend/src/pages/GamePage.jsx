@@ -2230,19 +2230,16 @@ export default function GamePage() {
                 } md:overflow-hidden bg-background-light dark:bg-background-dark relative`}
             >
                 {isMobileLayout ? (
-                    <header className="lg:hidden sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-4 py-2.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary shadow-md shadow-primary/30 cursor-pointer" onClick={handleBack} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') handleBack(); }}>
-                                    <span className="text-white text-lg font-bold leading-none">&#9822;</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">DigiChess</span>
-                                    <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">Live Arena</span>
-                                </div>
+                    <header className="lg:hidden sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-4 py-2 shadow-sm">
+                        <button type="button" className="flex items-center gap-2.5" onClick={handleBack}>
+                            <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary shadow-md shadow-primary/30">
+                                <span className="text-white text-base font-bold leading-none">&#9822;</span>
                             </div>
-                            <ProfileMenu settings={settings} />
-                        </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">DigiChess</span>
+                                <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">Live Arena</span>
+                            </div>
+                        </button>
                     </header>
                 ) : null}
                 {!game ? (
