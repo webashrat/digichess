@@ -317,20 +317,32 @@ export default function TournamentsPage() {
                         </button>
                     </div>
                     <div className="flex gap-1.5 px-4 pb-3">
-                        {statusOptions.map((option) => (
-                            <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => { setStatusFilter(option.id); setListPage(1); }}
-                                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                                    statusFilter === option.id
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
+                        {statusOptions.map((option) => {
+                            const count = statusCounts[option.id] || 0;
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => { setStatusFilter(option.id); setListPage(1); }}
+                                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                                        statusFilter === option.id
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
+                                >
+                                    {option.label}
+                                    {count > 0 ? (
+                                        <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold leading-none px-1 ${
+                                            statusFilter === option.id
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                        }`}>
+                                            {count}
+                                        </span>
+                                    ) : null}
+                                </button>
+                            );
+                        })}
                     </div>
                 </header>
 

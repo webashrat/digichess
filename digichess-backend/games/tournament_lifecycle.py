@@ -266,14 +266,75 @@ def finish_tournament(
     winners: Optional[Sequence[object]] = None,
     finished_at=None,
 ) -> Tournament:
+    now = finished_at or timezone.now()
     with transaction.atomic():
         locked = Tournament.objects.select_for_update().get(id=tournament.id)
         locked.winners = _normalize_winners(locked, winners=winners)
         locked.status = Tournament.STATUS_COMPLETED
-        locked.finished_at = finished_at or timezone.now()
+        locked.finished_at = now
         locked.save(update_fields=["winners", "status", "finished_at"])
+
+        orphaned = TournamentGame.objects.filter(
+            tournament=locked,
+            game__status__in=OPEN_GAME_STATUSES,
+        ).select_related("game")
+        for tg in orphaned:
+            game = tg.game
+            move_count = len((game.moves or "").strip().split()) if game.moves else 0
+            if move_count >= 2:
+                game.status = Game.STATUS_FINISHED
+                game.result = Game.RESULT_DRAW
+            else:
+                game.status = Game.STATUS_ABORTED
+                game.result = Game.RESULT_NONE
+            game.finished_at = now
+            game.save(update_fields=["status", "result", "finished_at"])
+
+    _broadcast_orphaned_game_finishes(tournament, now)
     tournament.refresh_from_db()
     return tournament
+
+
+def _broadcast_orphaned_game_finishes(tournament: Tournament, finished_at):
+    """Send game_finished WebSocket events for games that were force-closed."""
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from .serializers import GameSerializer
+
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+
+        closed_games = TournamentGame.objects.filter(
+            tournament=tournament,
+            game__finished_at=finished_at,
+        ).select_related("game", "game__white", "game__black")
+
+        for tg in closed_games:
+            game = tg.game
+            if game.status not in (Game.STATUS_FINISHED, Game.STATUS_ABORTED):
+                continue
+            game_data = GameSerializer(game).data
+            reason = "tournament_ended"
+            payload = {
+                "type": "game_finished",
+                "game_id": game.id,
+                "result": game.result,
+                "reason": reason,
+                "game": game_data,
+            }
+            async_to_sync(channel_layer.group_send)(
+                f"game_{game.id}",
+                {"type": "game.event", "payload": payload},
+            )
+            for user_id in (game.white_id, game.black_id):
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{user_id}",
+                    {"type": "game.event", "payload": payload},
+                )
+    except Exception:
+        pass
 
 
 def _swiss_history(

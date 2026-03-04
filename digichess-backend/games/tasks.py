@@ -334,6 +334,30 @@ def check_tournament_finish():
 
 
 @shared_task
+def cleanup_orphaned_tournament_games():
+    """Abort/draw any active games belonging to completed tournaments."""
+    now = timezone.now()
+    orphaned = TournamentGame.objects.filter(
+        tournament__status=Tournament.STATUS_COMPLETED,
+        game__status__in=[Game.STATUS_PENDING, Game.STATUS_ACTIVE],
+    ).select_related("game")
+    cleaned = []
+    for tg in orphaned:
+        game = tg.game
+        move_count = len((game.moves or "").strip().split()) if game.moves else 0
+        if move_count >= 2:
+            game.status = Game.STATUS_FINISHED
+            game.result = Game.RESULT_DRAW
+        else:
+            game.status = Game.STATUS_ABORTED
+            game.result = Game.RESULT_NONE
+        game.finished_at = now
+        game.save(update_fields=["status", "result", "finished_at"])
+        cleaned.append(game.id)
+    return {"cleaned": cleaned}
+
+
+@shared_task
 def pair_arena_idle_players():
     """Pair idle players in active arena tournaments."""
     active_arenas = Tournament.objects.filter(

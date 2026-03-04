@@ -204,6 +204,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "games.tasks.pair_arena_idle_players",
         "schedule": _env_float("TOURNAMENT_PAIR_ARENA_INTERVAL", 5.0),
     },
+    "cleanup_orphaned_tournament_games": {
+        "task": "games.tasks.cleanup_orphaned_tournament_games",
+        "schedule": 60.0,
+    },
     "prepare_daily_digiquiz_round": {
         "task": "games.tasks.prepare_daily_digiquiz_round",
         # 23:25 IST daily = 17:55 UTC
