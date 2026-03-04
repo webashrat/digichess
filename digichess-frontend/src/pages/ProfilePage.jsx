@@ -687,7 +687,7 @@ export default function ProfilePage() {
                                             displayUser?.username?.slice(0, 2).toUpperCase()
                                         )}
                                     </div>
-                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-white dark:border-slate-800" />
+                                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-[3px] border-white dark:border-slate-800 ${displayUser?.is_online ? 'bg-green-500' : 'bg-red-500'}`} />
                                 </div>
                                 <div className="text-center space-y-1">
                                     <div className="flex items-center justify-center gap-2">
