@@ -72,6 +72,7 @@ def _create_tournament_game(
         current_fen=chess.STARTING_FEN,
         status=Game.STATUS_ACTIVE,
         started_at=timezone.now(),
+        last_move_at=timezone.now(),
     )
     TournamentGame.objects.create(
         tournament=tournament, game=game, round_number=round_number

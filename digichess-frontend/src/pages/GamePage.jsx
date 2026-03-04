@@ -90,6 +90,7 @@ export default function GamePage() {
     const [analysisError, setAnalysisError] = useState(null);
     const [analysisLoading, setAnalysisLoading] = useState(false);
     const [showAnalysis, setShowAnalysis] = useState(false);
+    const [evalTooltip, setEvalTooltip] = useState(null);
     const [quickEval, setQuickEval] = useState(null);
     const [chatInput, setChatInput] = useState('');
     const [chatRoom, setChatRoom] = useState('players');
@@ -144,6 +145,8 @@ export default function GamePage() {
     const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
     const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
     const [isMobileLayout, setIsMobileLayout] = useState(false);
+    const [mobileChatOpen, setMobileChatOpen] = useState(false);
+    const mobileMovesRef = useRef(null);
     const [pieceMotion, setPieceMotion] = useState(null);
     const touchStateRef = useRef(null);
     const topBarRef = useRef(null);
@@ -610,6 +613,14 @@ export default function GamePage() {
             setShowAnalysis(false);
         }
     }, [currentStatus]);
+    useEffect(() => {
+        const container = mobileMovesRef.current;
+        if (!container || !isMobileLayout) return;
+        const active = container.querySelector('[data-active-move="true"]');
+        if (active) {
+            active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        }
+    }, [previewIndex, isMobileLayout, moves.length]);
     const isOwnPiece = (piece) => {
         if (!piece) return false;
         const isWhitePiece = piece === piece.toUpperCase();
@@ -1126,21 +1137,28 @@ export default function GamePage() {
             return last != null ? last : 0;
         });
     }, [analysisMoves, moves.length]);
-    const analysisGraphBars = useMemo(() => {
-        if (!analysisEvalSeries.length) return [];
-        const width = 100 / analysisEvalSeries.length;
-        return analysisEvalSeries.map((value, index) => {
-            const numeric = Number.isFinite(value) ? value : 0;
-            const clamped = Math.max(-10, Math.min(10, numeric));
-            const height = Math.max(2, Math.round((Math.abs(clamped) / 10) * 50));
-            return {
-                left: index * width,
-                width,
-                height,
-                isWhite: clamped >= 0,
-            };
+    const evalGraph = useMemo(() => {
+        if (!analysisEvalSeries.length) return null;
+        const n = analysisEvalSeries.length;
+        const viewW = Math.max(n - 1, 1);
+        const viewH = 200;
+        const cy = viewH / 2;
+        const points = analysisEvalSeries.map((val, i) => {
+            const c = Math.max(-10, Math.min(10, Number.isFinite(val) ? val : 0));
+            return { x: i, y: cy - (c / 10) * cy };
         });
+        const areaPath = `M 0,${cy} ${points.map((p) => `L ${p.x},${p.y}`).join(' ')} L ${viewW},${cy} Z`;
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+        return { points, areaPath, linePath, viewW, viewH, cy, n };
     }, [analysisEvalSeries]);
+    const phaseBoundaries = useMemo(() => {
+        const list = navigation.phaseList;
+        const bounds = [];
+        for (let i = 1; i < list.length; i++) {
+            if (list[i] !== list[i - 1]) bounds.push({ index: i, label: list[i] });
+        }
+        return bounds;
+    }, [navigation.phaseList]);
     const phaseCounts = useMemo(() => {
         const counts = { opening: 0, middlegame: 0, endgame: 0 };
         navigation.phaseList.forEach((phase) => {
@@ -2133,6 +2151,25 @@ export default function GamePage() {
         setChatInput('');
     };
 
+    const handleEvalGraphInteraction = useCallback((event, svgEl) => {
+        if (!evalGraph || !svgEl) return;
+        const rect = svgEl.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const ratio = Math.max(0, Math.min(1, x / rect.width));
+        const moveIdx = Math.round(ratio * (evalGraph.n - 1));
+        const evalVal = analysisEvalSeries[moveIdx];
+        const moveNum = Math.floor(moveIdx / 2) + 1;
+        const isWhiteMove = moveIdx % 2 === 0;
+        const san = moves[moveIdx] || '';
+        setEvalTooltip({
+            moveIdx,
+            label: `${moveNum}${isWhiteMove ? '.' : '...'} ${san}`,
+            eval: typeof evalVal === 'number' ? (evalVal > 0 ? `+${evalVal.toFixed(1)}` : evalVal.toFixed(1)) : '0.0',
+            pctX: ratio * 100,
+        });
+        clampPreviewIndex(moveIdx + 1);
+    }, [evalGraph, analysisEvalSeries, moves, clampPreviewIndex]);
+
     const handleProfileNavigate = useCallback((player) => {
         if (!player?.username) return;
         navigate(`/profile/${player.username}`);
@@ -2216,19 +2253,27 @@ export default function GamePage() {
                             </div>
                         ) : null}
 
-                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-0 sm:px-4 pb-4 min-h-0 overflow-hidden relative">
+                        <div className={`flex-1 flex flex-col lg:flex-row gap-4 px-0 sm:px-4 pb-4 min-h-0 relative ${isMobileLayout ? '' : 'overflow-hidden'}`}>
                             <aside
                                 className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 left-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                     leftDrawerOpen ? 'translate-x-0' : '-translate-x-full'
                                 } lg:translate-x-0`}
                             >
-                                <div className="flex items-center mb-2">
+                                <div className="flex items-center justify-between mb-2">
                                     <button
                                         className="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700"
                                         type="button"
                                         onClick={handleBack}
                                     >
                                         <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                                    </button>
+                                    <button
+                                        className="lg:hidden p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                                        type="button"
+                                        onClick={closeDrawers}
+                                        aria-label="Close panel"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">close</span>
                                     </button>
                                 </div>
                                 <div className="flex items-center justify-between mb-2">
@@ -2404,7 +2449,7 @@ export default function GamePage() {
                                 ) : null}
                             </aside>
 
-                            <main className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
+                            <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? '' : 'overflow-hidden'}`}>
                                 <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
@@ -2688,6 +2733,276 @@ export default function GamePage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {isMobileLayout ? (
+                                    <div className="lg:hidden flex flex-col gap-2 px-2 pb-4">
+                                        {isUserPlayer && currentStatus === 'active' ? (
+                                            <div className="flex items-center justify-center gap-1 py-1">
+                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back">
+                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                                </button>
+                                                {canOfferDraw ? (
+                                                    <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleOfferDraw} title="Offer draw">
+                                                        <span className="material-symbols-outlined text-xl">handshake</span>
+                                                    </button>
+                                                ) : null}
+                                                {canResign ? (
+                                                    <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-red-500 transition-colors" type="button" onClick={handleResign} title="Resign">
+                                                        <span className="material-symbols-outlined text-xl">flag</span>
+                                                    </button>
+                                                ) : null}
+                                                {canAbort ? (
+                                                    <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleAbort} title="Abort">
+                                                        <span className="material-symbols-outlined text-xl">close</span>
+                                                    </button>
+                                                ) : null}
+                                                <button className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${mobileChatOpen ? 'bg-primary/10 text-primary' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500'}`} type="button" onClick={() => setMobileChatOpen((p) => !p)} title="Chat">
+                                                    <span className="material-symbols-outlined text-xl">chat</span>
+                                                </button>
+                                            </div>
+                                        ) : !isUserPlayer && currentStatus === 'active' ? (
+                                            <div className="flex items-center justify-center gap-1 py-1">
+                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back">
+                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                                </button>
+                                                <button className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${mobileChatOpen ? 'bg-primary/10 text-primary' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500'}`} type="button" onClick={() => setMobileChatOpen((p) => !p)} title="Chat">
+                                                    <span className="material-symbols-outlined text-xl">chat</span>
+                                                </button>
+                                            </div>
+                                        ) : isGameOver ? (
+                                            <div className="flex items-center justify-center gap-1 py-1">
+                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors" type="button" onClick={handleBack} title="Back to home">
+                                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                                </button>
+                                            </div>
+                                        ) : null}
+
+                                        {resignConfirm ? (
+                                            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs">
+                                                <span className="font-semibold text-red-400">Confirm resign?</span>
+                                                <div className="mt-1.5 flex gap-2">
+                                                    <button className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold disabled:opacity-60" type="button" onClick={confirmResign} disabled={resignLoading}>Resign</button>
+                                                    <button className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold" type="button" onClick={() => setResignConfirm(false)}>Cancel</button>
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                        {drawOfferBy && currentStatus === 'active' && isUserPlayer ? (
+                                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 p-2 text-xs">
+                                                {drawOfferBy === user?.id ? (
+                                                    <div className="text-slate-500">Draw offer sent. Waiting for response.</div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="font-semibold">Opponent offered a draw.</span>
+                                                        <div className="flex gap-2">
+                                                            <button className="px-2 py-1 rounded-lg bg-primary text-white text-xs font-semibold" type="button" onClick={() => handleRespondDraw('accept')}>Accept</button>
+                                                            <button className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold" type="button" onClick={() => handleRespondDraw('decline')}>Decline</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null}
+                                        {drawNotice ? (
+                                            <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2 py-1">{drawNotice}</div>
+                                        ) : null}
+
+                                        <div className="flex items-center gap-1 bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 px-1 py-1">
+                                            <button type="button" className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 disabled:opacity-30" onClick={handleFirstMove} disabled={previewIndex === 0}>
+                                                <span className="material-symbols-outlined text-[18px]">first_page</span>
+                                            </button>
+                                            <button type="button" className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 disabled:opacity-30" onClick={handlePrevMove} disabled={previewIndex === 0}>
+                                                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                            </button>
+                                            <div ref={mobileMovesRef} className="flex-1 overflow-x-auto flex items-center gap-0.5 no-scrollbar px-1 min-h-[32px]">
+                                                {moves.length ? moves.map((move, index) => (
+                                                    <React.Fragment key={index}>
+                                                        {index % 2 === 0 ? (
+                                                            <span className="text-[10px] text-slate-400 font-mono shrink-0 mr-0.5">{Math.floor(index / 2) + 1}.</span>
+                                                        ) : null}
+                                                        <button
+                                                            type="button"
+                                                            data-active-move={previewIndex === index + 1 ? 'true' : undefined}
+                                                            className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-mono font-semibold transition-colors ${
+                                                                previewIndex === index + 1
+                                                                    ? 'bg-primary text-white'
+                                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                            }`}
+                                                            onClick={() => clampPreviewIndex(index + 1)}
+                                                        >
+                                                            {move}
+                                                        </button>
+                                                    </React.Fragment>
+                                                )) : (
+                                                    <span className="text-xs text-slate-400">No moves yet</span>
+                                                )}
+                                            </div>
+                                            <button type="button" className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 disabled:opacity-30" onClick={handleNextMove} disabled={previewIndex === maxPreviewIndex}>
+                                                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                            </button>
+                                            <button type="button" className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 disabled:opacity-30" onClick={handleLastMove} disabled={previewIndex === maxPreviewIndex}>
+                                                <span className="material-symbols-outlined text-[18px]">last_page</span>
+                                            </button>
+                                        </div>
+
+                                        {isGameOver ? (
+                                            <div className="space-y-2">
+                                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-3 space-y-1.5 text-xs">
+                                                    <div className="text-center font-semibold text-sm text-slate-800 dark:text-slate-100">
+                                                        {outcome?.label || (currentStatus === 'aborted' ? 'Game aborted' : 'Game finished')}
+                                                    </div>
+                                                    <div className="flex justify-center gap-4 text-slate-600 dark:text-slate-300">
+                                                        <span>{game?.white?.username || 'White'} ({resolveRating(game?.white)}{whiteDelta ? <span className={`ml-0.5 font-semibold ${whiteDelta.className}`}>{whiteDelta.text}</span> : null})</span>
+                                                        <span>{game?.black?.username || 'Black'} ({resolveRating(game?.black)}{blackDelta ? <span className={`ml-0.5 font-semibold ${blackDelta.className}`}>{blackDelta.text}</span> : null})</span>
+                                                    </div>
+                                                </div>
+
+                                                {showRematchActions ? (
+                                                    <div className="space-y-2">
+                                                        {rematchExpiredDisplay ? (
+                                                            <div className="w-full rounded-xl bg-slate-200/70 dark:bg-slate-800/70 px-3 py-2.5 text-xs font-semibold text-slate-500 text-center">Rematch option expired.</div>
+                                                        ) : rematchActive ? (
+                                                            isRematchRequester ? (
+                                                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-3 py-2.5 text-xs text-center">
+                                                                    <div className="font-semibold">Rematch requested. Waiting...</div>
+                                                                    <button className="mt-2 w-full px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold disabled:opacity-60" type="button" onClick={handleCancelRematch} disabled={rematchLoading}>Cancel request</button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 px-3 py-2.5 text-xs">
+                                                                    <div className="font-semibold text-center">Opponent wants a rematch!</div>
+                                                                    <div className="mt-2 flex gap-2">
+                                                                        <button className="flex-1 px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60" type="button" onClick={handleAcceptRematch} disabled={rematchLoading}>Accept</button>
+                                                                        <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-semibold disabled:opacity-60" type="button" onClick={handleRejectRematch} disabled={rematchLoading}>Decline</button>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        ) : (
+                                                            <button className="w-full px-3 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-60" type="button" onClick={handleRequestRematch} disabled={rematchLoading}>
+                                                                {rematchLoading ? 'Requesting...' : 'Rematch'}
+                                                            </button>
+                                                        )}
+                                                        {rematchNotice ? <div className="text-xs text-slate-500 text-center">{rematchNotice}</div> : null}
+                                                    </div>
+                                                ) : null}
+                                                {isTournamentGame ? (
+                                                    <button className="w-full px-3 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-sm font-semibold flex items-center justify-center gap-2" type="button" onClick={() => navigate(`/tournaments/${game.tournament_id}`)}>
+                                                        <span className="material-symbols-outlined text-[16px]">emoji_events</span>
+                                                        Back to Tournament
+                                                    </button>
+                                                ) : null}
+
+                                                {currentStatus === 'finished' ? (
+                                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-3 space-y-2 text-xs">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-semibold">Analysis</span>
+                                                            {analysisStatus === 'completed' ? (
+                                                                <button className="text-xs font-semibold text-primary" type="button" onClick={() => setShowAnalysis((p) => !p)}>{showAnalysis ? 'Hide' : 'Show'}</button>
+                                                            ) : null}
+                                                        </div>
+                                                        {analysisError ? <div className="text-red-500">{analysisError}</div> : null}
+                                                        {analysisStatus === 'failed' ? (
+                                                            <button className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60" type="button" onClick={() => handleRequestAnalysis(true)} disabled={analysisLoading}>{analysisLoading ? 'Retrying...' : 'Retry analysis'}</button>
+                                                        ) : null}
+                                                        {(analysisStatus === 'not_requested' || !analysisStatus) && analysisStatus !== 'failed' ? (
+                                                            <button className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60" type="button" onClick={handleRequestAnalysis} disabled={analysisLoading}>{analysisLoading ? 'Starting...' : 'Run analysis'}</button>
+                                                        ) : null}
+                                                        {(analysisStatus === 'queued' || analysisStatus === 'running') ? (
+                                                            <div className="space-y-1.5">
+                                                                <div className="text-slate-500">Analysis in progress ({analysisProgress}%)</div>
+                                                                <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                                                    <div className="h-full bg-primary" style={{ width: `${analysisProgress}%` }} />
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+                                                        {analysisStatus === 'completed' && showAnalysis ? (
+                                                            <>
+                                                                {analysisIncomplete ? (
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="text-amber-500">Analysis incomplete. Run again for full evaluation.</div>
+                                                                        <button className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-60" type="button" onClick={() => handleRequestAnalysis(true)} disabled={analysisLoading}>{analysisLoading ? 'Retrying...' : 'Re-run analysis'}</button>
+                                                                    </div>
+                                                                ) : null}
+                                                                {analysisSummary?.errors?.length ? <div className="text-amber-500">{analysisSummary.errors[0]}</div> : null}
+                                                                {evalGraph ? (
+                                                                    <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700" onMouseLeave={() => setEvalTooltip(null)}>
+                                                                        <svg
+                                                                            viewBox={`0 0 ${evalGraph.viewW} ${evalGraph.viewH}`}
+                                                                            preserveAspectRatio="none"
+                                                                            className="w-full h-28 cursor-crosshair"
+                                                                            onClick={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
+                                                                            onMouseMove={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
+                                                                        >
+                                                                            <defs>
+                                                                                <clipPath id="m-clip-top"><rect x="0" y="0" width={evalGraph.viewW} height={evalGraph.cy} /></clipPath>
+                                                                                <clipPath id="m-clip-bot"><rect x="0" y={evalGraph.cy} width={evalGraph.viewW} height={evalGraph.cy} /></clipPath>
+                                                                            </defs>
+                                                                            <path d={evalGraph.areaPath} fill="rgba(255,255,255,0.15)" clipPath="url(#m-clip-top)" />
+                                                                            <path d={evalGraph.areaPath} fill="rgba(0,0,0,0.3)" clipPath="url(#m-clip-bot)" />
+                                                                            <line x1="0" y1={evalGraph.cy} x2={evalGraph.viewW} y2={evalGraph.cy} stroke="rgba(148,163,184,0.25)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                                                                            {phaseBoundaries.map((b) => (
+                                                                                <line key={`mb-${b.index}`} x1={b.index} y1="0" x2={b.index} y2={evalGraph.viewH} stroke="rgba(148,163,184,0.25)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="3,3" />
+                                                                            ))}
+                                                                            <path d={evalGraph.linePath} fill="none" stroke="#f59e0b" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+                                                                            {evalTooltip ? <line x1={evalGraph.points[evalTooltip.moveIdx]?.x ?? 0} y1="0" x2={evalGraph.points[evalTooltip.moveIdx]?.x ?? 0} y2={evalGraph.viewH} stroke="rgba(245,158,11,0.6)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" /> : null}
+                                                                        </svg>
+                                                                        {phaseBoundaries.length || phaseCounts.opening ? (
+                                                                            <div className="absolute top-0 inset-x-0 flex text-[8px] font-bold uppercase tracking-wider text-slate-400/60 pointer-events-none">
+                                                                                {phaseCounts.opening ? <div style={{ width: `${phasePercents.opening}%` }} className="text-center truncate px-0.5">Opening</div> : null}
+                                                                                {phaseCounts.middlegame ? <div style={{ width: `${phasePercents.middlegame}%` }} className="text-center truncate px-0.5">Middlegame</div> : null}
+                                                                                {phaseCounts.endgame ? <div style={{ width: `${phasePercents.endgame}%` }} className="text-center truncate px-0.5">Endgame</div> : null}
+                                                                            </div>
+                                                                        ) : null}
+                                                                        {evalTooltip ? (
+                                                                            <div className="absolute bottom-1 px-2 py-1 rounded bg-slate-800/90 border border-slate-600 text-[10px] text-white font-mono pointer-events-none whitespace-nowrap" style={{ left: `clamp(0px, calc(${evalTooltip.pctX}% - 40px), calc(100% - 80px))` }}>
+                                                                                {evalTooltip.label} <span className="text-amber-400">{evalTooltip.eval}</span>
+                                                                            </div>
+                                                                        ) : null}
+                                                                    </div>
+                                                                ) : <div className="text-slate-500">No evaluation data yet.</div>}
+                                                            </>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        ) : null}
+
+                                        {currentStatus === 'active' && mobileChatOpen ? (
+                                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark flex flex-col max-h-[240px]">
+                                                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/70 dark:border-slate-700/70">
+                                                    <span className="text-xs font-semibold">{effectiveChatRoom === 'players' ? 'Players Chat' : 'Spectators Chat'}</span>
+                                                    <button type="button" className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400" onClick={() => setMobileChatOpen(false)}>
+                                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                                    </button>
+                                                </div>
+                                                {chatNotice ? <div className="px-3 pt-1.5 text-[11px] text-slate-500">{chatNotice}</div> : null}
+                                                <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1.5 text-xs no-scrollbar">
+                                                    {mergedChat.length ? mergedChat.map((msg, i) => (
+                                                        <div key={`mc-${msg.user}-${i}`} className="flex gap-1.5 items-start">
+                                                            <span className="font-semibold text-slate-800 dark:text-slate-100 shrink-0">{msg.user || 'User'}:</span>
+                                                            <span className="text-slate-600 dark:text-slate-300">{msg.message}</span>
+                                                        </div>
+                                                    )) : <div className="text-slate-400">No messages yet.</div>}
+                                                </div>
+                                                <div className="flex gap-2 p-2 border-t border-slate-200/70 dark:border-slate-700/70">
+                                                    <input
+                                                        placeholder={chatNotice || 'Message...'}
+                                                        className="flex-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs disabled:opacity-60"
+                                                        value={chatInput}
+                                                        onChange={(e) => setChatInput(e.target.value)}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSendChat(); }}
+                                                        disabled={Boolean(chatNotice)}
+                                                    />
+                                                    <button className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-60 shrink-0" type="button" onClick={handleSendChat} disabled={Boolean(chatNotice) || !chatInput.trim()} aria-label="Send">
+                                                        <span className="material-symbols-outlined text-sm">send</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : null}
+
+                                        <div className="flex items-center justify-center gap-3 text-[10px] text-slate-400 py-1">
+                                            <span>{game?.time_control || ''}</span>
+                                            {game?.rated !== undefined ? <span>{game.rated ? 'Rated' : 'Casual'}</span> : null}
+                                        </div>
+                                    </div>
+                                ) : null}
                             </main>
 
                             {currentStatus === 'active' ? (
@@ -2702,13 +3017,23 @@ export default function GamePage() {
                                                 {effectiveChatRoom === 'players' ? 'Players Chat' : 'Spectators Chat'}
                                             </h3>
                                         </div>
-                                        <button
-                                            className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
-                                            type="button"
-                                            onClick={() => setShowSettings((prev) => !prev)}
-                                        >
-                                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
+                                                type="button"
+                                                onClick={() => setShowSettings((prev) => !prev)}
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+                                            </button>
+                                            <button
+                                                className="lg:hidden flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+                                                type="button"
+                                                onClick={closeDrawers}
+                                                aria-label="Close panel"
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     {showSettings ? (
                                         <div className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-3 space-y-3">
@@ -2819,13 +3144,23 @@ export default function GamePage() {
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-sm font-semibold">Challenge Pending</h3>
-                                        <button
-                                            className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
-                                            type="button"
-                                            onClick={() => setShowSettings((prev) => !prev)}
-                                        >
-                                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
+                                                type="button"
+                                                onClick={() => setShowSettings((prev) => !prev)}
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+                                            </button>
+                                            <button
+                                                className="lg:hidden flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+                                                type="button"
+                                                onClick={closeDrawers}
+                                                aria-label="Close panel"
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     {showSettings ? (
                                         <div className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-3 space-y-3">
@@ -2924,13 +3259,23 @@ export default function GamePage() {
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-sm font-semibold">Game Summary</h3>
-                                        <button
-                                            className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
-                                            type="button"
-                                            onClick={() => setShowSettings((prev) => !prev)}
-                                        >
-                                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                className="flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300"
+                                                type="button"
+                                                onClick={() => setShowSettings((prev) => !prev)}
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+                                            </button>
+                                            <button
+                                                className="lg:hidden flex items-center justify-center p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+                                                type="button"
+                                                onClick={closeDrawers}
+                                                aria-label="Close panel"
+                                            >
+                                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     {showSettings ? (
                                         <div className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-3 space-y-3">
@@ -3157,40 +3502,44 @@ export default function GamePage() {
                                             ) : null}
                                             {analysisStatus === 'completed' && showAnalysis ? (
                                                 <div className="space-y-2">
-                                                    <div className="text-xs font-semibold text-slate-500">Powered by DigiChess</div>
-                                                    {analysisGraphBars.length ? (
-                                                        <div className="relative h-28 rounded-lg border-2 border-amber-400/80 bg-slate-700/60 overflow-hidden">
-                                                            <div className="absolute inset-x-0 top-0 h-px bg-amber-400/80" />
-                                                            <div className="absolute inset-x-0 bottom-0 h-px bg-amber-400/80" />
-                                                            <div className="absolute inset-x-0 top-1/2 h-px bg-slate-400/40" />
-                                                            {analysisGraphBars.map((bar, index) => (
-                                                                <div
-                                                                    key={`eval-bar-${index}`}
-                                                                    className={`absolute ${bar.isWhite ? 'bg-slate-100/90' : 'bg-slate-950/90'}`}
-                                                                    style={{
-                                                                        left: `${bar.left}%`,
-                                                                        width: `${bar.width}%`,
-                                                                        height: `${bar.height}%`,
-                                                                        top: bar.isWhite ? `${50 - bar.height}%` : '50%',
-                                                                        minWidth: '1px',
-                                                                    }}
-                                                                />
-                                                            ))}
+                                                    {evalGraph ? (
+                                                        <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700" onMouseLeave={() => setEvalTooltip(null)}>
+                                                            <svg
+                                                                viewBox={`0 0 ${evalGraph.viewW} ${evalGraph.viewH}`}
+                                                                preserveAspectRatio="none"
+                                                                className="w-full h-28 cursor-crosshair"
+                                                                onClick={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
+                                                                onMouseMove={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
+                                                            >
+                                                                <defs>
+                                                                    <clipPath id="d-clip-top"><rect x="0" y="0" width={evalGraph.viewW} height={evalGraph.cy} /></clipPath>
+                                                                    <clipPath id="d-clip-bot"><rect x="0" y={evalGraph.cy} width={evalGraph.viewW} height={evalGraph.cy} /></clipPath>
+                                                                </defs>
+                                                                <path d={evalGraph.areaPath} fill="rgba(255,255,255,0.15)" clipPath="url(#d-clip-top)" />
+                                                                <path d={evalGraph.areaPath} fill="rgba(0,0,0,0.3)" clipPath="url(#d-clip-bot)" />
+                                                                <line x1="0" y1={evalGraph.cy} x2={evalGraph.viewW} y2={evalGraph.cy} stroke="rgba(148,163,184,0.25)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                                                                {phaseBoundaries.map((b) => (
+                                                                    <line key={`db-${b.index}`} x1={b.index} y1="0" x2={b.index} y2={evalGraph.viewH} stroke="rgba(148,163,184,0.25)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="3,3" />
+                                                                ))}
+                                                                <path d={evalGraph.linePath} fill="none" stroke="#f59e0b" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+                                                                {evalTooltip ? <line x1={evalGraph.points[evalTooltip.moveIdx]?.x ?? 0} y1="0" x2={evalGraph.points[evalTooltip.moveIdx]?.x ?? 0} y2={evalGraph.viewH} stroke="rgba(245,158,11,0.6)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" /> : null}
+                                                            </svg>
+                                                            {phaseBoundaries.length || phaseCounts.opening ? (
+                                                                <div className="absolute top-0 inset-x-0 flex text-[8px] font-bold uppercase tracking-wider text-slate-400/60 pointer-events-none">
+                                                                    {phaseCounts.opening ? <div style={{ width: `${phasePercents.opening}%` }} className="text-center truncate px-0.5">Opening</div> : null}
+                                                                    {phaseCounts.middlegame ? <div style={{ width: `${phasePercents.middlegame}%` }} className="text-center truncate px-0.5">Middlegame</div> : null}
+                                                                    {phaseCounts.endgame ? <div style={{ width: `${phasePercents.endgame}%` }} className="text-center truncate px-0.5">Endgame</div> : null}
+                                                                </div>
+                                                            ) : null}
+                                                            {evalTooltip ? (
+                                                                <div className="absolute bottom-1 px-2 py-1 rounded bg-slate-800/90 border border-slate-600 text-[10px] text-white font-mono pointer-events-none whitespace-nowrap" style={{ left: `clamp(0px, calc(${evalTooltip.pctX}% - 40px), calc(100% - 80px))` }}>
+                                                                    {evalTooltip.label} <span className="text-amber-400">{evalTooltip.eval}</span>
+                                                                </div>
+                                                            ) : null}
                                                         </div>
                                                     ) : (
                                                         <div className="text-xs text-slate-500">No evaluation data yet.</div>
                                                     )}
-                                                    <div className="text-xs font-semibold text-slate-500">Game Phases</div>
-                                                    <div className="h-2 w-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex">
-                                                        <div className="bg-emerald-400" style={{ width: `${phasePercents.opening}%` }} />
-                                                        <div className="bg-amber-400" style={{ width: `${phasePercents.middlegame}%` }} />
-                                                        <div className="bg-purple-400" style={{ width: `${phasePercents.endgame}%` }} />
-                                                    </div>
-                                                    <div className="flex justify-between text-[11px] text-slate-500">
-                                                        <span>Opening {phaseCounts.opening}</span>
-                                                        <span>Middlegame {phaseCounts.middlegame}</span>
-                                                        <span>Endgame {phaseCounts.endgame}</span>
-                                                    </div>
                                                 </div>
                                             ) : null}
                                         </div>

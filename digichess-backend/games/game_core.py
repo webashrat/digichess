@@ -137,8 +137,14 @@ def compute_clock_snapshot(game: Game, now=None, board: Optional[chess.Board] = 
     black_left = game.black_time_left
     elapsed = 0
     move_count = len((game.moves or "").strip().split()) if game.moves else 0
-    # Do not run the main clock until both players have made their first move.
-    if game.status == Game.STATUS_ACTIVE and game.last_move_at and move_count >= 2:
+    is_tournament = TournamentGame.objects.filter(game_id=game.id).exists()
+    # For regular games: clock doesn't run until both players have made their first move.
+    # For tournament games: clock runs immediately from game start.
+    clock_active = False
+    if game.status == Game.STATUS_ACTIVE and game.last_move_at:
+        if is_tournament or move_count >= 2:
+            clock_active = True
+    if clock_active:
         elapsed = int((now - game.last_move_at).total_seconds())
         if elapsed < 0:
             elapsed = 0
@@ -306,7 +312,9 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
 
             # Apply elapsed time to side to move before move validation
             timeout_result = None
-            if game.status == Game.STATUS_ACTIVE and game.last_move_at and move_count >= 2:
+            is_tournament_move = TournamentGame.objects.filter(game_id=game.id).exists()
+            clock_running = game.status == Game.STATUS_ACTIVE and game.last_move_at and (is_tournament_move or move_count >= 2)
+            if clock_running:
                 elapsed = int((now - game.last_move_at).total_seconds())
                 if elapsed < 0:
                     elapsed = 0

@@ -377,9 +377,12 @@ def check_game_timeouts():
         except Exception:
             board = chess.Board()
         move_count = len((game.moves or "").strip().split()) if game.moves else 0
-        # Do not enforce main clock timeouts until both players have moved once
+        # For regular games: don't enforce clock until both players have moved once.
+        # For tournament games: clock runs immediately.
         if move_count < 2:
-            continue
+            is_tournament = TournamentGame.objects.filter(game_id=game.id).exists()
+            if not is_tournament:
+                continue
         snapshot = compute_clock_snapshot(game, now=now, board=board)
         result = None
         if snapshot["turn"] == "white" and snapshot["white_time_left"] <= 0:
