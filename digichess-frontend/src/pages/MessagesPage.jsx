@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import AdBanner from '../components/common/AdBanner';
 import Layout from '../components/layout/Layout';
 import {
     createThread,
@@ -717,6 +718,9 @@ export default function MessagesPage() {
                                         ) : (
                                             <div className="p-4 text-sm text-slate-500">No conversations yet.</div>
                                         )}
+                                    </div>
+                                    <div className="p-2 hidden lg:block">
+                                        <AdBanner format="auto" className="rounded-lg overflow-hidden" />
                                     </div>
                                 </aside>
 

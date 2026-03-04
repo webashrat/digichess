@@ -18,6 +18,7 @@ import {
     respondFriendRequest,
     searchPublicUsers,
 } from '../api';
+import AdBanner from '../components/common/AdBanner';
 import { useAuth } from '../context/AuthContext';
 import useNotifications from '../hooks/useNotifications';
 import useSettings from '../hooks/useSettings';
@@ -787,6 +788,10 @@ export default function HomePage() {
                         <div className="mt-3 text-xs text-red-500">{queueError}</div>
                     ) : null}
                 </section>
+
+                <div className="px-4 mt-4">
+                    <AdBanner format="auto" className="rounded-xl overflow-hidden" />
+                </div>
 
                 <section className="mt-6 pl-4 border-t border-slate-200 dark:border-gray-800 pt-6 bg-gradient-to-b from-transparent to-slate-200/40 dark:to-black/20">
                     <div className="flex items-center justify-between pr-4 mb-3">
