@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
@@ -19,6 +19,7 @@ import {
     requestGameAnalysis,
 } from '../api';
 import ChessPiece from '../components/chess/ChessPiece';
+import ClockDisplay from '../components/chess/ClockDisplay';
 import ProfileMenu from '../components/layout/ProfileMenu';
 import { useAuth } from '../context/AuthContext';
 import useGameSync from '../hooks/useGameSync';
@@ -33,6 +34,7 @@ const LOCAL_STORAGE_SOUND = 'soundEnabled';
 const LOCAL_STORAGE_AUTO_QUEEN = 'autoQueenEnabled';
 const SETTINGS_CHANGE_EVENT = 'digichess-settings-change';
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const EMPTY_SET = new Set();
 const MOVE_ANIMATION_MS_DESKTOP = 150;
 const MOVE_ANIMATION_MS_MOBILE = 190;
 
@@ -80,10 +82,10 @@ export default function GamePage() {
     const [optimisticState, setOptimisticState] = useState(null);
     const [previewIndex, setPreviewIndex] = useState(0);
     const [selectedSquare, setSelectedSquare] = useState(null);
-    const [legalTargets, setLegalTargets] = useState([]);
+    const [legalTargets, setLegalTargets] = useState(EMPTY_SET);
     const [dragFrom, setDragFrom] = useState(null);
     const [dragPiece, setDragPiece] = useState(null);
-    const [dragPosition, setDragPosition] = useState(null);
+    const dragGhostRef = useRef(null);
     const [lastMoveUci, setLastMoveUci] = useState(null);
     const [drawNotice, setDrawNotice] = useState(null);
     const [rematchNotice, setRematchNotice] = useState(null);
@@ -137,8 +139,10 @@ export default function GamePage() {
     const audioGestureAtRef = useRef(0);
     const animatedMoveRef = useRef(null);
     const skipNextMoveAnimationRef = useRef(false);
+    const squareClickRef = useRef(null);
+    const piecePointerDownRef = useRef(null);
     const [boardPixelSize, setBoardPixelSize] = useState(560);
-    const [clockNow, setClockNow] = useState(() => Date.now());
+    const clockNowRef = useRef(Date.now());
     const [resignConfirm, setResignConfirm] = useState(false);
     const [resignLoading, setResignLoading] = useState(false);
     const [pendingPromotion, setPendingPromotion] = useState(null);
@@ -598,17 +602,8 @@ export default function GamePage() {
     }, [clockSource, serverOffsetMs]);
 
     useEffect(() => {
-        if (!game?.id || currentStatus !== 'active') return;
-        const interval = setInterval(() => {
-            const now = Date.now();
-            setClockNow((prev) => (
-                Math.floor(prev / 1000) === Math.floor(now / 1000)
-                    ? prev
-                    : now
-            ));
-        }, 120);
-        return () => clearInterval(interval);
-    }, [game?.id, currentStatus]);
+        clockNowRef.current = Date.now();
+    }, [state?.fen, state?.moves]);
     useEffect(() => {
         if (currentStatus === 'finished' || currentStatus === 'aborted') {
             setShowAnalysis(true);
@@ -753,7 +748,7 @@ export default function GamePage() {
     }, [movesByFrom]);
     const queuePremove = useCallback((fromSquare, toSquare) => {
         setSelectedSquare(null);
-        setLegalTargets([]);
+        setLegalTargets(EMPTY_SET);
         const piece = squareMap[fromSquare];
         if (!piece) return;
         const isPawn = piece.toLowerCase() === 'p';
@@ -788,7 +783,7 @@ export default function GamePage() {
             to: activeMoveUci.slice(2, 4),
         };
     }, [activeMoveUci]);
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!activeMoveUci || activeMoveUci.length < 4 || isPreviewing || dragFrom) return;
         if (skipNextMoveAnimationRef.current) {
             skipNextMoveAnimationRef.current = false;
@@ -875,19 +870,19 @@ export default function GamePage() {
     useEffect(() => {
         if (!dragFrom) {
             setSelectedSquare(null);
-            setLegalTargets([]);
+            setLegalTargets(EMPTY_SET);
             return;
         }
         setSelectedSquare(dragFrom);
         if (canInteract) {
-            setLegalTargets(resolveTargets(dragFrom));
+            setLegalTargets(new Set(resolveTargets(dragFrom)));
             return;
         }
         if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
-            setLegalTargets(resolvePremoveTargets(dragFrom));
+            setLegalTargets(new Set(resolvePremoveTargets(dragFrom)));
             return;
         }
-        setLegalTargets([]);
+        setLegalTargets(EMPTY_SET);
     }, [
         canInteract,
         currentStatus,
@@ -903,7 +898,7 @@ export default function GamePage() {
         if (!canInteract) {
             if (!dragFrom) {
                 setSelectedSquare(null);
-                setLegalTargets([]);
+                setLegalTargets(EMPTY_SET);
             }
             setPendingPromotion(null);
         }
@@ -918,14 +913,25 @@ export default function GamePage() {
     }, [displayFen]);
 
     useEffect(() => {
-        if (!optimisticState) return;
-        const serverFen = state?.fen || game?.current_fen;
-        const serverMoves = state?.moves || game?.moves;
-        if ((serverFen && optimisticState.fen && serverFen === optimisticState.fen)
-            || (serverMoves && optimisticState.moves && serverMoves === optimisticState.moves)) {
-            setOptimisticState(null);
+        if (optimisticState) {
+            const serverFen = state?.fen || game?.current_fen;
+            const serverMoves = state?.moves || game?.moves || '';
+            let shouldClear = false;
+            if (serverFen && optimisticState.fen && serverFen === optimisticState.fen) shouldClear = true;
+            if (!shouldClear && serverMoves && optimisticState.moves && serverMoves === optimisticState.moves) shouldClear = true;
+            if (!shouldClear && serverMoves && optimisticState.moves) {
+                const serverCount = serverMoves.trim() ? serverMoves.split(' ').length : 0;
+                const optimisticCount = optimisticState.moves.trim() ? optimisticState.moves.split(' ').length : 0;
+                if (serverCount >= optimisticCount) shouldClear = true;
+            }
+            if (shouldClear) {
+                setOptimisticState(null);
+                if (state?.uci) setLastMoveUci(state.uci);
+                return;
+            }
         }
-    }, [optimisticState, state?.fen, state?.moves, game?.current_fen, game?.moves]);
+        if (state?.uci) setLastMoveUci(state.uci);
+    }, [optimisticState, state?.fen, state?.moves, state?.uci, game?.current_fen, game?.moves]);
 
     useEffect(() => {
         if (currentStatus !== 'active') {
@@ -933,26 +939,11 @@ export default function GamePage() {
         }
     }, [currentStatus, gameId]);
     useEffect(() => {
-        if (!optimisticState) return;
-        const serverMoves = state?.moves || game?.moves || '';
-        if (!serverMoves || !optimisticState.moves) return;
-        const serverCount = serverMoves.trim() ? serverMoves.split(' ').length : 0;
-        const optimisticCount = optimisticState.moves.trim() ? optimisticState.moves.split(' ').length : 0;
-        if (serverCount >= optimisticCount) {
-            setOptimisticState(null);
-        }
-    }, [optimisticState, state?.moves, game?.moves]);
-    useEffect(() => {
         setLastMoveUci(null);
         animatedMoveRef.current = null;
         skipNextMoveAnimationRef.current = false;
         setPieceMotion(null);
     }, [gameId]);
-    useEffect(() => {
-        if (state?.uci) {
-            setLastMoveUci(state.uci);
-        }
-    }, [state?.uci]);
     useEffect(() => {
         const prevOffer = drawOfferRef.current;
         const result = state?.result || game?.result;
@@ -1069,32 +1060,12 @@ export default function GamePage() {
         if (!clockSource) {
             return { white: null, black: null, turn: clockTurn };
         }
-        const anchor = clockAnchorRef.current || {
-            ...clockSource,
-            at: clockSource.serverTime
-                ? clockSource.serverTime * 1000
-                : Date.now() + serverOffsetMs,
-        };
-        let whiteLeft = clockSource.white;
-        let blackLeft = clockSource.black;
-        if (currentStatus === 'active' && moveCount >= 2 && anchor.at) {
-            const nowMs = clockSource.serverTime ? clockNow + serverOffsetMs : clockNow;
-            const elapsedMs = Math.max(0, nowMs - anchor.at);
-            const elapsed = Math.floor(elapsedMs / 1000);
-            if (anchor.turn === 'white') {
-                whiteLeft = Math.max(0, (anchor.white ?? 0) - elapsed);
-                blackLeft = anchor.black ?? blackLeft;
-            } else if (anchor.turn === 'black') {
-                blackLeft = Math.max(0, (anchor.black ?? 0) - elapsed);
-                whiteLeft = anchor.white ?? whiteLeft;
-            }
-        }
         return {
-            white: whiteLeft,
-            black: blackLeft,
-            turn: anchor.turn || clockTurn,
+            white: clockSource.white ?? null,
+            black: clockSource.black ?? null,
+            turn: clockSource.turn || clockTurn,
         };
-    }, [clockNow, clockSource, clockTurn, currentStatus, moveCount, serverOffsetMs]);
+    }, [clockSource, clockTurn]);
     const topClock = isUserWhite ? liveClock.black : liveClock.white;
     const bottomClock = isUserWhite ? liveClock.white : liveClock.black;
     const analysisMoves = useMemo(() => analysisData?.analysis?.moves ?? [], [analysisData]);
@@ -1781,13 +1752,13 @@ export default function GamePage() {
                 if (!selectedSquare) {
                     if (piece && isOwnPiece(piece)) {
                         setSelectedSquare(squareCoord);
-                        setLegalTargets(resolvePremoveTargets(squareCoord));
+                        setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
                     }
                     return;
                 }
                 if (selectedSquare === squareCoord) {
                     setSelectedSquare(null);
-                    setLegalTargets([]);
+                    setLegalTargets(EMPTY_SET);
                     return;
                 }
                 if (selectedSquare && selectedSquare !== squareCoord) {
@@ -1796,7 +1767,7 @@ export default function GamePage() {
                 }
                 if (piece && isOwnPiece(piece)) {
                     setSelectedSquare(squareCoord);
-                    setLegalTargets(resolvePremoveTargets(squareCoord));
+                    setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
                 }
             }
             return;
@@ -1805,18 +1776,18 @@ export default function GamePage() {
         if (!selectedSquare) {
             if (piece && isOwnPiece(piece)) {
                 setSelectedSquare(squareCoord);
-                setLegalTargets(resolveTargets(squareCoord));
+                setLegalTargets(new Set(resolveTargets(squareCoord)));
             }
             return;
         }
         if (selectedSquare === squareCoord) {
             setSelectedSquare(null);
-            setLegalTargets([]);
+            setLegalTargets(EMPTY_SET);
             return;
         }
-        if (legalTargets.includes(squareCoord)) {
+        if (legalTargets.has(squareCoord)) {
             setSelectedSquare(null);
-            setLegalTargets([]);
+            setLegalTargets(EMPTY_SET);
             const promotionOptions = getPromotionOptions(selectedSquare, squareCoord);
             if (promotionOptions.length && !autoQueenEnabled) {
                 const piece = squareMap[selectedSquare];
@@ -1838,26 +1809,30 @@ export default function GamePage() {
         }
         if (piece && isOwnPiece(piece)) {
             setSelectedSquare(squareCoord);
-            setLegalTargets(resolveTargets(squareCoord));
+            setLegalTargets(new Set(resolveTargets(squareCoord)));
         }
     };
+    squareClickRef.current = handleSquareClick;
+    piecePointerDownRef.current = handlePiecePointerDown;
+    const stableSquareClick = useCallback((coord) => squareClickRef.current?.(coord), []);
+    const stablePiecePointerDown = useCallback((e, coord) => piecePointerDownRef.current?.(e, coord), []);
 
     const updateDragPosition = useCallback((x, y) => {
         dragPosRef.current = { x, y };
-        if (dragRafRef.current) return;
-        dragRafRef.current = requestAnimationFrame(() => {
-            setDragPosition(dragPosRef.current);
-            dragRafRef.current = null;
-        });
+        const ghost = dragGhostRef.current;
+        if (ghost) {
+            ghost.style.transform = `translate(${x}px, ${y}px)`;
+            ghost.style.display = '';
+        }
     }, []);
 
     const clearDragState = useCallback((clearSelection = true) => {
         setDragFrom(null);
         setDragPiece(null);
-        setDragPosition(null);
+        if (dragGhostRef.current) dragGhostRef.current.style.display = 'none';
         if (clearSelection) {
             setSelectedSquare(null);
-            setLegalTargets([]);
+            setLegalTargets(EMPTY_SET);
         }
         dragPointerRef.current = null;
         dragStartRef.current = null;
@@ -1909,9 +1884,9 @@ export default function GamePage() {
         updateDragPosition(x, y);
         setSelectedSquare(squareCoord);
         if (canInteract) {
-            setLegalTargets(resolveTargets(squareCoord));
+            setLegalTargets(new Set(resolveTargets(squareCoord)));
         } else {
-            setLegalTargets(resolvePremoveTargets(squareCoord));
+            setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
         }
         if (event.currentTarget?.setPointerCapture) {
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -2160,6 +2135,86 @@ export default function GamePage() {
     const handleBack = useCallback(() => {
         navigate('/');
     }, [navigate]);
+
+    const boardGridMemo = useMemo(() => (
+        <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
+            {Array.from({ length: 8 }).flatMap((_, displayRow) => (
+                Array.from({ length: 8 }).map((_, displayCol) => {
+                    const actualRow = isUserWhite ? displayRow : 7 - displayRow;
+                    const actualCol = isUserWhite ? displayCol : 7 - displayCol;
+                    const square = board?.[actualRow]?.[actualCol] || null;
+                    const coord = `${FILES[actualCol]}${8 - actualRow}`;
+                    const isDark = (actualRow + actualCol) % 2 === 1;
+                    const isSelected = showMoveHints && selectedSquare === coord;
+                    const isTarget = showMoveHints && legalTargets.has(coord);
+                    const isCaptureTarget = isTarget && Boolean(squareMap[coord]);
+                    const isLastMove = lastMoveSquares
+                        && (lastMoveSquares.from === coord || lastMoveSquares.to === coord);
+                    const isCheckSquare = checkSquare === coord;
+                    const isPremoveSquare = premove
+                        && (premove.from === coord || premove.to === coord);
+                    const isDragging = dragFrom === coord;
+                    const isMotionTarget = Boolean(
+                        pieceMotion
+                        && pieceMotion.to === coord
+                        && pieceMotion.piece === square
+                        && !isDragging
+                    );
+                    const pieceMotionStyle = isMotionTarget
+                        ? {
+                            transform: pieceMotion.phase === 'start'
+                                ? `translate(${pieceMotion.offsetX}px, ${pieceMotion.offsetY}px)`
+                                : 'translate(0px, 0px)',
+                            transition: pieceMotion.phase === 'start'
+                                ? 'none'
+                                : `transform ${pieceMotion.duration}ms cubic-bezier(0.22, 0.8, 0.2, 1)`,
+                            willChange: 'transform',
+                        }
+                        : null;
+                    const squareStyle = {
+                        backgroundColor: isDark ? boardTheme.dark : boardTheme.light,
+                    };
+                    return (
+                        <div
+                            key={`${displayRow}-${displayCol}-${coord}`}
+                            role="button"
+                            tabIndex={-1}
+                            className="relative flex items-center justify-center"
+                            style={squareStyle}
+                            data-square={coord}
+                            data-selected={isSelected ? 'true' : 'false'}
+                            data-target={isTarget ? 'true' : 'false'}
+                            data-premove={isPremoveSquare ? 'true' : 'false'}
+                            onClick={() => {
+                                if (suppressClickRef.current) {
+                                    suppressClickRef.current = false;
+                                    return;
+                                }
+                                stableSquareClick(coord);
+                            }}
+                        >
+                            {isLastMove ? <span className="absolute inset-0 bg-yellow-500/40" /> : null}
+                            {isPremoveSquare ? <span className="absolute inset-0 bg-blue-400/30" /> : null}
+                            {isCheckSquare ? <span className="absolute inset-0 bg-red-600/40" /> : null}
+                            {isSelected ? <span className="absolute inset-0 bg-blue-400/25" /> : null}
+                            {isTarget ? (
+                                <span className={`absolute inset-0 ${isCaptureTarget ? 'bg-emerald-700/45' : 'bg-emerald-600/35'}`} />
+                            ) : null}
+                            {square ? (
+                                <div
+                                    onPointerDown={(e) => stablePiecePointerDown(e, coord)}
+                                    style={pieceMotionStyle ? { touchAction: 'none', ...pieceMotionStyle } : { touchAction: 'none' }}
+                                    className={`flex items-center justify-center outline-none focus:outline-none ${isDragging ? 'opacity-0' : ''}`}
+                                >
+                                    <ChessPiece piece={square} size={pieceSize} pieceSet={pieceSet} />
+                                </div>
+                            ) : null}
+                        </div>
+                    );
+                })
+            ))}
+        </div>
+    ), [board, boardTheme, checkSquare, dragFrom, isUserWhite, lastMoveSquares, legalTargets, pieceMotion, pieceSet, pieceSize, premove, selectedSquare, showMoveHints, squareMap, stablePiecePointerDown, stableSquareClick]);
 
     return (
         <Layout showHeader={false} showBottomNav={false}>
@@ -2453,7 +2508,7 @@ export default function GamePage() {
                             </aside>
 
                             <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? '' : 'overflow-hidden'}`}>
-                                <div ref={topBarRef} className="px-2 py-1.5 lg:py-2 flex items-center justify-between shrink-0">
+                                <div ref={topBarRef} className="px-2 py-1.5 lg:py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2487,9 +2542,7 @@ export default function GamePage() {
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <div className={`${topClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-1.5 min-w-[80px] text-center`}>
-                                            <span className={`text-xl font-bold font-mono ${topClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                                                {formatClock(topClockDisplay)}
-                                            </span>
+                                            <ClockDisplay seconds={topClockDisplay} isActive={topClockActive && currentStatus === 'active'} className={`text-xl font-bold font-mono ${topClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`} />
                                         </div>
                                     </div>
                                 </div>
@@ -2512,106 +2565,7 @@ export default function GamePage() {
                                             setPremoveNotice('Premove canceled.');
                                         }}
                                     >
-                                    <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
-                                        {Array.from({ length: 8 }).flatMap((_, displayRow) => (
-                                            Array.from({ length: 8 }).map((_, displayCol) => {
-                                                const actualRow = isUserWhite ? displayRow : 7 - displayRow;
-                                                const actualCol = isUserWhite ? displayCol : 7 - displayCol;
-                                                const square = board?.[actualRow]?.[actualCol] || null;
-                                                const coord = `${FILES[actualCol]}${8 - actualRow}`;
-                                                const isDark = (actualRow + actualCol) % 2 === 1;
-                                                const isSelected = showMoveHints && selectedSquare === coord;
-                                                const isTarget = showMoveHints && legalTargets.includes(coord);
-                                                const isCaptureTarget = isTarget && Boolean(squareMap[coord]);
-                                                const isLastMove = lastMoveSquares
-                                                    && (lastMoveSquares.from === coord || lastMoveSquares.to === coord);
-                                                const isCheckSquare = checkSquare === coord;
-                                                const isPremoveSquare = premove
-                                                    && (premove.from === coord || premove.to === coord);
-                                                const canDrag = Boolean(square)
-                                                    && isOwnPiece(square)
-                                                    && (canInteract
-                                                        || (isUserPlayer
-                                                            && !isUserTurn
-                                                            && currentStatus === 'active'
-                                                            && !isPreviewing));
-                                                const isDragging = dragFrom === coord;
-                                                const isMotionTarget = Boolean(
-                                                    pieceMotion
-                                                    && pieceMotion.to === coord
-                                                    && pieceMotion.piece === square
-                                                    && !isDragging
-                                                );
-                                                const pieceMotionStyle = isMotionTarget
-                                                    ? {
-                                                        transform: pieceMotion.phase === 'start'
-                                                            ? `translate(${pieceMotion.offsetX}px, ${pieceMotion.offsetY}px)`
-                                                            : 'translate(0px, 0px)',
-                                                        transition: pieceMotion.phase === 'start'
-                                                            ? 'none'
-                                                            : `transform ${pieceMotion.duration}ms cubic-bezier(0.22, 0.8, 0.2, 1)`,
-                                                        willChange: 'transform',
-                                                    }
-                                                    : null;
-                                                const squareStyle = {
-                                                    backgroundColor: isDark ? boardTheme.dark : boardTheme.light,
-                                                };
-                                                return (
-                                                    <div
-                                                        key={`${displayRow}-${displayCol}-${coord}`}
-                                                        role="button"
-                                                        tabIndex={-1}
-                                                        className="relative flex items-center justify-center"
-                                                        style={squareStyle}
-                                                        data-square={coord}
-                                                        data-selected={isSelected ? 'true' : 'false'}
-                                                        data-target={isTarget ? 'true' : 'false'}
-                                                        data-premove={isPremoveSquare ? 'true' : 'false'}
-                                                        onClick={() => {
-                                                            if (suppressClickRef.current) {
-                                                                suppressClickRef.current = false;
-                                                                return;
-                                                            }
-                                                            handleSquareClick(coord);
-                                                        }}
-                                                    >
-                                                        {isLastMove ? (
-                                                            <span className="absolute inset-0 bg-yellow-500/40" />
-                                                        ) : null}
-                                                        {isPremoveSquare ? (
-                                                            <span className="absolute inset-0 bg-blue-400/30" />
-                                                        ) : null}
-                                                        {isCheckSquare ? (
-                                                            <span className="absolute inset-0 bg-red-600/40" />
-                                                        ) : null}
-                                                        {isSelected ? (
-                                                            <span className="absolute inset-0 bg-blue-400/25" />
-                                                        ) : null}
-                                                        {isTarget ? (
-                                                            <span
-                                                                className={`absolute inset-0 ${
-                                                                    isCaptureTarget ? 'bg-emerald-700/45' : 'bg-emerald-600/35'
-                                                                }`}
-                                                            />
-                                                        ) : null}
-                                                        {square ? (
-                                                            <div
-                                                                onPointerDown={(event) => {
-                                                                    if (canDrag) {
-                                                                        handlePiecePointerDown(event, coord);
-                                                                    }
-                                                                }}
-                                                                style={pieceMotionStyle ? { touchAction: 'none', ...pieceMotionStyle } : { touchAction: 'none' }}
-                                                                className={`flex items-center justify-center outline-none focus:outline-none ${isDragging ? 'opacity-0' : ''}`}
-                                                            >
-                                                                <ChessPiece piece={square} size={pieceSize} pieceSet={pieceSet} />
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                );
-                                            })
-                                        ))}
-                                    </div>
+                                    {boardGridMemo}
                                     {pendingPromotion ? (
                                         <div className="absolute inset-0 z-50 bg-black/40 flex items-center justify-center">
                                             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 shadow-xl space-y-2">
@@ -2654,22 +2608,23 @@ export default function GamePage() {
                                             </div>
                                         </div>
                                     )}
-                                    {dragFrom && dragPiece && dragPosition ? (
-                                        <div
-                                            data-testid="drag-ghost"
-                                            style={{
-                                                position: 'absolute',
-                                                left: dragPosition.x - pieceSize / 2,
-                                                top: dragPosition.y - pieceSize / 2,
-                                                width: pieceSize,
-                                                height: pieceSize,
-                                                pointerEvents: 'none',
-                                                zIndex: 50,
-                                            }}
-                                        >
-                                            <ChessPiece piece={dragPiece} size={pieceSize} pieceSet={pieceSet} />
-                                        </div>
-                                    ) : null}
+                                    <div
+                                        ref={dragGhostRef}
+                                        data-testid="drag-ghost"
+                                        style={{
+                                            position: 'absolute',
+                                            left: -pieceSize / 2,
+                                            top: -pieceSize / 2,
+                                            width: pieceSize,
+                                            height: pieceSize,
+                                            pointerEvents: 'none',
+                                            zIndex: 50,
+                                            display: dragFrom && dragPiece ? '' : 'none',
+                                            willChange: 'transform',
+                                        }}
+                                    >
+                                        {dragPiece ? <ChessPiece piece={dragPiece} size={pieceSize} pieceSet={pieceSet} /> : null}
+                                    </div>
                                     </div>
                                 </div>
                                 {showEvalBar && isMobileLayout ? (
@@ -2696,7 +2651,7 @@ export default function GamePage() {
                                     </div>
                                 ) : null}
 
-                                <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0">
+                                <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2730,9 +2685,7 @@ export default function GamePage() {
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <div className={`${bottomClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-2 min-w-[90px] text-center`}>
-                                            <span className={`text-2xl font-bold font-mono ${bottomClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                                                {formatClock(bottomClockDisplay)}
-                                            </span>
+                                            <ClockDisplay seconds={bottomClockDisplay} isActive={bottomClockActive && currentStatus === 'active'} className={`text-2xl font-bold font-mono ${bottomClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`} />
                                         </div>
                                     </div>
                                 </div>
