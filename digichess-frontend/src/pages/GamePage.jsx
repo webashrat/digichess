@@ -298,31 +298,49 @@ export default function GamePage() {
     }, []);
 
     const moves = useMemo(() => (displayMoves ? displayMoves.split(' ') : []), [displayMoves]);
+    const navCacheRef = useRef({ movesKey: '', fens: [], uciList: [], phaseList: [], chessState: null });
     const navigation = useMemo(() => {
+        const movesKey = displayMoves || '';
+        const cache = navCacheRef.current;
+        if (cache.movesKey && movesKey.startsWith(cache.movesKey) && cache.fens.length > 0) {
+            const prevCount = cache.movesKey.trim() ? cache.movesKey.split(' ').length : 0;
+            if (prevCount <= moves.length) {
+                const chess = cache.chessState ? new Chess(cache.chessState) : new Chess();
+                const fens = [...cache.fens];
+                const uciList = [...cache.uciList];
+                const phaseList = [...cache.phaseList];
+                let ok = true;
+                for (let index = prevCount; index < moves.length; index += 1) {
+                    try {
+                        const move = chess.move(moves[index], { sloppy: true });
+                        if (!move) { ok = false; break; }
+                        uciList.push(`${move.from}${move.to}${move.promotion || ''}`);
+                        fens.push(chess.fen());
+                        const mn = index + 1;
+                        phaseList.push(mn <= 10 ? 'opening' : mn > 30 ? 'endgame' : 'middlegame');
+                    } catch { ok = false; break; }
+                }
+                if (ok) {
+                    navCacheRef.current = { movesKey, fens, uciList, phaseList, chessState: chess.fen() };
+                    return { fens, uciList, phaseList };
+                }
+            }
+        }
         const chess = new Chess();
         const fens = [chess.fen()];
         const uciList = [];
         const phaseList = [];
         for (let index = 0; index < moves.length; index += 1) {
-            const san = moves[index];
             try {
-                const move = chess.move(san, { sloppy: true });
+                const move = chess.move(moves[index], { sloppy: true });
                 if (!move) break;
-                const uci = `${move.from}${move.to}${move.promotion || ''}`;
-                uciList.push(uci);
+                uciList.push(`${move.from}${move.to}${move.promotion || ''}`);
                 fens.push(chess.fen());
-                const moveNumber = index + 1;
-                let phase = 'middlegame';
-                if (moveNumber <= 10) {
-                    phase = 'opening';
-                } else if (moveNumber > 30) {
-                    phase = 'endgame';
-                }
-                phaseList.push(phase);
-            } catch (err) {
-                break;
-            }
+                const mn = index + 1;
+                phaseList.push(mn <= 10 ? 'opening' : mn > 30 ? 'endgame' : 'middlegame');
+            } catch { break; }
         }
+        navCacheRef.current = { movesKey, fens, uciList, phaseList, chessState: chess.fen() };
         return { fens, uciList, phaseList };
     }, [moves]);
     const maxPreviewIndex = Math.min(moves.length, navigation.fens.length - 1);
@@ -899,13 +917,22 @@ export default function GamePage() {
 
     useEffect(() => {
         if (!canInteract) {
-            if (!dragFrom) {
-                setSelectedSquare(null);
+            if (!dragFrom && !selectedSquare) {
                 setLegalTargets(EMPTY_SET);
             }
             setPendingPromotion(null);
+            return;
         }
-    }, [canInteract, dragFrom]);
+        if (selectedSquare && !dragFrom) {
+            const piece = squareMap[selectedSquare];
+            if (piece && isOwnPiece(piece)) {
+                setLegalTargets(new Set(resolveTargets(selectedSquare)));
+            } else {
+                setSelectedSquare(null);
+                setLegalTargets(EMPTY_SET);
+            }
+        }
+    }, [canInteract, dragFrom, selectedSquare, squareMap, isOwnPiece, resolveTargets]);
     useEffect(() => {
         if (currentStatus !== 'active') {
             setPremove(null);
@@ -1063,12 +1090,18 @@ export default function GamePage() {
         if (!clockSource) {
             return { white: null, black: null, turn: clockTurn };
         }
-        return {
-            white: clockSource.white ?? null,
-            black: clockSource.black ?? null,
-            turn: clockSource.turn || clockTurn,
-        };
-    }, [clockSource, clockTurn]);
+        let white = clockSource.white;
+        let black = clockSource.black;
+        if (clockSource.serverTime && currentStatus === 'active') {
+            const transitSec = Math.max(0, (Date.now() - clockSource.serverTime * 1000) / 1000);
+            if (clockSource.turn === 'white' && white != null) {
+                white = Math.max(0, white - transitSec);
+            } else if (clockSource.turn === 'black' && black != null) {
+                black = Math.max(0, black - transitSec);
+            }
+        }
+        return { white, black, turn: clockSource.turn || clockTurn };
+    }, [clockSource, clockTurn, currentStatus]);
     const topClock = isUserWhite ? liveClock.black : liveClock.white;
     const bottomClock = isUserWhite ? liveClock.white : liveClock.black;
     const analysisMoves = useMemo(() => analysisData?.analysis?.moves ?? [], [analysisData]);
@@ -1668,7 +1701,7 @@ export default function GamePage() {
                 uci,
                 fen: chess.fen(),
                 moves: nextMoves,
-                legal_moves: chess.moves(),
+                legal_moves: null,
                 captured: Boolean(applied.captured),
             };
         } catch (err) {

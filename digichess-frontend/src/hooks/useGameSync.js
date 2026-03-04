@@ -475,9 +475,9 @@ export default function useGameSync({ gameId, spectate = false, token }) {
             } catch {
                 // ignore clock failures
             }
-        }, 1000);
+        }, connected ? 10000 : 3000);
         return () => clearInterval(clockInterval);
-    }, [gameId, game?.status]);
+    }, [gameId, game?.status, connected]);
 
     const sendChat = (message, room = 'players') => {
         if (!wsRef.current || wsRef.current.readyState !== 1) return;
