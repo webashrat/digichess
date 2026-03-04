@@ -769,11 +769,11 @@ export default function GamePage() {
                 return;
             }
             setPremove({ from: fromSquare, to: toSquare, promotion: 'q' });
-            setPremoveNotice('Premove set.');
+            setPremoveNotice(null);
             return;
         }
         setPremove({ from: fromSquare, to: toSquare });
-        setPremoveNotice('Premove set.');
+        setPremoveNotice(null);
     }, [autoQueenEnabled, squareMap]);
     const activeMoveIndex = isPreviewing ? previewIndex - 1 : navigation.uciList.length - 1;
     const activeMoveUci = (activeMoveIndex >= 0 && navigation.uciList[activeMoveIndex])
@@ -1724,7 +1724,7 @@ export default function GamePage() {
             return;
         }
         setPremove(null);
-        setPremoveNotice('Premove canceled.');
+        setPremoveNotice(null);
     }, [currentStatus, effectiveLegalMovesUci, isPreviewing, isUserPlayer, isUserTurn, pendingMove, premove, submitMoveFromUci]);
 
     const handlePromotionSelect = async (promotion) => {
@@ -1733,7 +1733,7 @@ export default function GamePage() {
         setPendingPromotion(null);
         if (mode === 'premove') {
             setPremove({ from, to, promotion });
-            setPremoveNotice('Premove set.');
+            setPremoveNotice(null);
             return;
         }
         if (origin === 'drag') {
@@ -1746,7 +1746,7 @@ export default function GamePage() {
         if (pendingPromotion) return;
         if (premove) {
             setPremove(null);
-            setPremoveNotice('Premove canceled.');
+            setPremoveNotice(null);
             return;
         }
         if (!canInteract) {
@@ -1865,7 +1865,7 @@ export default function GamePage() {
         if (pendingPromotion) return;
         if (premove) {
             setPremove(null);
-            setPremoveNotice('Premove canceled.');
+            setPremoveNotice(null);
             return;
         }
         if (!canInteract) {
@@ -2571,7 +2571,7 @@ export default function GamePage() {
                                             if (!premove) return;
                                             event.preventDefault();
                                             setPremove(null);
-                                            setPremoveNotice('Premove canceled.');
+                                            setPremoveNotice(null);
                                         }}
                                     >
                                     {boardGridMemo}
