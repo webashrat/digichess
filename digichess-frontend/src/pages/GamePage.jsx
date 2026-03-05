@@ -129,6 +129,7 @@ export default function GamePage() {
     const dragPosRef = useRef(null);
     const dragRafRef = useRef(null);
     const suppressClickRef = useRef(false);
+    const tapSelectedRef = useRef(null);
     const analysisPollRef = useRef(null);
     const drawOfferRef = useRef(null);
     const clockAnchorRef = useRef(null);
@@ -640,11 +641,11 @@ export default function GamePage() {
             active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
         }
     }, [previewIndex, isMobileLayout, moves.length]);
-    const isOwnPiece = (piece) => {
+    const isOwnPiece = useCallback((piece) => {
         if (!piece) return false;
         const isWhitePiece = piece === piece.toUpperCase();
         return isUserWhite ? isWhitePiece : !isWhitePiece;
-    };
+    }, [isUserWhite]);
     const resolveTargets = useCallback(
         (fromSquare) => (movesByFrom[fromSquare] || []).map((uci) => uci.slice(2, 4)),
         [movesByFrom]
@@ -889,11 +890,7 @@ export default function GamePage() {
     const drawerOpen = leftDrawerOpen || rightDrawerOpen;
 
     useEffect(() => {
-        if (!dragFrom) {
-            setSelectedSquare(null);
-            setLegalTargets(EMPTY_SET);
-            return;
-        }
+        if (!dragFrom) return;
         setSelectedSquare(dragFrom);
         if (canInteract) {
             setLegalTargets(new Set(resolveTargets(dragFrom)));
@@ -915,18 +912,25 @@ export default function GamePage() {
         resolveTargets,
     ]);
 
+    const preSelectRef = useRef(null);
     useEffect(() => {
         if (!canInteract) {
+            if (selectedSquare) {
+                preSelectRef.current = selectedSquare;
+            }
             if (!dragFrom && !selectedSquare) {
                 setLegalTargets(EMPTY_SET);
             }
             setPendingPromotion(null);
             return;
         }
-        if (selectedSquare && !dragFrom) {
-            const piece = squareMap[selectedSquare];
+        const sq = selectedSquare || preSelectRef.current;
+        preSelectRef.current = null;
+        if (sq && !dragFrom) {
+            const piece = squareMap[sq];
             if (piece && isOwnPiece(piece)) {
-                setLegalTargets(new Set(resolveTargets(selectedSquare)));
+                if (sq !== selectedSquare) setSelectedSquare(sq);
+                setLegalTargets(new Set(resolveTargets(sq)));
             } else {
                 setSelectedSquare(null);
                 setLegalTargets(EMPTY_SET);
@@ -1782,27 +1786,35 @@ export default function GamePage() {
             setPremoveNotice(null);
             return;
         }
+        const justTapped = tapSelectedRef.current;
+        if (justTapped) tapSelectedRef.current = null;
+
         if (!canInteract) {
             if (!isUserTurn && isUserPlayer && currentStatus === 'active' && !isPreviewing) {
                 const piece = squareMap[squareCoord];
                 if (!selectedSquare) {
                     if (piece && isOwnPiece(piece)) {
                         setSelectedSquare(squareCoord);
+                        preSelectRef.current = squareCoord;
                         setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
                     }
                     return;
                 }
                 if (selectedSquare === squareCoord) {
+                    if (justTapped === squareCoord) return;
                     setSelectedSquare(null);
+                    preSelectRef.current = null;
                     setLegalTargets(EMPTY_SET);
                     return;
                 }
                 if (selectedSquare && selectedSquare !== squareCoord) {
+                    preSelectRef.current = null;
                     queuePremove(selectedSquare, squareCoord);
                     return;
                 }
                 if (piece && isOwnPiece(piece)) {
                     setSelectedSquare(squareCoord);
+                    preSelectRef.current = squareCoord;
                     setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
                 }
             }
@@ -1817,6 +1829,7 @@ export default function GamePage() {
             return;
         }
         if (selectedSquare === squareCoord) {
+            if (justTapped === squareCoord) return;
             setSelectedSquare(null);
             setLegalTargets(EMPTY_SET);
             return;
@@ -1903,14 +1916,26 @@ export default function GamePage() {
         }
         if (!canInteract) {
             if (isUserTurn || !isUserPlayer || currentStatus !== 'active' || isPreviewing) return;
+            if (selectedSquare && selectedSquare !== squareCoord) {
+                suppressClickRef.current = true;
+                queuePremove(selectedSquare, squareCoord);
+                return;
+            }
+        } else if (selectedSquare && selectedSquare !== squareCoord && legalTargets.has(squareCoord)) {
+            suppressClickRef.current = true;
+            setSelectedSquare(null);
+            setLegalTargets(EMPTY_SET);
+            const uci = resolveMoveUci(selectedSquare, squareCoord);
+            if (uci) submitMoveFromUci(uci);
+            return;
         }
         const piece = squareMap[squareCoord];
         if (!piece || !isOwnPiece(piece)) return;
-        event.preventDefault();
         const rect = boardRef.current?.getBoundingClientRect();
         if (!rect) return;
         dragPointerRef.current = event.pointerId;
         dragMovedRef.current = false;
+        tapSelectedRef.current = selectedSquare === squareCoord ? null : squareCoord;
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         dragStartRef.current = { x, y };
@@ -1921,6 +1946,7 @@ export default function GamePage() {
         if (canInteract) {
             setLegalTargets(new Set(resolveTargets(squareCoord)));
         } else {
+            preSelectRef.current = squareCoord;
             setLegalTargets(new Set(resolvePremoveTargets(squareCoord)));
         }
         if (event.currentTarget?.setPointerCapture) {
@@ -1950,10 +1976,11 @@ export default function GamePage() {
             const moved = dragMovedRef.current;
             if (moved) {
                 suppressClickRef.current = true;
+                tapSelectedRef.current = null;
             }
             const fromSquare = dragFrom;
             const targetSquare = moved ? resolveCoordFromPoint(event.clientX, event.clientY) : null;
-            clearDragState(true);
+            clearDragState(moved);
             if (moved && fromSquare && targetSquare) {
                 if (canInteract) {
                     const targets = resolveTargets(fromSquare);
@@ -1991,6 +2018,7 @@ export default function GamePage() {
         };
         const handleCancel = () => {
             clearDragState(true);
+            tapSelectedRef.current = null;
             suppressClickRef.current = false;
         };
         const handleVisibilityChange = () => {
