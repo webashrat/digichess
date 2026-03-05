@@ -115,8 +115,6 @@ def create_active_game(token_a, token_b, id_b):
 
 
 def main():
-    global passed, failed
-
     print("=" * 60)
     print("ANTI-CHEAT VALIDATION TESTS")
     print("=" * 60)
