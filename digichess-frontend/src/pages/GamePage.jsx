@@ -2378,19 +2378,25 @@ export default function GamePage() {
                             </div>
                         ) : null}
 
-                        <div className="flex-1 flex flex-col lg:flex-row gap-4 px-0 sm:px-4 pb-4 min-h-0 relative overflow-hidden">
+                        <div className="flex-1 flex flex-col lg:flex-row lg:gap-0 gap-4 px-0 lg:px-0 sm:px-4 lg:pb-0 pb-4 min-h-0 relative overflow-hidden">
                             <aside
-                                className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 left-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 left-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 lg:rounded-none rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                     leftDrawerOpen ? 'translate-x-0' : '-translate-x-full'
                                 } lg:translate-x-0`}
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <button
-                                        className="text-slate-900 dark:text-white hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700"
+                                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                         type="button"
                                         onClick={handleBack}
                                     >
-                                        <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary shadow-sm">
+                                            <span className="text-white text-sm font-bold leading-none">&#9822;</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-extrabold tracking-tight leading-tight">DigiChess</span>
+                                            <span className="text-[8px] uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">Live Arena</span>
+                                        </div>
                                     </button>
                                     <button
                                         className="lg:hidden p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
@@ -2401,7 +2407,7 @@ export default function GamePage() {
                                         <span className="material-symbols-outlined text-[20px]">close</span>
                                     </button>
                                 </div>
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between mb-2 mt-2">
                                     <h3 className="text-sm font-semibold">Moves</h3>
                                     <span className="text-xs text-slate-500">{moves.length} moves</span>
                                 </div>
@@ -2574,8 +2580,8 @@ export default function GamePage() {
                                 ) : null}
                             </aside>
 
-                            <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden'}`}>
-                                <div ref={topBarRef} className="px-2 py-1.5 lg:py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
+                            <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden justify-center'}`}>
+                                <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2608,21 +2614,16 @@ export default function GamePage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        <div className={`${topClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-1.5 min-w-[80px] text-center`}>
-                                            <ClockDisplay seconds={topClockDisplay} isActive={topClockActive && currentStatus === 'active'} className={`text-xl font-bold font-mono ${topClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`} />
+                                        <div className={`${topClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded px-3 py-1.5 min-w-[90px] text-center`}>
+                                            <ClockDisplay seconds={topClockDisplay} isActive={topClockActive && currentStatus === 'active'} className={`text-2xl font-bold font-mono ${topClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`} />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="relative flex-none md:flex-1 flex items-start justify-center px-0 sm:px-2 pt-1 pb-1 sm:pt-2 sm:pb-3 gap-2 sm:gap-3 md:gap-6 min-h-0">
-                                    {showEvalBar && !isMobileLayout ? (
-                                        <div className={`hidden sm:flex h-[70%] md:h-[80%] w-3 md:w-4 bg-gray-800 rounded-full overflow-hidden flex ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shrink-0 relative shadow-inner`}>
-                                            <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
-                                        </div>
-                                    ) : null}
+                                <div className="relative flex-none flex items-center justify-center min-h-0">
                                     <div
                                         ref={boardRef}
-                                        className="aspect-square w-[min(100vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[100vw] md:max-w-[720px] max-h-[100vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl rounded-sm overflow-hidden border-4 border-surface-dark shrink-0 select-none touch-pan-y"
+                                        className="aspect-square w-[min(100vw,520px)] sm:w-[min(90vw,560px)] md:w-[min(72vh,720px)] max-w-[100vw] md:max-w-[720px] max-h-[100vw] sm:max-h-[90vw] md:max-h-[72vh] relative shadow-2xl overflow-hidden shrink-0 select-none touch-pan-y"
                                         style={isMobileLayout && mobileBoardSize ? { width: mobileBoardSize, height: mobileBoardSize } : undefined}
                                         data-testid="game-board"
                                         onContextMenu={(event) => {
@@ -2693,6 +2694,11 @@ export default function GamePage() {
                                         {dragPiece ? <ChessPiece piece={dragPiece} size={pieceSize} pieceSet={pieceSet} /> : null}
                                     </div>
                                     </div>
+                                    {showEvalBar && !isMobileLayout ? (
+                                        <div className={`absolute top-0 bottom-0 hidden lg:flex w-3 bg-gray-800 rounded-sm overflow-hidden ${evalBarFlip ? 'flex-col-reverse' : 'flex-col'} border border-gray-700 shadow-inner`} style={{ left: 'calc(50% - min(36vh, 360px) - 20px)' }}>
+                                            <div className="bg-white w-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" style={{ height: `${evalSplit.white}%` }}></div>
+                                        </div>
+                                    ) : null}
                                 </div>
                                 {showEvalBar && isMobileLayout ? (
                                     <div className="sm:hidden px-2 pb-1">
@@ -2732,7 +2738,7 @@ export default function GamePage() {
                                     >
                                         <div className="relative shrink-0">
                                             <div
-                                                className={`w-12 h-12 rounded-full border-2 border-primary ring-2 ring-primary/20 ${bottomAvatar ? 'bg-cover bg-center' : 'bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold'}`}
+                                                className={`w-10 h-10 rounded-full border-2 border-surface-dark dark:border-gray-700 ${bottomAvatar ? 'bg-cover bg-center' : 'bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold'}`}
                                                 style={bottomAvatar ? { backgroundImage: `url('${bottomAvatar}')` } : undefined}
                                             >
                                                 {!bottomAvatar ? bottomInitials : null}
@@ -2740,7 +2746,7 @@ export default function GamePage() {
                                         </div>
                                         <div className="flex flex-col min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-bold text-base truncate text-slate-900 dark:text-white">{bottomPlayer?.username || 'You'}</p>
+                                                <p className="font-bold text-sm truncate">{bottomPlayer?.username || 'You'}</p>
                                                 {bottomTag ? (
                                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getRatingTagClasses(bottomTag)}`}>
                                                         {bottomTag}
@@ -2751,7 +2757,7 @@ export default function GamePage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        <div className={`${bottomClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded-lg px-3 py-2 min-w-[90px] text-center`}>
+                                        <div className={`${bottomClockActive ? 'bg-primary border border-blue-400 text-white shadow-[0_0_15px_rgba(19,91,236,0.4)]' : 'bg-white/80 dark:bg-slate-700/80 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'} rounded px-3 py-1.5 min-w-[90px] text-center`}>
                                             <ClockDisplay seconds={bottomClockDisplay} isActive={bottomClockActive && currentStatus === 'active'} className={`text-2xl font-bold font-mono ${bottomClockActive ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`} />
                                         </div>
                                     </div>
@@ -3014,7 +3020,7 @@ export default function GamePage() {
 
                             {currentStatus === 'active' ? (
                                 <aside
-                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 lg:rounded-none rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                         rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                                     } lg:translate-x-0`}
                                 >
@@ -3145,7 +3151,7 @@ export default function GamePage() {
                                 </aside>
                             ) : currentStatus === 'pending' ? (
                                 <aside
-                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 lg:rounded-none rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                         rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                                     } lg:translate-x-0`}
                                 >
@@ -3260,7 +3266,7 @@ export default function GamePage() {
                                 </aside>
                             ) : (
                                 <aside
-                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
+                                    className={`lg:w-72 w-[min(88vw,320px)] lg:static fixed inset-y-0 right-0 z-50 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-gray-800 lg:rounded-none rounded-2xl p-3 flex flex-col min-h-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-out ${
                                         rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                                     } lg:translate-x-0`}
                                 >
