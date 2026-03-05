@@ -55,8 +55,10 @@ class UserSerializer(serializers.ModelSerializer):
             "digiquiz_wrong",
             "show_friends_public",
             "last_seen_at",
+            "is_staff",
+            "is_superuser",
         )
-        read_only_fields = ("id", "date_joined", "is_online", "last_seen_at")
+        read_only_fields = ("id", "date_joined", "is_online", "last_seen_at", "is_staff", "is_superuser")
 
     def get_is_online(self, obj):
         return _is_recently_online(obj)

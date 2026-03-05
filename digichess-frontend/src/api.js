@@ -239,3 +239,28 @@ export const deleteNotification = (notificationId) =>
 
 export const clearAllNotifications = () =>
     api.del('/notifications/clear-all/');
+
+// ---------------------------------------------------------------------------
+// Anti-Cheat
+// ---------------------------------------------------------------------------
+
+export const submitCheatReport = (payload) =>
+    api.post('/games/anticheat/reports/', payload);
+
+export const fetchCheatReports = (statusFilter = '') =>
+    api.get(`/games/anticheat/reports/${statusFilter ? `?status=${statusFilter}` : ''}`);
+
+export const fetchCheatReportDetail = (id) =>
+    api.get(`/games/anticheat/reports/${id}/`);
+
+export const runCheatAnalysis = (id) =>
+    api.post(`/games/anticheat/reports/${id}/analyze/`);
+
+export const resolveCheatReport = (id, payload) =>
+    api.post(`/games/anticheat/reports/${id}/resolve/`, payload);
+
+export const fetchIrwinStatus = () =>
+    api.get('/games/anticheat/irwin/status/');
+
+export const trainIrwinModel = (epochs = 80) =>
+    api.post('/games/anticheat/irwin/train/', { epochs });

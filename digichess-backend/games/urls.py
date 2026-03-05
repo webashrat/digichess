@@ -47,6 +47,14 @@ from .views_leaderboard import RatingLeaderboardView, DigiQuizLeaderboardView
 from .views_bot import BotListView, CreateBotGameView
 from .views_puzzle import DailyPuzzleView, PuzzleView, NextPuzzleView, PuzzleBatchView
 from .views_optimistic import OptimisticMoveView
+from .views_anticheat import (
+    CheatReportListCreateView,
+    CheatReportDetailView,
+    RunCheatAnalysisView,
+    ResolveCheatReportView,
+    IrwinStatusView,
+    IrwinTrainView,
+)
 from .views_quiz import (
     DigiQuizFinalizeRoundView,
     DigiQuizImportQuestionBankView,
@@ -119,4 +127,11 @@ urlpatterns = [
     path("puzzles/<str:puzzle_id>/", PuzzleView.as_view(), name="puzzle-detail"),
     path("puzzles/next/", NextPuzzleView.as_view(), name="puzzle-next"),
     path("puzzles/batch/<str:angle>/", PuzzleBatchView.as_view(), name="puzzle-batch"),
+    # Anti-cheat
+    path("anticheat/reports/", CheatReportListCreateView.as_view(), name="anticheat-reports"),
+    path("anticheat/reports/<int:pk>/", CheatReportDetailView.as_view(), name="anticheat-report-detail"),
+    path("anticheat/reports/<int:pk>/analyze/", RunCheatAnalysisView.as_view(), name="anticheat-analyze"),
+    path("anticheat/reports/<int:pk>/resolve/", ResolveCheatReportView.as_view(), name="anticheat-resolve"),
+    path("anticheat/irwin/status/", IrwinStatusView.as_view(), name="anticheat-irwin-status"),
+    path("anticheat/irwin/train/", IrwinTrainView.as_view(), name="anticheat-irwin-train"),
 ]

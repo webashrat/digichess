@@ -52,13 +52,61 @@ def _material_eval(board: chess.Board) -> float:
     return score
 
 
+PIECE_VALUES = {
+    chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3,
+    chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0,
+}
+
+
+def classify_move(cp_loss: float, is_brilliant: bool = False) -> str:
+    """Classify a move based on centipawn loss. Shared by analysis and cheat detection."""
+    if is_brilliant:
+        return "brilliant"
+    if cp_loss <= 0:
+        return "best"
+    if cp_loss < 10:
+        return "excellent"
+    if cp_loss < 30:
+        return "good"
+    if cp_loss < 100:
+        return "inaccuracy"
+    if cp_loss < 300:
+        return "mistake"
+    return "blunder"
+
+
+def _detect_brilliant(board_before: chess.Board, move: chess.Move, cp_loss: float) -> bool:
+    """Chess.com-style brilliant: top engine move + material sacrifice + complex position."""
+    if cp_loss > 0:
+        return False
+    if board_before.legal_moves.count() <= 15:
+        return False
+
+    piece = board_before.piece_at(move.from_square)
+    if not piece:
+        return False
+    moved_value = PIECE_VALUES.get(piece.piece_type, 0)
+    if moved_value < 3:
+        return False
+
+    captured = board_before.piece_at(move.to_square)
+    captured_value = PIECE_VALUES.get(captured.piece_type, 0) if captured else 0
+
+    board_after = board_before.copy()
+    board_after.push(move)
+    attackers = board_after.attackers(not piece.color, move.to_square)
+    is_hanging = len(attackers) > 0
+
+    return is_hanging and moved_value > captured_value
+
+
 def analyze_game_with_stockfish(
     game: Game,
     engine_path: str,
     time_per_move: float = 0.3,
     depth: int = 15
 ) -> dict:
-    """Analyze game with local Stockfish."""
+    """Analyze game with local Stockfish. Includes cp_loss, classification, and per-player stats."""
     moves_raw, moves = _get_moves(game)
 
     if not moves:
@@ -87,6 +135,8 @@ def analyze_game_with_stockfish(
                             "mate": mate,
                             "best_move": board.san(pv[0]) if pv else None,
                             "depth": result.get("depth", 0),
+                            "cp_loss": 0,
+                            "classification": "best",
                         }
                     ],
                     "summary": {"total_moves": 0, "analyzed_moves": 1},
@@ -97,15 +147,18 @@ def analyze_game_with_stockfish(
 
     analysis_moves = []
     errors = []
+    prev_eval_cp = 0
 
     try:
         with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-            # Always replay from the starting position to avoid double-applying moves.
             temp_board = chess.Board()
 
             for i, move_san in enumerate(moves):
                 try:
                     move = temp_board.parse_san(move_san)
+                    is_white_move = temp_board.turn == chess.WHITE
+                    board_before = temp_board.copy()
+
                     temp_board.push(move)
 
                     limit = chess.engine.Limit(time=time_per_move, depth=depth)
@@ -120,11 +173,22 @@ def analyze_game_with_stockfish(
 
                     eval_score = None
                     mate = None
+                    current_eval_cp = prev_eval_cp
                     if score:
                         cp_score = score.pov(chess.WHITE).score(mate_score=100000)
                         if cp_score is not None:
                             eval_score = cp_score / 100.0
+                            current_eval_cp = cp_score
                         mate = score.pov(chess.WHITE).mate()
+
+                    if is_white_move:
+                        cp_loss_raw = prev_eval_cp - current_eval_cp
+                    else:
+                        cp_loss_raw = current_eval_cp - prev_eval_cp
+                    cp_loss = max(0, cp_loss_raw)
+
+                    brilliant = _detect_brilliant(board_before, move, cp_loss)
+                    classification = classify_move(cp_loss, is_brilliant=brilliant)
 
                     best_move_san = None
                     if pv and len(pv) > 0:
@@ -141,8 +205,13 @@ def analyze_game_with_stockfish(
                             "mate": mate,
                             "best_move": best_move_san,
                             "depth": result.get("depth", 0),
+                            "cp_loss": round(cp_loss / 100.0, 2),
+                            "classification": classification,
                         }
                     )
+
+                    prev_eval_cp = current_eval_cp
+
                 except chess.InvalidMoveError as e:
                     errors.append(f"Move {i+1} ({move_san}): Invalid move - {str(e)}")
                     continue
@@ -158,6 +227,23 @@ def analyze_game_with_stockfish(
         raise Exception(f"Failed to start Stockfish engine: {str(e)}")
 
     analyzed_count = len([m for m in analysis_moves if m.get("eval") is not None])
+
+    def _player_stats(side_moves):
+        if not side_moves:
+            return {"acpl": 0, "accuracy": 0, "brilliant": 0, "best": 0, "excellent": 0, "good": 0, "inaccuracy": 0, "mistake": 0, "blunder": 0}
+        total_cp = sum(m.get("cp_loss", 0) for m in side_moves) * 100
+        acpl = round(total_cp / len(side_moves), 1) if side_moves else 0
+        accuracy = round(max(0, min(100, 100 - acpl * 1.5)), 1) if acpl < 66 else 0
+        counts = {"brilliant": 0, "best": 0, "excellent": 0, "good": 0, "inaccuracy": 0, "mistake": 0, "blunder": 0}
+        for m in side_moves:
+            c = m.get("classification", "")
+            if c in counts:
+                counts[c] += 1
+        return {"acpl": acpl, "accuracy": accuracy, **counts}
+
+    white_moves = [m for m in analysis_moves if m["move_number"] % 2 == 1]
+    black_moves = [m for m in analysis_moves if m["move_number"] % 2 == 0]
+
     result = {
         "moves": analysis_moves,
         "summary": {
@@ -165,6 +251,8 @@ def analyze_game_with_stockfish(
             "analyzed_moves": analyzed_count,
             "raw_moves_count": len(moves_raw.split()) if moves_raw else 0,
             "moves_sample": moves[:5] if moves else [],
+            "white": _player_stats(white_moves),
+            "black": _player_stats(black_moves),
         },
     }
 

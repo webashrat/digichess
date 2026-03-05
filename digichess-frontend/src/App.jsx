@@ -13,6 +13,8 @@ import QuizPage from './pages/QuizPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import NotFoundPage from './pages/NotFoundPage';
+import AntiCheatPage from './pages/AntiCheatPage';
+import AntiCheatReportPage from './pages/AntiCheatReportPage';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
       <Route path="/messages" element={<MessagesPage />} />
       <Route path="/puzzles" element={<PuzzlesPage />} />
       <Route path="/quiz" element={<QuizPage />} />
+      <Route path="/anticheat" element={<AntiCheatPage />} />
+      <Route path="/anticheat/:reportId" element={<AntiCheatReportPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/rankings" element={<Navigate to="/leaderboard" replace />} />

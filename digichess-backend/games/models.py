@@ -75,6 +75,10 @@ class Game(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     result = models.CharField(max_length=10, choices=RESULT_CHOICES, default=RESULT_NONE)
     moves = models.TextField(blank=True, help_text="PGN moves in SAN, space separated")
+    move_times_ms = models.JSONField(
+        default=list, blank=True,
+        help_text="Per-move elapsed time in milliseconds, one entry per ply",
+    )
     current_fen = models.TextField(default=START_FEN, help_text="Board state after last move")
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
@@ -383,3 +387,176 @@ class DigiQuizRatingHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.rating_before}->{self.rating_after} (round {self.round_id})"
+
+
+# ---------------------------------------------------------------------------
+# Anti-Cheat: Reporting & Analysis
+# Inspired by Lichess Irwin (https://github.com/clarkerubber/irwin, AGPL-3.0)
+# and PGN-Spy T% methodology (https://github.com/MGleason1/PGN-Spy, MIT)
+# ---------------------------------------------------------------------------
+
+
+class CheatReport(models.Model):
+    REASON_ENGINE = "engine_use"
+    REASON_SUSPICIOUS = "suspicious_play"
+    REASON_OTHER = "other"
+
+    REASON_CHOICES = [
+        (REASON_ENGINE, "Engine Assistance"),
+        (REASON_SUSPICIOUS, "Suspicious Play"),
+        (REASON_OTHER, "Other"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_UNDER_REVIEW = "under_review"
+    STATUS_RESOLVED_CLEAN = "resolved_clean"
+    STATUS_RESOLVED_CHEATING = "resolved_cheating"
+    STATUS_DISMISSED = "dismissed"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_UNDER_REVIEW, "Under Review"),
+        (STATUS_RESOLVED_CLEAN, "Resolved – Clean"),
+        (STATUS_RESOLVED_CHEATING, "Resolved – Cheating"),
+        (STATUS_DISMISSED, "Dismissed"),
+    ]
+
+    reporter = models.ForeignKey(
+        User, related_name="cheat_reports_filed", on_delete=models.CASCADE
+    )
+    reported_user = models.ForeignKey(
+        User, related_name="cheat_reports_against", on_delete=models.CASCADE
+    )
+    game = models.ForeignKey(
+        Game, related_name="cheat_reports", on_delete=models.CASCADE
+    )
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES, default=REASON_ENGINE)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    resolved_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="cheat_reports_resolved",
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["reporter", "game"],
+                name="uq_cheat_report_reporter_game",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Report by {self.reporter_id} on {self.reported_user_id} (game {self.game_id})"
+
+
+class CheatAnalysis(models.Model):
+    """
+    Combined analysis output per report.
+    T1-T5 fields follow PGN-Spy Multi-PV methodology.
+    Irwin score comes from the ported neural network.
+    """
+
+    VERDICT_CLEAN = "clean"
+    VERDICT_SUSPICIOUS = "suspicious"
+    VERDICT_LIKELY_CHEATING = "likely_cheating"
+
+    VERDICT_CHOICES = [
+        (VERDICT_CLEAN, "Clean"),
+        (VERDICT_SUSPICIOUS, "Suspicious"),
+        (VERDICT_LIKELY_CHEATING, "Likely Cheating"),
+    ]
+
+    report = models.OneToOneField(
+        CheatReport, related_name="analysis", on_delete=models.CASCADE
+    )
+    game = models.ForeignKey(Game, related_name="cheat_analyses", on_delete=models.CASCADE)
+    analyzed_user = models.ForeignKey(
+        User, related_name="cheat_analyses", on_delete=models.CASCADE
+    )
+
+    t1_pct = models.FloatField(default=0, help_text="% moves matching engine top-1 choice")
+    t2_pct = models.FloatField(default=0, help_text="% moves matching engine top-2")
+    t3_pct = models.FloatField(default=0, help_text="% moves matching engine top-3")
+    t4_pct = models.FloatField(default=0, help_text="% moves matching engine top-4")
+    t5_pct = models.FloatField(default=0, help_text="% moves matching engine top-5")
+
+    avg_centipawn_loss = models.FloatField(default=0)
+    avg_winning_chances_loss = models.FloatField(default=0)
+    best_move_streak = models.IntegerField(default=0)
+    accuracy_score = models.FloatField(default=0, help_text="0-100 overall accuracy")
+
+    position_stats = models.JSONField(
+        default=dict, blank=True,
+        help_text="T% and ACPL broken down by position category (undecided/losing/winning/post_losing)",
+    )
+    move_classifications = models.JSONField(
+        default=list, blank=True,
+        help_text="Per-move breakdown: san, cp_loss, wcl, rank, is_forced, position_category, classification",
+    )
+    forced_moves_excluded = models.IntegerField(default=0)
+    book_moves_excluded = models.IntegerField(default=0)
+    cp_loss_distribution = models.JSONField(
+        default=dict, blank=True,
+        help_text='Counts by bracket: {">0": N, ">10": N, ">25": N, ...}',
+    )
+    suspicious_moves = models.JSONField(
+        default=list, blank=True,
+        help_text="Moves in complex undecided positions that matched engine T1",
+    )
+
+    irwin_score = models.IntegerField(
+        null=True, blank=True,
+        help_text="0-100 from Irwin NN, null if model untrained",
+    )
+
+    verdict = models.CharField(max_length=30, choices=VERDICT_CHOICES, default=VERDICT_CLEAN)
+    confidence = models.FloatField(default=0, help_text="0-1 confidence in verdict")
+    full_analysis = models.JSONField(
+        null=True, blank=True,
+        help_text="Complete raw data including tensor features",
+    )
+
+    total_moves_analyzed = models.IntegerField(default=0)
+    analyzed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-analyzed_at"]
+
+    def __str__(self):
+        return f"CheatAnalysis for report {self.report_id} – {self.verdict}"
+
+
+class IrwinTrainingData(models.Model):
+    """
+    Labeled data collected from admin resolutions.
+    Tensor format follows Irwin's BasicGameModel (https://github.com/clarkerubber/irwin).
+    """
+
+    game = models.ForeignKey(Game, related_name="irwin_training", on_delete=models.CASCADE)
+    player = models.ForeignKey(User, related_name="irwin_training", on_delete=models.CASCADE)
+    label = models.BooleanField(help_text="True = cheating, False = clean")
+    tensor_data = models.JSONField(
+        help_text="8-feature x 60-move tensor + piece types for Irwin NN",
+    )
+    labeled_by = models.ForeignKey(
+        User, related_name="irwin_labels_given", on_delete=models.CASCADE
+    )
+    labeled_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-labeled_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["game", "player"],
+                name="uq_irwin_training_game_player",
+            ),
+        ]
+
+    def __str__(self):
+        label_str = "cheating" if self.label else "clean"
+        return f"IrwinTraining game={self.game_id} player={self.player_id} ({label_str})"
