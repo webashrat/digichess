@@ -13,6 +13,7 @@ import {
     fetchUserGames,
     respondFriendRequest,
     sendFriendRequest,
+    submitCheatReport,
     unfriend,
     updateProfile,
 } from '../api';
@@ -283,6 +284,12 @@ export default function ProfilePage() {
     const [editError, setEditError] = useState(null);
     const [editForm, setEditForm] = useState({ nickname: '', bio: '', country: '', profilePic: '' });
     const [challengeError, setChallengeError] = useState(null);
+    const [reportOpen, setReportOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('engine_use');
+    const [reportDescription, setReportDescription] = useState('');
+    const [reportGameLink, setReportGameLink] = useState('');
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportResult, setReportResult] = useState(null);
     const [showAllGames, setShowAllGames] = useState(false);
     const [gamesFilter, setGamesFilter] = useState('all');
     const [gamesPage, setGamesPage] = useState(1);
@@ -630,6 +637,47 @@ export default function ProfilePage() {
         navigate(`/?challenge=1&opponent=${displayUser.id}&username=${encodeURIComponent(displayUser.username || '')}`);
     };
 
+    const _extractGameId = (link) => {
+        if (!link) return null;
+        const trimmed = link.trim();
+        if (/^\d+$/.test(trimmed)) return Number(trimmed);
+        const match = trimmed.match(/\/game\/(\d+)/);
+        return match ? Number(match[1]) : null;
+    };
+
+    const handleSubmitReport = async () => {
+        const gameId = _extractGameId(reportGameLink);
+        if (!gameId) {
+            setReportResult('Please paste a valid game link (e.g. /game/123 or the full URL).');
+            return;
+        }
+        const matched = completedNonBotGames.find(g => g.id === gameId);
+        if (!matched) {
+            setReportResult('This game was not found in recent games. Make sure the link is correct.');
+            return;
+        }
+        const w = matched.white?.username;
+        const b = matched.black?.username;
+        const reporterName = user?.username;
+        const targetName = displayUser?.username;
+        const isValidPair = (w === reporterName && b === targetName) || (b === reporterName && w === targetName);
+        if (!isValidPair) {
+            setReportResult(`This game was not played between you and ${targetName}. Please paste a game you played together.`);
+            return;
+        }
+        setReportLoading(true);
+        setReportResult(null);
+        try {
+            await submitCheatReport({ game: gameId, reason: reportReason, description: reportDescription });
+            setReportResult('success');
+        } catch (err) {
+            const msg = err?.data?.detail || err?.data?.game?.[0] || err?.data?.non_field_errors?.[0] || err?.message || 'Failed to submit report.';
+            setReportResult(msg);
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
     const handleEditProfilePicChange = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
@@ -812,24 +860,37 @@ export default function ProfilePage() {
                                             </button>
                                         ) : null}
                                     </div>
-                                    {isPlayingLive && liveGameId ? (
-                                        <button
-                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-emerald-600/20 transition-colors"
-                                            type="button"
-                                            onClick={() => navigate(`/game/${liveGameId}`)}
-                                        >
-                                            View live game
-                                        </button>
-                                    ) : (
-                                        <button
-                                            className="w-full bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-slate-900/20 transition-colors disabled:opacity-60"
-                                            type="button"
-                                            onClick={handleChallenge}
-                                            disabled={!canChallenge || activeGameLoading}
-                                        >
-                                            Challenge
-                                        </button>
-                                    )}
+                                    <div className="flex gap-2">
+                                        {isPlayingLive && liveGameId ? (
+                                            <button
+                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-emerald-600/20 transition-colors"
+                                                type="button"
+                                                onClick={() => navigate(`/game/${liveGameId}`)}
+                                            >
+                                                View live game
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-primary/20 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 text-sm"
+                                                type="button"
+                                                onClick={handleChallenge}
+                                                disabled={!canChallenge || activeGameLoading}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">swords</span>
+                                                Challenge
+                                            </button>
+                                        )}
+                                        {!displayUser?.is_bot ? (
+                                            <button
+                                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-amber-500/20 transition-colors flex items-center justify-center gap-2 text-sm"
+                                                type="button"
+                                                onClick={() => { setReportOpen(true); setReportResult(null); setReportGameLink(''); setReportDescription(''); setReportReason('engine_use'); }}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">warning</span>
+                                                Report
+                                            </button>
+                                        ) : null}
+                                    </div>
                                     {activeGameLoading ? (
                                         <div className="text-xs text-slate-500">Checking live game…</div>
                                     ) : activeGame ? (
@@ -840,6 +901,111 @@ export default function ProfilePage() {
                                     ) : null}
                                 </div>
                             ) : null}
+
+                            {/* Report Modal */}
+                            {reportOpen ? (
+                                <div className="fixed inset-0 z-[200] overflow-y-auto bg-black/60 backdrop-blur-sm" onClick={() => !reportLoading && setReportOpen(false)}>
+                                    <div className="min-h-full flex items-center justify-center p-4 sm:p-8">
+                                    <div className="w-[420px] max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-auto" onClick={e => e.stopPropagation()}>
+                                        {reportResult === 'success' ? (
+                                            <div className="px-5 py-8 text-center space-y-2">
+                                                <span className="material-symbols-outlined text-green-500 text-[40px] block">check_circle</span>
+                                                <div className="text-base font-bold text-green-600 dark:text-green-400">Report submitted</div>
+                                                <div className="text-sm text-slate-500">Our team will review this report. Thank you for helping keep DigiChess fair.</div>
+                                                <button className="mt-4 px-6 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors" type="button" onClick={() => setReportOpen(false)}>Done</button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-amber-500 text-[22px]">report</span>
+                                                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Report {displayUser?.username}</h3>
+                                                        </div>
+                                                        <button className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" type="button" onClick={() => !reportLoading && setReportOpen(false)}>
+                                                            <span className="material-symbols-outlined text-[20px]">close</span>
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-500 mt-0.5">Help us maintain a fair playing environment.</p>
+                                                </div>
+
+                                                <div className="px-5 py-4 space-y-3.5">
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Reason</label>
+                                                        <select
+                                                            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                                            value={reportReason}
+                                                            onChange={e => setReportReason(e.target.value)}
+                                                            disabled={reportLoading}
+                                                        >
+                                                            <option value="engine_use">Cheating (Engine Assistance)</option>
+                                                            <option value="suspicious_play">Suspicious Play</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Game Link</label>
+                                                        <input
+                                                            type="text"
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                                            placeholder="e.g. /game/123 or full URL"
+                                                            value={reportGameLink}
+                                                            onChange={e => setReportGameLink(e.target.value)}
+                                                            disabled={reportLoading}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400 mt-1">Only games between you and {displayUser?.username} are accepted.</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Details</label>
+                                                        <textarea
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm resize-none placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                                            rows={2}
+                                                            placeholder="Describe why you suspect this player..."
+                                                            value={reportDescription}
+                                                            onChange={e => setReportDescription(e.target.value)}
+                                                            disabled={reportLoading}
+                                                        />
+                                                    </div>
+
+                                                    {reportResult && reportResult !== 'success' ? (
+                                                        <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800/30">
+                                                            <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">error</span>
+                                                            <span>{reportResult}</span>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+
+                                                <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex gap-3">
+                                                    <button
+                                                        className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                                                        type="button"
+                                                        onClick={handleSubmitReport}
+                                                        disabled={reportLoading || !reportGameLink.trim()}
+                                                    >
+                                                        {reportLoading ? 'Submitting...' : (
+                                                            <>
+                                                                <span className="material-symbols-outlined text-[16px]">send</span>
+                                                                Submit Report
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg transition-colors hover:bg-slate-300 dark:hover:bg-slate-600"
+                                                        type="button"
+                                                        onClick={() => setReportOpen(false)}
+                                                        disabled={reportLoading}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
                             {friendError ? (
                                 <div className="mt-2 text-xs text-red-500">{friendError}</div>
                             ) : null}

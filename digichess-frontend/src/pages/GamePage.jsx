@@ -17,6 +17,7 @@ import {
     fetchGameAnalysis,
     fetchGameAnalysisStatus,
     requestGameAnalysis,
+    submitCheatReport,
 } from '../api';
 import ChessPiece from '../components/chess/ChessPiece';
 import ClockDisplay from '../components/chess/ClockDisplay';
@@ -26,6 +27,27 @@ import useGameSync from '../hooks/useGameSync';
 import useSettings from '../hooks/useSettings';
 import { BOARD_THEMES, PIECE_SETS } from '../utils/boardPresets';
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
+
+import brilliantIcon from '../../chess_move_classification_emojis/brilliant.png';
+import bestIcon from '../../chess_move_classification_emojis/best.png';
+import excellentIcon from '../../chess_move_classification_emojis/excellent.png';
+import goodIcon from '../../chess_move_classification_emojis/good.png';
+import inaccuracyIcon from '../../chess_move_classification_emojis/inaccuracy.png';
+import mistakeIcon from '../../chess_move_classification_emojis/mistake.png';
+import blunderIcon from '../../chess_move_classification_emojis/blunder.png';
+
+const CLASSIFICATION_ICONS = { brilliant: brilliantIcon, best: bestIcon, excellent: excellentIcon, good: goodIcon, inaccuracy: inaccuracyIcon, mistake: mistakeIcon, blunder: blunderIcon };
+const NOTABLE_ICONS = { brilliant: brilliantIcon, inaccuracy: inaccuracyIcon, mistake: mistakeIcon, blunder: blunderIcon };
+const CLASSIFICATION_LABELS = { brilliant: 'Brilliant', best: 'Best', excellent: 'Excellent', good: 'Good', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder' };
+const CLASSIFICATION_COLORS = {
+    brilliant: 'bg-cyan-700/60 text-cyan-200 border-cyan-400/70 shadow-[0_0_12px_rgba(6,182,212,0.5)] animate-pulse',
+    best: 'bg-green-700/60 text-green-200 border-green-400/70 shadow-[0_0_12px_rgba(34,197,94,0.5)]',
+    excellent: 'bg-teal-700/60 text-teal-200 border-teal-400/70 shadow-[0_0_10px_rgba(20,184,166,0.4)]',
+    good: 'bg-blue-700/60 text-blue-200 border-blue-400/70 shadow-[0_0_10px_rgba(59,130,246,0.4)]',
+    inaccuracy: 'bg-amber-700/60 text-amber-200 border-amber-400/70 shadow-[0_0_12px_rgba(245,158,11,0.5)]',
+    mistake: 'bg-orange-700/60 text-orange-200 border-orange-400/70 shadow-[0_0_12px_rgba(249,115,22,0.5)]',
+    blunder: 'bg-red-700/60 text-red-200 border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.6)] animate-pulse',
+};
 
 const DEFAULT_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -146,6 +168,11 @@ export default function GamePage() {
     const clockNowRef = useRef(Date.now());
     const [resignConfirm, setResignConfirm] = useState(false);
     const [resignLoading, setResignLoading] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('engine_use');
+    const [reportDescription, setReportDescription] = useState('');
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportResult, setReportResult] = useState(null);
     const [pendingPromotion, setPendingPromotion] = useState(null);
     const [premove, setPremove] = useState(null);
     const [premoveNotice, setPremoveNotice] = useState(null);
@@ -1110,6 +1137,13 @@ export default function GamePage() {
     const bottomClock = isUserWhite ? liveClock.white : liveClock.black;
     const analysisMoves = useMemo(() => analysisData?.analysis?.moves ?? [], [analysisData]);
     const analysisSummary = analysisData?.analysis?.summary || null;
+    const classificationMap = useMemo(() => {
+        const map = {};
+        for (const m of analysisMoves) {
+            if (m.classification) map[m.move_number] = m.classification;
+        }
+        return map;
+    }, [analysisMoves]);
     const analyzedMovesCount = analysisSummary?.analyzed_moves
         ?? analysisMoves.filter((move) => typeof move?.eval === 'number').length;
     const totalAnalysisMoves = analysisSummary?.total_moves ?? analysisMoves.length;
@@ -1505,6 +1539,22 @@ export default function GamePage() {
             setError(err.message || 'Failed to resign.');
         } finally {
             setResignLoading(false);
+        }
+    };
+
+    const handleSubmitReport = async () => {
+        if (!isAuthenticated || !game?.id) return;
+        setReportLoading(true);
+        setReportResult(null);
+        try {
+            await submitCheatReport({ game: game.id, reason: reportReason, description: reportDescription });
+            setReportResult('success');
+            setTimeout(() => setReportModalOpen(false), 1500);
+        } catch (err) {
+            const msg = err?.data?.detail || err?.data?.game?.[0] || err?.data?.non_field_errors?.[0] || err?.message || 'Failed to submit report.';
+            setReportResult(msg);
+        } finally {
+            setReportLoading(false);
         }
     };
 
@@ -2473,17 +2523,23 @@ export default function GamePage() {
                                                             <div className="text-slate-500 font-mono text-center">{index + 1}.</div>
                                                             <button
                                                                 type="button"
-                                                                className={`pl-2 text-left font-mono font-medium rounded ${isWhiteActive ? 'text-primary' : 'text-slate-900 dark:text-white'}`}
+                                                                className={`pl-2 text-left font-mono font-medium rounded flex items-center gap-1 ${isWhiteActive ? 'text-primary' : 'text-slate-900 dark:text-white'}`}
                                                                 onClick={() => clampPreviewIndex(whiteIndex)}
                                                             >
                                                                 {pair.white || ''}
+                                                                {showAnalysis && CLASSIFICATION_ICONS[classificationMap[whiteIndex]] ? (
+                                                                    <img src={CLASSIFICATION_ICONS[classificationMap[whiteIndex]]} alt="" className="w-3.5 h-3.5 inline-block" />
+                                                                ) : null}
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                className={`pl-2 text-left font-mono font-medium rounded ${isBlackActive ? 'text-primary' : 'text-slate-900 dark:text-white'}`}
+                                                                className={`pl-2 text-left font-mono font-medium rounded flex items-center gap-1 ${isBlackActive ? 'text-primary' : 'text-slate-900 dark:text-white'}`}
                                                                 onClick={() => clampPreviewIndex(blackIndex)}
                                                             >
                                                                 {pair.black || ''}
+                                                                {showAnalysis && CLASSIFICATION_ICONS[classificationMap[blackIndex]] ? (
+                                                                    <img src={CLASSIFICATION_ICONS[classificationMap[blackIndex]]} alt="" className="w-3.5 h-3.5 inline-block" />
+                                                                ) : null}
                                                             </button>
                                                         </div>
                                                     );
@@ -2581,7 +2637,15 @@ export default function GamePage() {
                             </aside>
 
                             <main className={`flex-1 flex flex-col relative min-h-0 ${isMobileLayout ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden justify-center'}`}>
-                                <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
+                                <div ref={topBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent relative">
+                                    {showAnalysis && isPreviewing && classificationMap[previewIndex] && CLASSIFICATION_ICONS[classificationMap[previewIndex]] && ((topColor === 'white' && previewIndex % 2 === 1) || (topColor === 'black' && previewIndex % 2 === 0)) ? (
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10">
+                                            <span className={`inline-flex items-center gap-2 text-sm font-extrabold px-4 py-1.5 rounded-full border-2 backdrop-blur-sm ${CLASSIFICATION_COLORS[classificationMap[previewIndex]] || ''}`}>
+                                                <img src={CLASSIFICATION_ICONS[classificationMap[previewIndex]]} alt="" className="w-6 h-6 drop-shadow-lg" />
+                                                {CLASSIFICATION_LABELS[classificationMap[previewIndex]]}
+                                            </span>
+                                        </div>
+                                    ) : null}
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2724,7 +2788,15 @@ export default function GamePage() {
                                     </div>
                                 ) : null}
 
-                                <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent">
+                                <div ref={bottomBarRef} className="px-2 py-2 flex items-center justify-between shrink-0 bg-slate-100/60 dark:bg-slate-900/60 lg:bg-transparent relative">
+                                    {showAnalysis && isPreviewing && classificationMap[previewIndex] && CLASSIFICATION_ICONS[classificationMap[previewIndex]] && ((bottomColor === 'white' && previewIndex % 2 === 1) || (bottomColor === 'black' && previewIndex % 2 === 0)) ? (
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10">
+                                            <span className={`inline-flex items-center gap-2 text-sm font-extrabold px-4 py-1.5 rounded-full border-2 backdrop-blur-sm ${CLASSIFICATION_COLORS[classificationMap[previewIndex]] || ''}`}>
+                                                <img src={CLASSIFICATION_ICONS[classificationMap[previewIndex]]} alt="" className="w-6 h-6 drop-shadow-lg" />
+                                                {CLASSIFICATION_LABELS[classificationMap[previewIndex]]}
+                                            </span>
+                                        </div>
+                                    ) : null}
                                     <div
                                         className="flex items-center gap-3 overflow-hidden cursor-pointer"
                                         role="button"
@@ -2906,6 +2978,79 @@ export default function GamePage() {
                                                     </button>
                                                 ) : null}
 
+                                                {currentStatus === 'finished' && isUserPlayer && !game?.white?.is_bot && !game?.black?.is_bot ? (
+                                                    <div className="relative">
+                                                        <button
+                                                            className="w-full px-3 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                                            type="button"
+                                                            onClick={() => { setReportModalOpen(true); setReportResult(null); }}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">flag</span>
+                                                            Report Opponent
+                                                        </button>
+                                                        {reportModalOpen ? (
+                                                            <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={() => !reportLoading && setReportModalOpen(false)}>
+                                                                <div className="w-full max-w-[400px] my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Report {opponentName || 'Opponent'}</h3>
+                                                                        <button className="text-slate-400 hover:text-slate-600" type="button" onClick={() => !reportLoading && setReportModalOpen(false)}>
+                                                                            <span className="material-symbols-outlined text-[20px]">close</span>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="space-y-3">
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Reason</label>
+                                                                            <select
+                                                                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm"
+                                                                                value={reportReason}
+                                                                                onChange={(e) => setReportReason(e.target.value)}
+                                                                                disabled={reportLoading}
+                                                                            >
+                                                                                <option value="engine_use">Engine Assistance</option>
+                                                                                <option value="suspicious_play">Suspicious Play</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Details (optional)</label>
+                                                                            <textarea
+                                                                                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm resize-none"
+                                                                                rows={3}
+                                                                                placeholder="Describe why you believe this player was cheating..."
+                                                                                value={reportDescription}
+                                                                                onChange={(e) => setReportDescription(e.target.value)}
+                                                                                disabled={reportLoading}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    {reportResult === 'success' ? (
+                                                                        <div className="text-center text-green-600 dark:text-green-400 text-sm font-semibold py-2">Report submitted. Thank you.</div>
+                                                                    ) : reportResult && reportResult !== 'success' ? (
+                                                                        <div className="text-center text-red-500 text-xs">{reportResult}</div>
+                                                                    ) : null}
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            className="flex-1 px-3 py-2.5 rounded-lg bg-red-500 text-white text-sm font-semibold disabled:opacity-60"
+                                                                            type="button"
+                                                                            onClick={handleSubmitReport}
+                                                                            disabled={reportLoading || reportResult === 'success'}
+                                                                        >
+                                                                            {reportLoading ? 'Submitting...' : 'Submit Report'}
+                                                                        </button>
+                                                                        <button
+                                                                            className="flex-1 px-3 py-2.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-sm font-semibold"
+                                                                            type="button"
+                                                                            onClick={() => setReportModalOpen(false)}
+                                                                            disabled={reportLoading}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
+
                                                 {currentStatus === 'finished' ? (
                                                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-3 space-y-2 text-xs">
                                                         <div className="flex items-center justify-between">
@@ -2939,11 +3084,12 @@ export default function GamePage() {
                                                                 ) : null}
                                                                 {analysisSummary?.errors?.length ? <div className="text-amber-500">{analysisSummary.errors[0]}</div> : null}
                                                                 {evalGraph ? (
+                                                                    <div>
                                                                     <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700" onMouseLeave={() => setEvalTooltip(null)}>
                                                                         <svg
                                                                             viewBox={`0 0 ${evalGraph.viewW} ${evalGraph.viewH}`}
                                                                             preserveAspectRatio="none"
-                                                                            className="w-full h-28 cursor-crosshair"
+                                                                            className="w-full h-36 md:h-44 cursor-crosshair"
                                                                             onClick={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
                                                                             onMouseMove={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
                                                                         >
@@ -2972,6 +3118,8 @@ export default function GamePage() {
                                                                                 {evalTooltip.label} <span className="text-amber-400">{evalTooltip.eval}</span>
                                                                             </div>
                                                                         ) : null}
+                                                                    </div>
+                                                                    <div className="text-center text-[9px] text-slate-500/60 font-semibold mt-1 select-none">Powered By DigiChess</div>
                                                                     </div>
                                                                 ) : <div className="text-slate-500">No evaluation data yet.</div>}
                                                             </>
@@ -3516,11 +3664,12 @@ export default function GamePage() {
                                             {analysisStatus === 'completed' && showAnalysis ? (
                                                 <div className="space-y-2">
                                                     {evalGraph ? (
+                                                        <div>
                                                         <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700" onMouseLeave={() => setEvalTooltip(null)}>
                                                             <svg
                                                                 viewBox={`0 0 ${evalGraph.viewW} ${evalGraph.viewH}`}
                                                                 preserveAspectRatio="none"
-                                                                className="w-full h-28 cursor-crosshair"
+                                                                className="w-full h-36 md:h-44 cursor-crosshair"
                                                                 onClick={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
                                                                 onMouseMove={(e) => handleEvalGraphInteraction(e, e.currentTarget)}
                                                             >
@@ -3549,6 +3698,8 @@ export default function GamePage() {
                                                                     {evalTooltip.label} <span className="text-amber-400">{evalTooltip.eval}</span>
                                                                 </div>
                                                             ) : null}
+                                                        </div>
+                                                        <div className="text-center text-[9px] text-slate-500/60 font-semibold mt-1 select-none">Powered By DigiChess</div>
                                                         </div>
                                                     ) : (
                                                         <div className="text-xs text-slate-500">No evaluation data yet.</div>

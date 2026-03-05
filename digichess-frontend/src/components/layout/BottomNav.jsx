@@ -6,12 +6,20 @@ import { useAuth } from '../../context/AuthContext';
 export default function BottomNav() {
     const { user } = useAuth();
     const avatarUrl = user?.profile_pic || user?.avatar || user?.image || '';
+    const isSuperAdmin = user?.is_superuser === true;
     const navItems = [
         { id: 'home', to: '/', icon: 'home', label: 'Home', shortLabel: 'Home', end: true },
         { id: 'tournaments', to: '/tournaments', icon: 'trophy', label: 'Tournaments', shortLabel: 'Tourneys' },
         { id: 'quiz', to: '/quiz', icon: 'quiz', label: 'Quiz', shortLabel: 'Quiz' },
         { id: 'leaderboard', to: '/leaderboard', icon: 'leaderboard', label: 'Leaderboard', shortLabel: 'Ranks' },
         { id: 'social', to: '/messages', icon: 'groups', label: 'Social', shortLabel: 'Social' },
+        ...(isSuperAdmin ? [{
+            id: 'anticheat',
+            to: '/anticheat',
+            icon: 'shield',
+            label: 'Anti-Cheat',
+            shortLabel: 'Shield',
+        }] : []),
         {
             id: 'profile',
             to: user ? '/profile' : '/login',
@@ -21,9 +29,10 @@ export default function BottomNav() {
             isProfile: Boolean(user),
         },
     ];
+    const gridCols = isSuperAdmin ? 'grid-cols-7' : 'grid-cols-6';
     return (
         <nav className="fixed inset-x-0 bottom-0 z-50 pb-safe bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800">
-            <div className="grid grid-cols-6 h-[58px] sm:h-[62px]">
+            <div className={`grid ${gridCols} h-[58px] sm:h-[62px]`}>
                 {navItems.map((item) => (
                     <NavLink
                         key={item.id}

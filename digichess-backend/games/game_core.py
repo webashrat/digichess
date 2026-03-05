@@ -390,6 +390,12 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             else:
                 game.black_time_left += game.black_increment_seconds
 
+            # Record per-move elapsed time for cheat detection timing analysis
+            elapsed_ms = int((now - game.last_move_at).total_seconds() * 1000) if game.last_move_at else 0
+            if not isinstance(game.move_times_ms, list):
+                game.move_times_ms = []
+            game.move_times_ms.append(max(0, elapsed_ms))
+
             # Track first move time for the black grace period; main clock starts after both moves
             game.last_move_at = now
             result, reason = _evaluate_result(board, game.moves, game.START_FEN)
@@ -407,6 +413,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                 "result",
                 "current_fen",
                 "moves",
+                "move_times_ms",
                 "white_time_left",
                 "black_time_left",
                 "last_move_at",
