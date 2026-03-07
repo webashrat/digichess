@@ -18,10 +18,12 @@ import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CheatReport, CheatAnalysis, IrwinTrainingData
+from .irwin_imports import save_single_import_sample
+from .models import CheatReport, CheatAnalysis, IrwinImportJob, IrwinTrainingData
 from .permissions import IsSuperAdmin
 from .serializers_anticheat import (
     CheatReportCreateSerializer,
@@ -29,6 +31,10 @@ from .serializers_anticheat import (
     CheatAnalysisSerializer,
     ResolveReportSerializer,
     IrwinStatusSerializer,
+    IrwinTrainingDataSerializer,
+    SingleIrwinImportSerializer,
+    IrwinCsvUploadSerializer,
+    IrwinImportJobSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -181,6 +187,24 @@ class ResolveCheatReportView(APIView):
                     defaults={
                         "label": is_cheating,
                         "tensor_data": tensor_data,
+                        "source_type": IrwinTrainingData.SOURCE_REPORT_RESOLUTION,
+                        "suspect_color": (
+                            IrwinTrainingData.COLOR_WHITE
+                            if report.game.white_id == report.reported_user_id
+                            else IrwinTrainingData.COLOR_BLACK
+                        ),
+                        "moves_text": (report.game.moves or "").strip(),
+                        "start_fen": report.game.START_FEN,
+                        "move_times_seconds": [
+                            round(ms / 1000.0, 3)
+                            for ms in (report.game.move_times_ms or [])
+                            if isinstance(ms, (int, float))
+                        ],
+                        "move_format": IrwinTrainingData.FORMAT_SAN,
+                        "source_ref": f"report:{report.id}",
+                        "notes": admin_notes,
+                        "import_job": None,
+                        "import_row_number": None,
                         "labeled_by": request.user,
                     },
                 )
@@ -210,6 +234,100 @@ class IrwinStatusView(APIView):
             "model_path": str(MODEL_PATH) if irwin.is_trained() else "",
         }
         return Response(IrwinStatusSerializer(data).data)
+
+
+class IrwinSingleImportView(APIView):
+    """POST import a single external game into Irwin training data."""
+
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        serializer = SingleIrwinImportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            sample = save_single_import_sample(
+                labeled_by=request.user,
+                moves_text=serializer.validated_data["moves"],
+                suspect_color=serializer.validated_data["suspect_color"],
+                label=serializer.validated_data["label"],
+                move_times_seconds=serializer.validated_data.get("move_times_seconds", ""),
+                start_fen=serializer.validated_data.get("start_fen", ""),
+                move_format=serializer.validated_data.get(
+                    "move_format", IrwinTrainingData.FORMAT_AUTO
+                ),
+                source_ref=serializer.validated_data.get("source_ref", ""),
+                external_id=serializer.validated_data.get("external_id", ""),
+                notes=serializer.validated_data.get("notes", ""),
+                source_type=IrwinTrainingData.SOURCE_SINGLE_IMPORT,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as exc:
+            logger.error("Single Irwin import failed: %s", exc)
+            return Response(
+                {"detail": f"Import failed: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            IrwinTrainingDataSerializer(sample).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class IrwinImportJobListCreateView(APIView):
+    """GET recent CSV jobs, POST a new CSV import job."""
+
+    permission_classes = [IsSuperAdmin]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        jobs = IrwinImportJob.objects.select_related("uploaded_by")[:50]
+        return Response(IrwinImportJobSerializer(jobs, many=True).data)
+
+    def post(self, request):
+        serializer = IrwinCsvUploadSerializer(data=request.data, context={})
+        serializer.is_valid(raise_exception=True)
+
+        file_obj = serializer.validated_data["file"]
+        csv_content = serializer.context["csv_content"]
+        row_count = serializer.context["row_count"]
+
+        job = IrwinImportJob.objects.create(
+            upload_type=IrwinImportJob.TYPE_CSV,
+            status=IrwinImportJob.STATUS_QUEUED,
+            file_name=file_obj.name,
+            csv_content=csv_content,
+            total_rows=row_count,
+            detail="Queued for processing.",
+            uploaded_by=request.user,
+        )
+
+        from .tasks import process_irwin_csv_import_job
+
+        process_irwin_csv_import_job.delay(job.id)
+
+        return Response(
+            IrwinImportJobSerializer(job).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class IrwinImportJobDetailView(APIView):
+    """GET one CSV import job."""
+
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request, pk):
+        job = get_object_or_404(
+            IrwinImportJob.objects.select_related("uploaded_by"),
+            pk=pk,
+        )
+        return Response(IrwinImportJobSerializer(job).data)
 
 
 class IrwinTrainView(APIView):

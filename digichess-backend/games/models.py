@@ -531,18 +531,136 @@ class CheatAnalysis(models.Model):
         return f"CheatAnalysis for report {self.report_id} – {self.verdict}"
 
 
+class IrwinImportJob(models.Model):
+    """Background CSV import job for Irwin training samples."""
+
+    TYPE_CSV = "csv"
+    TYPE_CHOICES = [
+        (TYPE_CSV, "CSV Upload"),
+    ]
+
+    STATUS_QUEUED = "queued"
+    STATUS_PROCESSING = "processing"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_QUEUED, "Queued"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    upload_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_CSV)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_QUEUED)
+    file_name = models.CharField(max_length=255)
+    csv_content = models.TextField(blank=True)
+    total_rows = models.IntegerField(default=0)
+    processed_rows = models.IntegerField(default=0)
+    imported_rows = models.IntegerField(default=0)
+    failed_rows = models.IntegerField(default=0)
+    row_errors = models.JSONField(default=list, blank=True)
+    detail = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        User, related_name="irwin_import_jobs", on_delete=models.CASCADE
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"IrwinImportJob {self.id} ({self.status})"
+
+
 class IrwinTrainingData(models.Model):
     """
-    Labeled data collected from admin resolutions.
+    Labeled data collected from report resolutions and manual imports.
     Tensor format follows Irwin's BasicGameModel (https://github.com/clarkerubber/irwin).
     """
 
-    game = models.ForeignKey(Game, related_name="irwin_training", on_delete=models.CASCADE)
-    player = models.ForeignKey(User, related_name="irwin_training", on_delete=models.CASCADE)
+    SOURCE_REPORT_RESOLUTION = "report_resolution"
+    SOURCE_SINGLE_IMPORT = "single_import"
+    SOURCE_CSV_IMPORT = "csv_import"
+    SOURCE_CHOICES = [
+        (SOURCE_REPORT_RESOLUTION, "Report Resolution"),
+        (SOURCE_SINGLE_IMPORT, "Single Import"),
+        (SOURCE_CSV_IMPORT, "CSV Import"),
+    ]
+
+    COLOR_WHITE = "white"
+    COLOR_BLACK = "black"
+    COLOR_CHOICES = [
+        (COLOR_WHITE, "White"),
+        (COLOR_BLACK, "Black"),
+    ]
+
+    FORMAT_AUTO = "auto"
+    FORMAT_PGN = "pgn"
+    FORMAT_SAN = "san"
+    FORMAT_UCI = "uci"
+    MOVE_FORMAT_CHOICES = [
+        (FORMAT_AUTO, "Auto"),
+        (FORMAT_PGN, "PGN"),
+        (FORMAT_SAN, "SAN"),
+        (FORMAT_UCI, "UCI"),
+    ]
+
+    game = models.ForeignKey(
+        Game,
+        related_name="irwin_training",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    player = models.ForeignKey(
+        User,
+        related_name="irwin_training",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
     label = models.BooleanField(help_text="True = cheating, False = clean")
     tensor_data = models.JSONField(
         help_text="8-feature x 60-move tensor + piece types for Irwin NN",
     )
+    source_type = models.CharField(
+        max_length=30,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_REPORT_RESOLUTION,
+    )
+    suspect_color = models.CharField(
+        max_length=10,
+        choices=COLOR_CHOICES,
+        blank=True,
+        default="",
+    )
+    moves_text = models.TextField(blank=True, default="")
+    start_fen = models.TextField(
+        blank=True,
+        default=Game.START_FEN,
+        help_text="Blank in the UI maps to the standard chess starting position.",
+    )
+    move_times_seconds = models.JSONField(default=list, blank=True)
+    move_format = models.CharField(
+        max_length=10,
+        choices=MOVE_FORMAT_CHOICES,
+        default=FORMAT_AUTO,
+    )
+    source_ref = models.TextField(blank=True, default="")
+    external_id = models.CharField(max_length=120, blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+    import_job = models.ForeignKey(
+        IrwinImportJob,
+        related_name="samples",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    import_row_number = models.IntegerField(null=True, blank=True)
     labeled_by = models.ForeignKey(
         User, related_name="irwin_labels_given", on_delete=models.CASCADE
     )
@@ -559,4 +677,7 @@ class IrwinTrainingData(models.Model):
 
     def __str__(self):
         label_str = "cheating" if self.label else "clean"
-        return f"IrwinTraining game={self.game_id} player={self.player_id} ({label_str})"
+        if self.game_id and self.player_id:
+            return f"IrwinTraining game={self.game_id} player={self.player_id} ({label_str})"
+        ref = self.external_id or f"import:{self.id}"
+        return f"IrwinTraining {ref} ({label_str})"

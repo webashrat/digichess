@@ -276,3 +276,18 @@ export const fetchIrwinStatus = () =>
 
 export const trainIrwinModel = (epochs = 80) =>
     api.post('/games/anticheat/irwin/train/', { epochs });
+
+export const createIrwinSingleImport = (payload) =>
+    api.post('/games/anticheat/irwin/imports/single/', payload);
+
+export const fetchIrwinImportJobs = () =>
+    api.get('/games/anticheat/irwin/import-jobs/');
+
+export const fetchIrwinImportJob = (id) =>
+    api.get(`/games/anticheat/irwin/import-jobs/${id}/`);
+
+export const createIrwinCsvImportJob = (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/games/anticheat/irwin/import-jobs/', formData);
+};

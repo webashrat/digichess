@@ -43,6 +43,10 @@ def test(name, condition, detail=""):
         print(f"  FAIL  {name}  {detail}")
 
 
+# This is a legacy helper for the standalone smoke script, not a pytest test.
+test.__test__ = False
+
+
 def login(username, password):
     r = requests.post(f"{BASE}/accounts/login/", json={"username": username, "password": password})
     if r.status_code != 200:
