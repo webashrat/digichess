@@ -145,11 +145,23 @@ export const tournamentPairings = (tournamentId) =>
 export const tournamentMyGame = (tournamentId) =>
     api.get(`/games/tournaments/${tournamentId}/my-game/`);
 
-export const enqueueMatchmaking = (time_control) =>
-    api.post('/games/matchmaking/enqueue/', { time_control });
+export const enqueueMatchmaking = (payloadOrTimeControl) =>
+    api.post(
+        '/games/matchmaking/enqueue/',
+        payloadOrTimeControl && typeof payloadOrTimeControl === 'object'
+            ? payloadOrTimeControl
+            : { time_control: payloadOrTimeControl }
+    );
 
-export const cancelMatchmaking = (time_control) =>
-    api.post('/games/matchmaking/cancel/', time_control ? { time_control } : {});
+export const cancelMatchmaking = (payloadOrTimeControl) =>
+    api.post(
+        '/games/matchmaking/cancel/',
+        !payloadOrTimeControl
+            ? {}
+            : payloadOrTimeControl && typeof payloadOrTimeControl === 'object'
+                ? payloadOrTimeControl
+                : { time_control: payloadOrTimeControl }
+    );
 
 export const queueStatus = () => api.get('/games/matchmaking/status/');
 

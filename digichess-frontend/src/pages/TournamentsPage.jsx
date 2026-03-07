@@ -298,15 +298,26 @@ export default function TournamentsPage() {
         <Layout showHeader={false} showBottomNav={!showCreate}>
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div className="flex items-center justify-between px-4 py-3">
+                    <div className="relative flex items-center justify-between px-4 py-3">
                         <button
-                            className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-slate-600 dark:text-slate-300"
+                            className="flex items-center gap-2.5 rounded-2xl px-1 py-0.5 transition-opacity hover:opacity-90"
                             type="button"
                             onClick={() => navigate('/')}
+                            aria-label="Go to home"
                         >
-                            <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary shadow-md shadow-primary/30">
+                                <span className="text-white text-lg font-bold leading-none">♞</span>
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
+                                    DigiChess
+                                </span>
+                                <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">
+                                    Live Arena
+                                </span>
+                            </div>
                         </button>
-                        <h1 className="text-base font-bold tracking-tight">Tournaments</h1>
+                        <h1 className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-base font-bold tracking-tight">Tournaments</h1>
                         <button
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-blue-600 transition-colors shadow-sm"
                             type="button"

@@ -19,12 +19,58 @@ import {
 } from '../api';
 import { getBlitzTag, getRatingTagClasses } from '../utils/ratingTags';
 
-const ratingModes = ['bullet', 'blitz', 'rapid', 'classical', 'digiquiz'];
+const ratingModes = [
+    {
+        id: 'bullet',
+        label: 'Bullet',
+        icon: 'local_fire_department',
+        iconClass: 'text-orange-400',
+        iconBg: 'bg-orange-500/15',
+        activeBg: 'from-orange-500/16 via-orange-400/10 to-transparent',
+        activeRing: 'ring-orange-400/20',
+    },
+    {
+        id: 'blitz',
+        label: 'Blitz',
+        icon: 'flash_on',
+        iconClass: 'text-yellow-400',
+        iconBg: 'bg-yellow-500/15',
+        activeBg: 'from-yellow-500/16 via-amber-400/10 to-transparent',
+        activeRing: 'ring-yellow-400/20',
+    },
+    {
+        id: 'rapid',
+        label: 'Rapid',
+        icon: 'timer',
+        iconClass: 'text-green-400',
+        iconBg: 'bg-green-500/15',
+        activeBg: 'from-green-500/16 via-emerald-400/10 to-transparent',
+        activeRing: 'ring-green-400/20',
+    },
+    {
+        id: 'classical',
+        label: 'Classical',
+        icon: 'hourglass_empty',
+        iconClass: 'text-sky-400',
+        iconBg: 'bg-sky-500/15',
+        activeBg: 'from-sky-500/16 via-blue-400/10 to-transparent',
+        activeRing: 'ring-sky-400/20',
+    },
+    {
+        id: 'digiquiz',
+        label: 'DigiQuiz',
+        icon: 'quiz',
+        iconClass: 'text-primary',
+        iconBg: 'bg-primary/15',
+        activeBg: 'from-primary/16 via-blue-400/10 to-transparent',
+        activeRing: 'ring-primary/20',
+    },
+];
 const ratingRanges = [
-    { id: 'week', label: 'This Week', days: 7 },
-    { id: 'month', label: 'This Month', days: 30 },
-    { id: 'year', label: 'This Year', days: 365 },
-    { id: 'all', label: 'All Time', days: null },
+    { id: 'week', label: 'This Week', shortLabel: '7D', days: 7, icon: 'calendar_view_week' },
+    { id: 'month', label: 'This Month', shortLabel: '30D', days: 30, icon: 'calendar_month' },
+    { id: 'year', label: 'This Year', shortLabel: '1Y', days: 365, icon: 'date_range' },
+    { id: 'all', label: 'All Time', shortLabel: 'All', days: null, icon: 'all_inclusive' },
 ];
 const RECENT_LIMIT = 5;
 const RECENT_PAGE_SIZE = 6;
@@ -314,6 +360,8 @@ export default function ProfilePage() {
         { label: 'Bullet', value: displayUser?.rating_bullet || 800, icon: 'local_fire_department', color: 'text-orange-400' },
         { label: 'Blitz', value: displayUser?.rating_blitz || 800, icon: 'flash_on', color: 'text-yellow-400' },
         { label: 'Rapid', value: displayUser?.rating_rapid || 800, icon: 'timer', color: 'text-green-400' },
+        { label: 'Classical', value: displayUser?.rating_classical || 800, icon: 'hourglass_empty', color: 'text-sky-400' },
+        { label: 'DigiQuiz', value: displayUser?.rating_digiquiz ?? 0, icon: 'quiz', color: 'text-primary' },
     ]), [displayUser]);
 
     useEffect(() => {
@@ -540,6 +588,10 @@ export default function ProfilePage() {
     const isPlayingLive = Boolean(displayUser?.is_playing || liveGameId);
     const canChallenge = isAuthenticated && displayUser && !isSelf && !displayUser.is_bot && !isPlayingLive;
     const displayCountryCode = useMemo(() => normalizeCountryCode(displayUser?.country), [displayUser?.country]);
+    const activeModeMeta = useMemo(
+        () => ratingModes.find((ratingMode) => ratingMode.id === mode) || ratingModes[1],
+        [mode]
+    );
 
     const handleFriendRequest = async () => {
         if (!displayUser?.id || friendState === 'loading' || friendState === 'sent' || friendState === 'friends') return;
@@ -705,18 +757,29 @@ export default function ProfilePage() {
     return (
         <Layout showHeader={false} showBottomNav={!editOpen && !showAllGames}>
             <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-                <div className="sticky top-0 z-50 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md border-b border-border-light dark:border-border-dark shadow-sm px-4 py-3 flex items-center justify-between">
-                    <button className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400" type="button" onClick={() => window.history.back()}>
-                        <span className="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <h1 className="text-lg font-bold">Profile</h1>
-                    <button
-                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-500 dark:text-slate-400"
-                        type="button"
-                        onClick={() => setEditOpen(true)}
-                    >
-                        <span className="material-symbols-outlined">settings</span>
-                    </button>
+                <div className="sticky top-0 z-50 bg-gradient-to-b from-background-light/95 to-background-light/90 dark:from-background-dark/95 dark:to-background-dark/90 backdrop-blur-md border-b border-border-light dark:border-border-dark shadow-sm px-4 py-3">
+                    <div className="relative flex items-center justify-between">
+                        <button
+                            className="flex items-center gap-2.5 rounded-2xl px-1 py-0.5 transition-opacity hover:opacity-90"
+                            type="button"
+                            onClick={() => navigate('/')}
+                            aria-label="Go to home"
+                        >
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary shadow-md shadow-primary/30">
+                                <span className="text-white text-lg font-bold leading-none">♞</span>
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
+                                    DigiChess
+                                </span>
+                                <span className="text-[9px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 font-semibold leading-tight">
+                                    Live Arena
+                                </span>
+                            </div>
+                        </button>
+                        <h1 className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-lg font-bold">Profile</h1>
+                        <div className="size-9 shrink-0" />
+                    </div>
                 </div>
                 {!displayUser ? (
                     <div className="p-6 text-sm text-slate-500">
@@ -749,7 +812,7 @@ export default function ProfilePage() {
                                     </div>
                                     <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-xs">{displayUser?.bio || 'No bio yet.'}</p>
                                 </div>
-                                <div className="grid grid-cols-3 gap-3 w-full max-w-sm mt-5">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 w-full max-w-4xl mt-5">
                                     {stats.map((stat) => (
                                         <div key={stat.label} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
                                             <span className={`material-symbols-outlined text-[18px] ${stat.color}`}>{stat.icon}</span>
@@ -758,48 +821,31 @@ export default function ProfilePage() {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="w-full max-w-sm mt-3 p-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 shadow-sm">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[18px] text-primary">quiz</span>
-                                            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">DigiQuiz</span>
-                                        </div>
-                                        <span className="text-sm font-bold">{displayUser?.rating_digiquiz ?? 0}</span>
-                                    </div>
-                                    <div className="flex items-center gap-4 mt-2 text-xs">
-                                        <div className="flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                            <span className="text-slate-500">{displayUser?.digiquiz_correct ?? 0} correct</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-red-500" />
-                                            <span className="text-slate-500">{displayUser?.digiquiz_wrong ?? 0} wrong</span>
-                                        </div>
-                                    </div>
-                                </div>
                             {isSelf ? (
                                 <div className="flex gap-3 w-full max-w-sm mt-4">
                                     <button
-                                        className="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm"
+                                        className="flex-1 rounded-xl border border-violet-300/40 bg-white/80 px-4 py-2.5 text-sm font-semibold text-violet-700 shadow-md shadow-violet-500/10 transition-all hover:border-violet-400/55 hover:bg-violet-50 hover:shadow-violet-500/20 dark:border-violet-500/30 dark:bg-slate-900/75 dark:text-violet-300 dark:hover:border-violet-400/45 dark:hover:bg-slate-800 flex items-center justify-center gap-2.5"
                                         type="button"
                                         onClick={() => setEditOpen(true)}
                                     >
-                                        <span className="material-symbols-outlined text-lg">edit</span>
+                                        <span className="inline-flex size-7 items-center justify-center rounded-lg bg-violet-500/15 text-violet-500 dark:text-violet-300">
+                                            <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                                        </span>
                                         Edit profile
                                     </button>
                                 </div>
                             ) : (canFriend || canMessage) ? (
                                 <div className="flex flex-col gap-2 w-full max-w-sm mt-4">
-                                    <div className="flex gap-3">
+                                    <div className="flex flex-wrap gap-3">
                                         {canFriend ? (
                                             friendState === 'friends' ? (
                                                 <>
-                                                    <div className="flex-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold py-2.5 px-4 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-2 text-sm">
+                                                    <div className="flex-1 min-w-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold py-2.5 px-4 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-2 text-sm">
                                                         <span className="material-symbols-outlined text-lg">check_circle</span>
                                                         Friends
                                                     </div>
                                                     <button
-                                                        className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-semibold py-2.5 px-4 rounded-lg border border-red-500/30 hover:border-red-500 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        className="flex-1 min-w-0 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-semibold py-2.5 px-4 rounded-lg border border-red-500/30 hover:border-red-500 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                                                         type="button"
                                                         onClick={handleUnfriend}
                                                         disabled={friendState === 'loading'}
@@ -810,7 +856,7 @@ export default function ProfilePage() {
                                                 </>
                                             ) : friendState === 'sent' ? (
                                                 <button
-                                                    className="flex-1 bg-surface-light dark:bg-surface-dark text-slate-500 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-sm cursor-default"
+                                                    className="flex-1 min-w-0 bg-surface-light dark:bg-surface-dark text-slate-500 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-sm cursor-default"
                                                     type="button"
                                                     disabled
                                                 >
@@ -818,9 +864,9 @@ export default function ProfilePage() {
                                                     Request sent
                                                 </button>
                                             ) : friendState === 'received' ? (
-                                                <div className="flex-1 flex gap-2">
+                                                <div className="flex min-w-0 flex-1 gap-2">
                                                     <button
-                                                        className="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        className="flex-1 min-w-0 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                                                         type="button"
                                                         onClick={handleAcceptIncoming}
                                                         disabled={friendState === 'loading'}
@@ -829,7 +875,7 @@ export default function ProfilePage() {
                                                         Accept
                                                     </button>
                                                     <button
-                                                        className="bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                        className="min-w-0 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                                                         type="button"
                                                         onClick={handleDeclineIncoming}
                                                         disabled={friendState === 'loading'}
@@ -839,7 +885,7 @@ export default function ProfilePage() {
                                                 </div>
                                             ) : (
                                                 <button
-                                                    className="flex-1 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                                                    className="flex-1 min-w-0 bg-surface-light dark:bg-surface-dark hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg border border-border-light dark:border-border-dark transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                                                     type="button"
                                                     onClick={handleFriendRequest}
                                                     disabled={friendState === 'loading'}
@@ -851,7 +897,7 @@ export default function ProfilePage() {
                                         ) : null}
                                         {canMessage ? (
                                             <button
-                                                className="flex-1 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-primary/20 transition-colors flex items-center justify-center gap-2 text-sm"
+                                                className="basis-full sm:basis-auto sm:flex-1 min-w-0 bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-primary/20 transition-colors flex items-center justify-center gap-2 text-sm"
                                                 type="button"
                                                 onClick={handleMessage}
                                             >
@@ -1012,42 +1058,79 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div className="px-4 mb-4">
+                        <div className="mx-4 mb-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-surface-light/80 dark:bg-surface-dark/80 p-3 sm:p-4 shadow-sm">
                             <h3 className="text-lg font-bold mb-3">Performance</h3>
-                            <div className="bg-surface-light dark:bg-surface-dark p-1 rounded-xl flex gap-1 border border-slate-200 dark:border-slate-800 overflow-x-auto hide-scrollbar">
-                                {ratingModes.map((ratingMode) => (
-                                    <button
-                                        key={ratingMode}
-                                        className={`shrink-0 min-w-[92px] py-2 px-2 rounded-lg text-[12px] sm:text-sm font-semibold tracking-wide text-center whitespace-nowrap transition-all ${mode === ratingMode ? 'bg-white dark:bg-background-dark text-primary' : 'text-slate-500'}`}
-                                        type="button"
-                                        onClick={() => setMode(ratingMode)}
-                                    >
-                                        {ratingMode === 'digiquiz' ? 'DIGIQUIZ' : ratingMode.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {ratingRanges.map((range) => (
-                                    <button
-                                        key={range.id}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                                            timeRange === range.id
-                                                ? 'bg-primary text-white border-primary'
-                                                : 'bg-surface-light dark:bg-surface-dark border-slate-200 dark:border-slate-700 text-slate-500'
-                                        }`}
-                                        type="button"
-                                        onClick={() => setTimeRange(range.id)}
-                                    >
-                                        {range.label}
-                                    </button>
-                                ))}
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                                        {ratingModes.map((ratingMode) => {
+                                            const isActive = mode === ratingMode.id;
+                                            return (
+                                                <button
+                                                    key={ratingMode.id}
+                                                    className={`group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-2.5 text-center transition-all sm:flex-row sm:items-center sm:justify-start sm:gap-2.5 sm:px-3 sm:text-left ${
+                                                        isActive
+                                                            ? `bg-gradient-to-br ${ratingMode.activeBg} border-slate-200 dark:border-slate-700 ring-1 ${ratingMode.activeRing} shadow-sm`
+                                                            : 'border-transparent bg-white/70 dark:bg-slate-900/45 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-900/70'
+                                                    }`}
+                                                    type="button"
+                                                    onClick={() => setMode(ratingMode.id)}
+                                                >
+                                                    <span className={`inline-flex size-8 items-center justify-center rounded-xl sm:size-9 ${ratingMode.iconBg}`}>
+                                                        <span className={`material-symbols-outlined text-[16px] sm:text-[18px] ${ratingMode.iconClass}`}>{ratingMode.icon}</span>
+                                                    </span>
+                                                    <span className="flex min-w-0 flex-col leading-tight">
+                                                        <span className={`hidden sm:block text-[10px] font-bold uppercase tracking-[0.16em] ${isActive ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                            Mode
+                                                        </span>
+                                                        <span className={`truncate text-[11px] sm:text-sm font-semibold ${isActive ? 'text-slate-900 dark:text-white' : ''}`}>
+                                                            {ratingMode.label}
+                                                        </span>
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                        {ratingRanges.map((range) => {
+                                            const isActive = timeRange === range.id;
+                                            return (
+                                                <button
+                                                    key={range.id}
+                                                    className={`flex min-w-0 items-center justify-between gap-2 rounded-2xl border px-2.5 py-2.5 text-left transition-all sm:px-3 ${
+                                                        isActive
+                                                            ? 'border-primary/35 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent dark:from-primary/15 dark:via-primary/8 dark:to-slate-900/70 text-slate-900 dark:text-white ring-1 ring-primary/15 shadow-sm'
+                                                            : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/45 text-slate-600 dark:text-slate-400 hover:border-primary/20 hover:text-slate-900 dark:hover:text-slate-200'
+                                                    }`}
+                                                    type="button"
+                                                    onClick={() => setTimeRange(range.id)}
+                                                >
+                                                    <span className="flex min-w-0 items-center gap-2">
+                                                        <span className={`material-symbols-outlined shrink-0 text-[16px] sm:text-[17px] ${isActive ? 'text-primary dark:text-primary' : 'text-primary'}`}>{range.icon}</span>
+                                                        <span className="truncate text-[11px] sm:text-sm font-semibold">{range.label}</span>
+                                                    </span>
+                                                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                                        isActive
+                                                            ? 'bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15'
+                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                                    }`}>
+                                                        {range.shortLabel}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                </div>
                             </div>
                         </div>
 
                         <div className="mx-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5 relative overflow-hidden shadow-sm">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Current Rating</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
+                                        <span className={`inline-flex size-7 items-center justify-center rounded-lg ${activeModeMeta.iconBg}`}>
+                                            <span className={`material-symbols-outlined text-[15px] ${activeModeMeta.iconClass}`}>{activeModeMeta.icon}</span>
+                                        </span>
+                                        <span>Current {activeModeMeta.label} Rating</span>
+                                    </p>
                                     <div className="flex items-baseline gap-2">
                                         <h2 className="text-4xl font-bold text-slate-900 dark:text-white">{currentRating || '--'}</h2>
                                         <span className={`text-sm font-bold flex items-center ${ratingDelta >= 0 ? 'text-green-500' : 'text-red-500'}`}>

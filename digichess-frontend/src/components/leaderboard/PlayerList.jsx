@@ -4,7 +4,7 @@ import { createThread, sendFriendRequest } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { getBlitzTag, getRatingTagClasses } from '../../utils/ratingTags';
 
-const PlayerRow = ({ player, rank }) => {
+const PlayerRow = ({ player, rank, ratingLabel = 'Rating' }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [friendState, setFriendState] = useState('idle');
@@ -40,7 +40,11 @@ const PlayerRow = ({ player, rank }) => {
 
     return (
         <div
-            className={`group relative grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_5.5rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_7rem] gap-2 items-center px-4 sm:px-5 py-3 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${player.isSelf ? 'bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary' : ''}`}
+            className={`group relative grid grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.25rem] gap-2 sm:grid-cols-[3.25rem_minmax(0,1fr)_5.5rem_6.25rem] items-center rounded-2xl border px-3 py-3 sm:px-4 sm:py-3.5 shadow-sm transition-all cursor-pointer ${
+                isSelf
+                    ? 'border-primary/30 bg-primary/5 dark:bg-primary/10'
+                    : 'border-slate-200 dark:border-slate-800 bg-white/75 dark:bg-slate-900/55 hover:border-primary/25 hover:bg-white dark:hover:bg-slate-900/80'
+            }`}
             role="button"
             tabIndex={0}
             onClick={() => {
@@ -52,33 +56,54 @@ const PlayerRow = ({ player, rank }) => {
                 }
             }}
         >
-            <div className="text-sm font-bold text-slate-500 text-center">{rank}</div>
+            <div className="flex items-center justify-center">
+                <span className={`inline-flex min-w-10 h-10 items-center justify-center rounded-xl text-sm font-bold ${
+                    isSelf
+                        ? 'bg-primary text-white shadow-md shadow-primary/20'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                }`}>
+                    {rank}
+                </span>
+            </div>
             <div className="flex items-center gap-3 min-w-0">
                 <div className="relative shrink-0">
                     <div
-                        className="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center flex items-center justify-center text-xs font-bold text-white"
+                        className="w-9 h-9 rounded-full bg-slate-700 bg-cover bg-center flex items-center justify-center text-xs font-bold text-white ring-2 ring-white dark:ring-slate-800"
                         style={player.avatar ? { backgroundImage: `url('${player.avatar}')` } : undefined}
                     >
                         {!player.avatar ? player.username?.slice(0, 2).toUpperCase() : null}
                     </div>
                 </div>
                 <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
                         {tag ? (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tagClasses}`}>{tag}</span>
                         ) : null}
-                        <span className="truncate font-medium text-sm">{player.username}</span>
+                        <span className="truncate font-semibold text-sm sm:text-[15px]">{player.username}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
+                        <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 font-semibold uppercase tracking-[0.14em]">
+                            {player.countryCode || 'INT'}
+                        </span>
+                        <span className="truncate">
+                            {isSelf ? 'You' : player.is_bot ? 'Bot' : 'Player'}
+                        </span>
                     </div>
                 </div>
             </div>
-            <div className="text-right font-bold text-slate-700 dark:text-slate-300 text-sm tabular-nums pr-0.5">{player.rating}</div>
+            <div className="pr-0.5 text-right">
+                <div className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 tabular-nums">{player.rating}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                    {ratingLabel}
+                </div>
+            </div>
             <div className="flex justify-end items-center gap-2">
                 {!isSelf && !player.is_bot ? (
                     <button
-                        className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
+                        className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-colors ${
                             friendState === 'sent'
-                                ? 'text-green-500 bg-green-500/10'
-                                : 'text-slate-400 hover:text-primary hover:bg-primary/10'
+                                ? 'text-green-500 bg-green-500/10 border-green-500/20'
+                                : 'text-slate-400 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:text-primary hover:border-primary/25 hover:bg-primary/10'
                         }`}
                         type="button"
                         onClick={handleFriendRequest}
@@ -91,7 +116,7 @@ const PlayerRow = ({ player, rank }) => {
                 ) : null}
                 {!isSelf && !player.is_bot ? (
                     <button
-                        className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-primary hover:bg-primary/10"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition-colors text-slate-400 hover:text-primary hover:border-primary/25 hover:bg-primary/10"
                         type="button"
                         onClick={handleMessage}
                         title="Message"
@@ -104,20 +129,27 @@ const PlayerRow = ({ player, rank }) => {
     );
 };
 
-export default function PlayerList({ players = [], startRank = 4 }) {
+export default function PlayerList({ players = [], startRank = 4, ratingLabel = 'Rating' }) {
     if (!players || players.length === 0) return null;
 
     return (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
-            <div className="grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_5.5rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_7rem] gap-2 px-4 sm:px-5 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 uppercase">
-                <div className="text-center">#</div>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark p-2 sm:p-3 shadow-sm">
+            <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_4.75rem_5.25rem] sm:grid-cols-[3.25rem_minmax(0,1fr)_5.5rem_6.25rem] gap-2 px-2 sm:px-3 pb-2 text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.16em]">
+                <div className="text-center">Rank</div>
                 <div>Player</div>
-                <div className="text-right">Rating</div>
+                <div className="text-right">{ratingLabel}</div>
                 <div className="text-right">Actions</div>
             </div>
-            {players.map((player, index) => (
-                <PlayerRow key={player.id || index} player={player} rank={startRank + index} />
-            ))}
+            <div className="space-y-2">
+                {players.map((player, index) => (
+                    <PlayerRow
+                        key={player.id || index}
+                        player={player}
+                        rank={player.rank ?? (startRank + index)}
+                        ratingLabel={ratingLabel}
+                    />
+                ))}
+            </div>
         </div>
     );
 }
