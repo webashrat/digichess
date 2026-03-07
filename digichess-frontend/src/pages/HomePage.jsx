@@ -24,11 +24,141 @@ import useNotifications from '../hooks/useNotifications';
 import useSettings from '../hooks/useSettings';
 
 const quickPlayCards = [
-    { id: 'bullet', label: 'Bullet', time: '1+0', icon: 'local_fire_department', color: 'text-orange-400' },
-    { id: 'blitz', label: 'Blitz', time: '3+2', icon: 'flash_on', color: 'text-yellow-400' },
-    { id: 'rapid', label: 'Rapid', time: '10+0', icon: 'timer', color: 'text-green-400' },
-    { id: 'classical', label: 'Classical', time: '30+0', icon: 'hourglass_empty', color: 'text-blue-400' },
+    {
+        id: 'bullet_1_0',
+        timeControl: 'bullet',
+        label: 'Bullet',
+        time: '1+0',
+        icon: 'local_fire_department',
+        color: 'text-orange-300',
+        iconBg: 'bg-orange-500/15',
+        badgeClass: 'bg-orange-500/15 text-orange-300 ring-1 ring-orange-400/25',
+        accentClass: 'from-orange-500 via-orange-400 to-amber-300',
+        hoverClass: 'hover:border-orange-400/45 hover:shadow-orange-500/15',
+    },
+    {
+        id: 'bullet_2_1',
+        timeControl: 'bullet',
+        label: 'Bullet',
+        time: '2+1',
+        icon: 'local_fire_department',
+        color: 'text-orange-300',
+        iconBg: 'bg-orange-500/15',
+        badgeClass: 'bg-orange-500/15 text-orange-300 ring-1 ring-orange-400/25',
+        accentClass: 'from-orange-500 via-orange-400 to-amber-300',
+        hoverClass: 'hover:border-orange-400/45 hover:shadow-orange-500/15',
+    },
+    {
+        id: 'blitz_3_0',
+        timeControl: 'blitz',
+        label: 'Blitz',
+        time: '3+0',
+        icon: 'flash_on',
+        color: 'text-yellow-300',
+        iconBg: 'bg-yellow-500/15',
+        badgeClass: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-400/25',
+        accentClass: 'from-yellow-400 via-amber-300 to-orange-300',
+        hoverClass: 'hover:border-yellow-400/45 hover:shadow-yellow-500/15',
+    },
+    {
+        id: 'blitz_3_2',
+        timeControl: 'blitz',
+        label: 'Blitz',
+        time: '3+2',
+        icon: 'flash_on',
+        color: 'text-yellow-300',
+        iconBg: 'bg-yellow-500/15',
+        badgeClass: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-400/25',
+        accentClass: 'from-yellow-400 via-amber-300 to-orange-300',
+        hoverClass: 'hover:border-yellow-400/45 hover:shadow-yellow-500/15',
+    },
+    {
+        id: 'blitz_5_0',
+        timeControl: 'blitz',
+        label: 'Blitz',
+        time: '5+0',
+        icon: 'flash_on',
+        color: 'text-yellow-300',
+        iconBg: 'bg-yellow-500/15',
+        badgeClass: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-400/25',
+        accentClass: 'from-yellow-400 via-amber-300 to-orange-300',
+        hoverClass: 'hover:border-yellow-400/45 hover:shadow-yellow-500/15',
+    },
+    {
+        id: 'blitz_5_3',
+        timeControl: 'blitz',
+        label: 'Blitz',
+        time: '5+3',
+        icon: 'flash_on',
+        color: 'text-yellow-300',
+        iconBg: 'bg-yellow-500/15',
+        badgeClass: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-400/25',
+        accentClass: 'from-yellow-400 via-amber-300 to-orange-300',
+        hoverClass: 'hover:border-yellow-400/45 hover:shadow-yellow-500/15',
+    },
+    {
+        id: 'rapid_10_0',
+        timeControl: 'rapid',
+        label: 'Rapid',
+        time: '10+0',
+        icon: 'timer',
+        color: 'text-emerald-300',
+        iconBg: 'bg-emerald-500/15',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25',
+        accentClass: 'from-emerald-500 via-green-400 to-lime-300',
+        hoverClass: 'hover:border-emerald-400/45 hover:shadow-emerald-500/15',
+    },
+    {
+        id: 'rapid_10_5',
+        timeControl: 'rapid',
+        label: 'Rapid',
+        time: '10+5',
+        icon: 'timer',
+        color: 'text-emerald-300',
+        iconBg: 'bg-emerald-500/15',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25',
+        accentClass: 'from-emerald-500 via-green-400 to-lime-300',
+        hoverClass: 'hover:border-emerald-400/45 hover:shadow-emerald-500/15',
+    },
+    {
+        id: 'rapid_15_10',
+        timeControl: 'rapid',
+        label: 'Rapid',
+        time: '15+10',
+        icon: 'timer',
+        color: 'text-emerald-300',
+        iconBg: 'bg-emerald-500/15',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25',
+        accentClass: 'from-emerald-500 via-green-400 to-lime-300',
+        hoverClass: 'hover:border-emerald-400/45 hover:shadow-emerald-500/15',
+    },
+    {
+        id: 'classical_30_0',
+        timeControl: 'classical',
+        label: 'Classical',
+        time: '30+0',
+        icon: 'hourglass_empty',
+        color: 'text-sky-300',
+        iconBg: 'bg-sky-500/15',
+        badgeClass: 'bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25',
+        accentClass: 'from-sky-500 via-blue-400 to-indigo-300',
+        hoverClass: 'hover:border-sky-400/45 hover:shadow-sky-500/15',
+    },
+    {
+        id: 'classical_30_20',
+        timeControl: 'classical',
+        label: 'Classical',
+        time: '30+20',
+        icon: 'hourglass_empty',
+        color: 'text-sky-300',
+        iconBg: 'bg-sky-500/15',
+        badgeClass: 'bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25',
+        accentClass: 'from-sky-500 via-blue-400 to-indigo-300',
+        hoverClass: 'hover:border-sky-400/45 hover:shadow-sky-500/15',
+    },
 ];
+
+const quickPlayCardMap = Object.fromEntries(quickPlayCards.map((card) => [card.id, card]));
 
 const customFormatOptions = [
     { id: 'bullet', label: 'Bullet' },
@@ -45,7 +175,7 @@ const customFormatPresets = {
     classical: { minutes: 30, increment: 0 },
 };
 
-const botModeOptions = quickPlayCards.map((card) => ({ id: card.id, label: card.label }));
+const botModeOptions = customFormatOptions.filter((option) => option.id !== 'custom');
 const JIANG_BOT_IMAGE = '/images/jiang-bot.png';
 
 const TIER_ORDER = ['beginner', 'intermediate', 'advanced', 'expert', 'master'];
@@ -139,7 +269,10 @@ export default function HomePage() {
         { label: 'Bullet', value: user?.rating_bullet || 800, icon: 'local_fire_department', color: 'text-orange-400' },
         { label: 'Blitz', value: user?.rating_blitz || 800, icon: 'flash_on', color: 'text-yellow-400' },
         { label: 'Rapid', value: user?.rating_rapid || 800, icon: 'timer', color: 'text-green-400' },
+        { label: 'Classical', value: user?.rating_classical || 800, icon: 'hourglass_empty', color: 'text-sky-400' },
+        { label: 'DigiQuiz', value: user?.rating_digiquiz ?? 0, icon: 'quiz', color: 'text-primary' },
     ]), [user]);
+    const queueingPreset = queueingControl ? quickPlayCardMap[queueingControl] : null;
 
     const isPlayModalOpen = showCustomForm || showBotPanel;
 
@@ -328,7 +461,7 @@ export default function HomePage() {
         };
     }, [isPlayModalOpen]);
 
-    const handleQuickPlay = async (timeControl) => {
+    const handleQuickPlay = async (preset) => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
@@ -337,12 +470,12 @@ export default function HomePage() {
         setQueueLoading(true);
         setQueueError(null);
         try {
-            const result = await enqueueMatchmaking(timeControl);
+            const result = await enqueueMatchmaking({ queue_key: preset.id });
             if (result?.id) {
                 navigate(`/game/${result.id}`);
                 return;
             }
-            setQueueingControl(timeControl);
+            setQueueingControl(preset.id);
         } catch (err) {
             setQueueError(err.message || 'Failed to join queue.');
         } finally {
@@ -353,10 +486,11 @@ export default function HomePage() {
     const handleCancelQueue = async () => {
         if (!queueingControl) return;
         try {
-            await cancelMatchmaking(queueingControl);
+            await cancelMatchmaking({ queue_key: queueingControl });
         } catch (err) {
             // ignore
         } finally {
+            setQueueLoading(false);
             setQueueingControl(null);
         }
     };
@@ -367,7 +501,7 @@ export default function HomePage() {
             return;
         }
         if (!customOpponent?.id) {
-            setCustomError('Select an opponent first.');
+            setCustomError('Select a user to challenge first.');
             return;
         }
         const minutes = Number(customMinutes);
@@ -426,7 +560,7 @@ export default function HomePage() {
                 navigate(`/game/${game.id}`);
             }
         } catch (err) {
-            setCustomError(err.message || 'Failed to create game.');
+            setCustomError(err.message || 'Failed to send challenge.');
         } finally {
             setCustomSubmitting(false);
         }
@@ -747,25 +881,35 @@ export default function HomePage() {
                         <span className="material-symbols-outlined text-primary">swords</span>
                         Play Chess
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                         {quickPlayCards.map((card) => (
                             <button
                                 key={card.id}
-                                onClick={() => handleQuickPlay(card.id)}
+                                onClick={() => handleQuickPlay(card)}
                                 disabled={queueLoading || Boolean(queueingControl)}
-                                className="group relative flex items-center p-4 h-28 sm:h-32 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-200 dark:from-[#1e232e] dark:to-[#13161c] border border-slate-200 dark:border-gray-800 hover:border-primary/50 transition-all overflow-hidden disabled:opacity-60"
+                                className={`group relative min-h-[118px] overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-100 p-3 text-left shadow-sm transition-all disabled:opacity-60 dark:border-gray-800 dark:from-[#1e232e] dark:to-[#13161c] ${queueingControl === card.id ? 'border-primary/50 shadow-lg shadow-primary/15 dark:border-primary/50' : card.hoverClass}`}
                                 type="button"
                             >
-                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <span className="material-symbols-outlined text-6xl">{card.icon}</span>
+                                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.accentClass}`}></div>
+                                <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-5xl">{card.icon}</span>
                                 </div>
-                                <div className="relative z-10 flex items-center gap-3 w-full">
-                                    <div className="bg-slate-100/80 dark:bg-gray-800/50 p-2 rounded-lg backdrop-blur-sm shrink-0">
-                                        <span className={`material-symbols-outlined ${card.color}`}>{card.icon}</span>
+                                <div className="relative z-10 flex h-full flex-col">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className={`inline-flex size-9 items-center justify-center rounded-xl ${card.iconBg}`}>
+                                            <span className={`material-symbols-outlined text-[20px] ${card.color}`}>{card.icon}</span>
+                                        </div>
+                                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${queueingControl === card.id ? 'bg-primary/15 text-primary ring-1 ring-primary/25' : card.badgeClass}`}>
+                                            {card.label}
+                                        </span>
                                     </div>
-                                    <div className="text-left leading-tight">
-                                        <span className="block text-2xl font-bold text-slate-900 dark:text-white">{card.time}</span>
-                                        <span className="block text-sm text-slate-600 dark:text-gray-400 font-medium mt-1">{card.label}</span>
+                                    <div className="mt-auto pt-5 leading-tight">
+                                        <span className="block text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{card.time}</span>
+                                        {queueingControl === card.id ? (
+                                            <span className="block mt-1 text-[11px] text-slate-500 dark:text-gray-400">
+                                                Searching...
+                                            </span>
+                                        ) : null}
                                     </div>
                                 </div>
                             </button>
@@ -774,11 +918,11 @@ export default function HomePage() {
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
                             onClick={toggleCustomForm}
-                            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary/80 to-blue-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
+                            className="w-full py-3 rounded-xl border border-amber-300/35 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 hover:brightness-105 hover:shadow-orange-400/40 transition-all"
                             type="button"
                         >
-                            <span className="material-symbols-outlined">add_circle</span>
-                            Create Custom Game
+                            <span className="material-symbols-outlined">person_add</span>
+                            Challenge a User
                         </button>
                         <button
                             onClick={toggleBotPanel}
@@ -794,7 +938,7 @@ export default function HomePage() {
                     {queueingControl ? (
                         <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                             <div className="text-xs text-slate-600 dark:text-slate-300">
-                                Searching for a {queueingControl} match...
+                                Searching for a {queueingPreset?.time || 'queued'} {queueingPreset?.label || ''} match...
                             </div>
                             <button
                                 className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-xs font-semibold"
@@ -904,7 +1048,7 @@ export default function HomePage() {
                             {showCustomForm ? (
                                 <div className="rounded-3xl border border-[#30466e] bg-[#1a2335] p-4 sm:p-5 shadow-[0_24px_55px_rgba(7,11,24,0.45)] space-y-4 text-slate-100">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">Create custom game</h3>
+                                        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">Challenge a user</h3>
                                         <button
                                             type="button"
                                         className="size-9 rounded-full border border-[#3d5580] bg-[#0d1730] text-slate-400 hover:text-white hover:border-[#4d6aa0] flex items-center justify-center transition-colors"
@@ -1055,7 +1199,7 @@ export default function HomePage() {
                                         onClick={handleCreateCustomGame}
                                         disabled={customSubmitting}
                                     >
-                                        {customSubmitting ? 'Creating...' : 'Send Challenge'}
+                                        {customSubmitting ? 'Sending...' : 'Send Challenge'}
                                     </button>
                                 </div>
                             ) : null}

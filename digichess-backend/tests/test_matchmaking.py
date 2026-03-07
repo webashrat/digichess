@@ -92,3 +92,35 @@ def test_matchmaking_match_found(auth_client, create_user, monkeypatch):
     game = Game.objects.get(id=game_id)
     assert game.status == Game.STATUS_PENDING
     assert fake.zcard("mm:blitz:z") == 0
+
+
+@pytest.mark.django_db
+def test_matchmaking_preset_queue_uses_exact_clock(auth_client, create_user, monkeypatch):
+    fake = FakeRedis()
+    monkeypatch.setattr(views_matchmaking, "get_redis", lambda: fake)
+
+    user1 = create_user(email="mm4@example.com", username="mm4")
+    user2 = create_user(email="mm5@example.com", username="mm5")
+    client1, _ = auth_client(user1)
+    client2, _ = auth_client(user2)
+
+    resp1 = client1.post("/api/games/matchmaking/enqueue/", {"queue_key": "blitz_5_3"}, format="json")
+    assert resp1.status_code == 200
+
+    status = client1.get("/api/games/matchmaking/status/")
+    assert status.status_code == 200
+    assert status.data["queues"].get("blitz_5_3") == 1
+    assert status.data["pool_sizes"].get("blitz_5_3") == 1
+
+    resp2 = client2.post("/api/games/matchmaking/enqueue/", {"queue_key": "blitz_5_3"}, format="json")
+    assert resp2.status_code == 201
+
+    game = Game.objects.get(id=resp2.data["id"])
+    assert game.time_control == Game.TIME_BLITZ
+    assert game.initial_time_seconds == 300
+    assert game.increment_seconds == 3
+    assert game.white_time_seconds == 300
+    assert game.black_time_seconds == 300
+    assert game.white_increment_seconds == 3
+    assert game.black_increment_seconds == 3
+    assert fake.zcard("mm:blitz_5_3:z") == 0
