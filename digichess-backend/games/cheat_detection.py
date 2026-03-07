@@ -66,34 +66,32 @@ def _get_engine_path():
     return path
 
 
-def run_cheat_analysis(
-    game: Game,
-    target_user,
+def run_cheat_analysis_from_sequence(
+    move_list: list[str],
+    player_is_white: bool,
+    move_times_ms: Optional[list[int]] = None,
+    start_fen: Optional[str] = None,
+    player_rating: int = 800,
     book_depth: int = DEFAULT_BOOK_DEPTH,
     multipv: int = DEFAULT_MULTIPV,
     depth: int = DEFAULT_DEPTH,
     time_per_move: float = DEFAULT_TIME_PER_MOVE,
 ) -> dict:
     """
-    Full cheat analysis on a single game for a target player.
+    Full cheat analysis on a move sequence for one color.
 
     Returns a dict ready to populate CheatAnalysis fields.
     """
-    moves_raw = (game.moves or "").strip()
-    move_list = [m for m in moves_raw.split() if m] if moves_raw else []
     if not move_list:
         raise ValueError("Game has no moves to analyze.")
 
-    player_is_white = game.white_id == target_user.id
-    if not player_is_white and game.black_id != target_user.id:
-        raise ValueError("Target user is not a player in this game.")
-
     player_color = chess.WHITE if player_is_white else chess.BLACK
-    book_plies = book_depth * 2
+    resolved_start_fen = (start_fen or Game.START_FEN or "").strip() or Game.START_FEN
+    book_plies = 0 if resolved_start_fen != Game.START_FEN else book_depth * 2
 
     engine_path = _get_engine_path()
 
-    move_times = game.move_times_ms if isinstance(game.move_times_ms, list) else []
+    move_times = move_times_ms if isinstance(move_times_ms, list) else []
     has_timing = len(move_times) > 0
 
     per_move = []
@@ -105,7 +103,17 @@ def run_cheat_analysis(
     was_ever_losing = False
 
     with chess.engine.SimpleEngine.popen_uci(engine_path) as engine:
-        board = chess.Board()
+        board = chess.Board(resolved_start_fen)
+        if resolved_start_fen != Game.START_FEN:
+            info = engine.analyse(
+                board,
+                chess.engine.Limit(time=time_per_move * 0.3, depth=depth),
+            )
+            score = info.get("score")
+            if score:
+                cp = score.pov(chess.WHITE).score(mate_score=100000)
+                if cp is not None:
+                    prev_eval_cp = cp
 
         for ply_idx, move_san in enumerate(move_list):
             try:
@@ -356,7 +364,6 @@ def run_cheat_analysis(
             "consistent_time_flag": consistent_flag,
         }
 
-    player_rating = _get_player_rating(game, target_user, player_is_white)
     verdict, confidence = _compute_verdict(
         t1, acpl, avg_wcl, best_streak, position_stats, player_rating, len(all_analyzed)
     )
@@ -393,6 +400,44 @@ def run_cheat_analysis(
             "piece_types": padded_pieces,
         },
     }
+
+
+def run_cheat_analysis(
+    game: Game,
+    target_user,
+    book_depth: int = DEFAULT_BOOK_DEPTH,
+    multipv: int = DEFAULT_MULTIPV,
+    depth: int = DEFAULT_DEPTH,
+    time_per_move: float = DEFAULT_TIME_PER_MOVE,
+) -> dict:
+    """
+    Full cheat analysis on a single game for a target player.
+
+    Returns a dict ready to populate CheatAnalysis fields.
+    """
+    moves_raw = (game.moves or "").strip()
+    move_list = [m for m in moves_raw.split() if m] if moves_raw else []
+    if not move_list:
+        raise ValueError("Game has no moves to analyze.")
+
+    player_is_white = game.white_id == target_user.id
+    if not player_is_white and game.black_id != target_user.id:
+        raise ValueError("Target user is not a player in this game.")
+
+    move_times_ms = game.move_times_ms if isinstance(game.move_times_ms, list) else []
+    player_rating = _get_player_rating(game, target_user, player_is_white)
+
+    return run_cheat_analysis_from_sequence(
+        move_list,
+        player_is_white=player_is_white,
+        move_times_ms=move_times_ms,
+        start_fen=Game.START_FEN,
+        player_rating=player_rating,
+        book_depth=book_depth,
+        multipv=multipv,
+        depth=depth,
+        time_per_move=time_per_move,
+    )
 
 
 def _get_player_rating(game: Game, user, is_white: bool) -> int:

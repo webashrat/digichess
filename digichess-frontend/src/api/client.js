@@ -92,10 +92,13 @@ export const apiRequest = async (path, options = {}) => {
         fallbackToNoAuth = false,
     } = options;
     const authToken = noAuth ? null : (token ?? tokenStorage.get());
-    const requestHeaders = {
-        'Content-Type': 'application/json',
-        ...headers,
-    };
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    const requestHeaders = isFormData
+        ? { ...headers }
+        : {
+            'Content-Type': 'application/json',
+            ...headers,
+        };
     if (authToken) {
         requestHeaders.Authorization = `Token ${authToken}`;
     }
@@ -112,7 +115,7 @@ export const apiRequest = async (path, options = {}) => {
         return fetch(buildUrl(path), {
             method,
             headers: dynamicHeaders,
-            body: body ? JSON.stringify(body) : undefined,
+            body: !body ? undefined : (isFormData ? body : JSON.stringify(body)),
             credentials: 'include',
         });
     };

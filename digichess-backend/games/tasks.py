@@ -10,7 +10,8 @@ import random
 import chess
 
 from utils.redis_client import get_redis
-from .models import Game, GameAnalysis, Tournament, TournamentParticipant, TournamentGame
+from .irwin_imports import iter_csv_rows, save_single_import_sample
+from .models import Game, GameAnalysis, Tournament, TournamentParticipant, TournamentGame, IrwinImportJob, IrwinTrainingData
 from .views import FinishGameView, GameMoveView
 from .serializers import GameSerializer
 from .bot_utils import get_bot_move_with_error
@@ -179,6 +180,125 @@ def analyze_game_full_async(game_id: int, prefer_lichess: bool = True, force: bo
         analysis_record.error = str(exc)
         analysis_record.completed_at = timezone.now()
         analysis_record.save(update_fields=["status", "error", "completed_at", "updated_at"])
+
+
+@shared_task
+def process_irwin_csv_import_job(job_id: int):
+    """Process one queued CSV import for Irwin training data."""
+    try:
+        job = IrwinImportJob.objects.select_related("uploaded_by").get(id=job_id)
+    except IrwinImportJob.DoesNotExist:
+        return
+
+    if job.status == IrwinImportJob.STATUS_PROCESSING:
+        return
+
+    job.status = IrwinImportJob.STATUS_PROCESSING
+    job.started_at = timezone.now()
+    job.completed_at = None
+    job.detail = "Processing CSV rows."
+    job.row_errors = []
+    job.processed_rows = 0
+    job.imported_rows = 0
+    job.failed_rows = 0
+    job.save(
+        update_fields=[
+            "status",
+            "started_at",
+            "completed_at",
+            "detail",
+            "row_errors",
+            "processed_rows",
+            "imported_rows",
+            "failed_rows",
+            "updated_at",
+        ]
+    )
+
+    try:
+        row_errors = []
+        processed_rows = 0
+        imported_rows = 0
+        failed_rows = 0
+
+        for row_number, row in enumerate(iter_csv_rows(job.csv_content), start=1):
+            try:
+                save_single_import_sample(
+                    labeled_by=job.uploaded_by,
+                    moves_text=row.get("moves", ""),
+                    suspect_color=row.get("suspect_color", ""),
+                    label=row.get("label", ""),
+                    move_times_seconds=row.get("move_times_seconds", ""),
+                    start_fen=row.get("start_fen", ""),
+                    move_format=row.get("moves_format", IrwinTrainingData.FORMAT_AUTO),
+                    source_ref=row.get("source_ref", ""),
+                    external_id=row.get("external_id", ""),
+                    notes=row.get("notes", ""),
+                    source_type=IrwinTrainingData.SOURCE_CSV_IMPORT,
+                    import_job=job,
+                    import_row_number=row_number,
+                )
+                imported_rows += 1
+            except Exception as exc:
+                failed_rows += 1
+                if len(row_errors) < 50:
+                    row_errors.append(
+                        {
+                            "row": row_number,
+                            "external_id": row.get("external_id", ""),
+                            "detail": str(exc),
+                        }
+                    )
+
+            processed_rows += 1
+            if processed_rows % 5 == 0:
+                job.processed_rows = processed_rows
+                job.imported_rows = imported_rows
+                job.failed_rows = failed_rows
+                job.row_errors = row_errors
+                job.save(
+                    update_fields=[
+                        "processed_rows",
+                        "imported_rows",
+                        "failed_rows",
+                        "row_errors",
+                        "updated_at",
+                    ]
+                )
+
+        job.processed_rows = processed_rows
+        job.imported_rows = imported_rows
+        job.failed_rows = failed_rows
+        job.row_errors = row_errors
+        job.completed_at = timezone.now()
+        job.status = IrwinImportJob.STATUS_COMPLETED
+        job.detail = (
+            f"Completed import. Imported {imported_rows} row(s), failed {failed_rows} row(s)."
+        )
+        job.save(
+            update_fields=[
+                "processed_rows",
+                "imported_rows",
+                "failed_rows",
+                "row_errors",
+                "status",
+                "completed_at",
+                "detail",
+                "updated_at",
+            ]
+        )
+    except Exception as exc:
+        job.status = IrwinImportJob.STATUS_FAILED
+        job.completed_at = timezone.now()
+        job.detail = str(exc)
+        job.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "detail",
+                "updated_at",
+            ]
+        )
 
 
 @shared_task

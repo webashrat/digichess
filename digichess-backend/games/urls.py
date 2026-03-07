@@ -54,6 +54,9 @@ from .views_anticheat import (
     ResolveCheatReportView,
     IrwinStatusView,
     IrwinTrainView,
+    IrwinSingleImportView,
+    IrwinImportJobListCreateView,
+    IrwinImportJobDetailView,
 )
 from .views_quiz import (
     DigiQuizFinalizeRoundView,
@@ -134,4 +137,7 @@ urlpatterns = [
     path("anticheat/reports/<int:pk>/resolve/", ResolveCheatReportView.as_view(), name="anticheat-resolve"),
     path("anticheat/irwin/status/", IrwinStatusView.as_view(), name="anticheat-irwin-status"),
     path("anticheat/irwin/train/", IrwinTrainView.as_view(), name="anticheat-irwin-train"),
+    path("anticheat/irwin/imports/single/", IrwinSingleImportView.as_view(), name="anticheat-irwin-import-single"),
+    path("anticheat/irwin/import-jobs/", IrwinImportJobListCreateView.as_view(), name="anticheat-irwin-import-jobs"),
+    path("anticheat/irwin/import-jobs/<int:pk>/", IrwinImportJobDetailView.as_view(), name="anticheat-irwin-import-job-detail"),
 ]

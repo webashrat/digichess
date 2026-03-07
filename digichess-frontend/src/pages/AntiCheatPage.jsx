@@ -9,6 +9,9 @@ import {
     fetchCheatReports,
     fetchIrwinStatus,
     trainIrwinModel,
+    createIrwinSingleImport,
+    fetchIrwinImportJobs,
+    createIrwinCsvImportJob,
 } from '../api';
 
 const STATUS_LABELS = {
@@ -26,6 +29,33 @@ const REASON_LABELS = {
 };
 
 const REPORTS_PER_PAGE = 5;
+const CSV_TEMPLATE_COLUMNS = [
+    'moves',
+    'suspect_color',
+    'label',
+    'move_times_seconds',
+    'start_fen',
+    'moves_format',
+    'source_ref',
+    'external_id',
+    'notes',
+];
+const CSV_TEMPLATE_CONTENT = [
+    CSV_TEMPLATE_COLUMNS.join(','),
+    '"1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6",white,cheat,"12,9,15,8,21,7,18,6,11,9,14,8,17,10",,auto,https://lichess.org/example-game,lichess-demo-001,"Reviewed external dataset sample"',
+    '"e2e4 e7e5 g1f3 b8c6 f1b5 a7a6",black,clean,"5,6,7,8,9,10",,uci,https://www.chess.com/game/live/123456,cc-live-123456,"Imported from external site"',
+].join('\n');
+const DEFAULT_SINGLE_IMPORT = {
+    moves: '',
+    suspectColor: 'white',
+    label: '',
+    moveTimes: '',
+    startFen: '',
+    moveFormat: 'auto',
+    sourceRef: '',
+    externalId: '',
+    notes: '',
+};
 
 const MOCK_REPORTS = [
     { id: 'demo-6', reported_user: { username: 'PawnStorm', profile_pic: null, rating_blitz: 980 }, reporter: { username: 'QueenSlayer' }, reason: 'engine_use', status: 'resolved_cheating', game: 156, created_at: new Date(Date.now() - 48 * 3600000).toISOString(), _mock: true, _likelihood: 97 },
@@ -73,6 +103,37 @@ function _leftBorderColor(likelihood) {
     if (likelihood >= 75) return 'border-l-red-500';
     if (likelihood >= 40) return 'border-l-amber-500';
     return 'border-l-green-500';
+}
+function _queueStatusColor(status) {
+    if (status === 'queued') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+    if (status === 'processing') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    if (status === 'completed') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    if (status === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+}
+function _messageBoxColor(type) {
+    if (type === 'success') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    if (type === 'error') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+}
+function _formatFileSize(bytes = 0) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+function _formatDateTime(dateString) {
+    if (!dateString) return 'Just now';
+    try {
+        return new Date(dateString).toLocaleString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+    } catch {
+        return 'Just now';
+    }
 }
 
 function ReportCard({ report, onSelect }) {
@@ -138,6 +199,15 @@ export default function AntiCheatPage() {
     const [trainLoading, setTrainLoading] = useState(false);
     const [trainResult, setTrainResult] = useState(null);
     const [showNotif, setShowNotif] = useState(false);
+    const [csvFile, setCsvFile] = useState(null);
+    const [csvInputKey, setCsvInputKey] = useState(0);
+    const [csvQueue, setCsvQueue] = useState([]);
+    const [csvMessage, setCsvMessage] = useState(null);
+    const [csvLoading, setCsvLoading] = useState(false);
+    const [singleImportForm, setSingleImportForm] = useState(DEFAULT_SINGLE_IMPORT);
+    const [singleImportMessage, setSingleImportMessage] = useState(null);
+    const [singleImportLoading, setSingleImportLoading] = useState(false);
+    const [importMode, setImportMode] = useState('single');
 
     const isSuperAdmin = user?.is_superuser === true;
     useEffect(() => { if (!authLoading && !isSuperAdmin) navigate('/'); }, [authLoading, isSuperAdmin, navigate]);
@@ -152,9 +222,16 @@ export default function AntiCheatPage() {
     const loadIrwin = useCallback(async () => {
         try { setIrwinStatus(await fetchIrwinStatus()); } catch {}
     }, []);
+    const loadImportJobs = useCallback(async () => {
+        try {
+            const jobs = await fetchIrwinImportJobs();
+            setCsvQueue(Array.isArray(jobs) ? jobs : []);
+        } catch {}
+    }, []);
 
     useEffect(() => { loadReports(); }, [loadReports]);
     useEffect(() => { loadIrwin(); }, [loadIrwin]);
+    useEffect(() => { if (isSuperAdmin) loadImportJobs(); }, [isSuperAdmin, loadImportJobs]);
 
     const handleTrain = async () => {
         setTrainLoading(true); setTrainResult(null);
@@ -168,6 +245,16 @@ export default function AntiCheatPage() {
         const t = setTimeout(() => setTrainResult(null), 3000);
         return () => clearTimeout(t);
     }, [trainResult]);
+    useEffect(() => {
+        if (!csvMessage) return;
+        const t = setTimeout(() => setCsvMessage(null), 3000);
+        return () => clearTimeout(t);
+    }, [csvMessage]);
+    useEffect(() => {
+        if (!singleImportMessage) return;
+        const t = setTimeout(() => setSingleImportMessage(null), 3000);
+        return () => clearTimeout(t);
+    }, [singleImportMessage]);
 
     if (authLoading) return null;
     if (!isSuperAdmin) return null;
@@ -180,6 +267,110 @@ export default function AntiCheatPage() {
 
     const pendingCount = reports.filter(r => r.status === 'pending' || r.status === 'under_review').length;
     const resolvedCount = reports.filter(r => r.status?.startsWith('resolved')).length;
+    const singleImportSideTone = singleImportForm.suspectColor === 'white'
+        ? 'bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200'
+        : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900';
+    const singleImportLabelTone = singleImportForm.label === 'cheat'
+        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+        : singleImportForm.label === 'clean'
+            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    const singleImportStartTone = singleImportForm.startFen.trim()
+        ? 'Custom FEN'
+        : 'Standard Start';
+    const singleImportTimingTone = singleImportForm.moveTimes.trim()
+        ? 'Timing Added'
+        : 'No Timing';
+    const csvSelectedTone = csvFile?.name || 'No file selected';
+    const csvQueueTone = csvQueue.length === 1 ? '1 item queued' : `${csvQueue.length} items queued`;
+    const handleCsvTemplateDownload = () => {
+        const blob = new Blob([CSV_TEMPLATE_CONTENT], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'irwin-training-template.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+    const handleCsvFileSelect = (event) => {
+        const nextFile = event.target.files?.[0] || null;
+        setCsvFile(nextFile);
+        if (nextFile) {
+            setCsvMessage({
+                type: 'info',
+                text: `${nextFile.name} selected. Add it to the queue when ready.`,
+            });
+        }
+    };
+    const handleQueueCsv = async () => {
+        if (!csvFile) {
+            setCsvMessage({ type: 'error', text: 'Choose a CSV file before adding it to the queue.' });
+            return;
+        }
+        setCsvLoading(true);
+        try {
+            const job = await createIrwinCsvImportJob(csvFile);
+            setCsvQueue((prev) => [job, ...prev.filter((item) => item.id !== job.id)]);
+            setCsvMessage({
+                type: 'success',
+                text: `${csvFile.name} was queued for import.`,
+            });
+            setCsvFile(null);
+            setCsvInputKey((prev) => prev + 1);
+            loadImportJobs();
+        } catch (e) {
+            setCsvMessage({ type: 'error', text: e?.data?.detail || e.message || 'Could not queue the selected CSV file.' });
+        } finally {
+            setCsvLoading(false);
+        }
+    };
+    const updateSingleImportField = (field, value) => {
+        setSingleImportForm((prev) => ({ ...prev, [field]: value }));
+    };
+    const handleSingleImportReset = () => {
+        setSingleImportForm(DEFAULT_SINGLE_IMPORT);
+        setSingleImportMessage(null);
+    };
+    const handleSingleImportSubmit = async (event) => {
+        event.preventDefault();
+        if (!singleImportForm.moves.trim()) {
+            setSingleImportMessage({ type: 'error', text: 'Game moves are required for a single import.' });
+            return;
+        }
+        if (!singleImportForm.label) {
+            setSingleImportMessage({ type: 'error', text: 'Choose the final result label: clean or cheat.' });
+            return;
+        }
+        setSingleImportLoading(true);
+        try {
+            await createIrwinSingleImport({
+                moves: singleImportForm.moves,
+                suspect_color: singleImportForm.suspectColor,
+                label: singleImportForm.label,
+                move_times_seconds: singleImportForm.moveTimes,
+                start_fen: singleImportForm.startFen,
+                move_format: singleImportForm.moveFormat,
+                source_ref: singleImportForm.sourceRef,
+                external_id: singleImportForm.externalId,
+                notes: singleImportForm.notes,
+            });
+            setSingleImportForm(DEFAULT_SINGLE_IMPORT);
+            setSingleImportMessage({
+                type: 'success',
+                text: 'Single import saved to Irwin training data.',
+            });
+            loadIrwin();
+        } catch (e) {
+            setSingleImportMessage({
+                type: 'error',
+                text: e?.data?.detail || e.message || 'Single import failed.',
+            });
+        } finally {
+            setSingleImportLoading(false);
+        }
+    };
 
     return (
         <Layout showHeader={false} showBottomNav>
@@ -382,6 +573,471 @@ export default function AntiCheatPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                        <div className="p-5 space-y-5">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-violet-500 text-[22px]">upload</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">Import Game</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Import one external game or switch to CSV upload in the same section.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setImportMode('single')}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${
+                                        importMode === 'single'
+                                            ? 'bg-violet-600 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    Single Import
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setImportMode('csv')}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${
+                                        importMode === 'csv'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    Upload CSV
+                                </button>
+                            </div>
+
+                            {importMode === 'csv' ? (
+                                <div className="space-y-4">
+                                    {csvMessage ? (
+                                        <div className={`rounded-xl px-4 py-3 text-sm font-medium ${_messageBoxColor(csvMessage.type)}`}>
+                                            {csvMessage.text}
+                                        </div>
+                                    ) : null}
+
+                                    <div className="rounded-3xl border border-blue-200/80 dark:border-blue-800/60 bg-gradient-to-br from-blue-500/12 via-cyan-500/10 to-violet-500/10 dark:from-blue-500/18 dark:via-cyan-500/10 dark:to-violet-500/10 p-5">
+                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                            <div className="space-y-2">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-gray-900/40 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                                    <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                                                    Bulk Training Upload
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">Queue many labeled games at once</h4>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                                        Upload one CSV, keep the format simple, and send the whole batch into the training import queue.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/80 text-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+                                                    {csvSelectedTone}
+                                                </span>
+                                                <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                                    {csvQueueTone}
+                                                </span>
+                                                <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                                                    Template Ready
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">description</span>
+                                                    <span className="text-sm font-semibold">Simple format</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Only three columns are required: moves, suspect_color, and label.</div>
+                                            </div>
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">queue</span>
+                                                    <span className="text-sm font-semibold">Queued import</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Large CSVs are meant to run through the import queue instead of blocking the page.</div>
+                                            </div>
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-violet-600 dark:text-violet-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">download</span>
+                                                    <span className="text-sm font-semibold">Template included</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Download the sample CSV first if you want the exact format.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-blue-500">folder_zip</span>
+                                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">CSV File</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4 md:col-span-2">
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Choose your import file</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            Required columns: <span className="font-semibold text-gray-700 dark:text-gray-200">moves</span>, <span className="font-semibold text-gray-700 dark:text-gray-200">suspect_color</span>, <span className="font-semibold text-gray-700 dark:text-gray-200">label</span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCsvTemplateDownload}
+                                                        className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm font-semibold text-blue-700 dark:text-blue-300 rounded-xl transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">download</span>
+                                                        Sample CSV
+                                                    </button>
+                                                </div>
+
+                                                <div className="mt-4 rounded-2xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 p-4">
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                                        <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                                            <span className="material-symbols-outlined text-[18px]">attach_file</span>
+                                                            Choose CSV
+                                                            <input
+                                                                key={csvInputKey}
+                                                                type="file"
+                                                                accept=".csv,text/csv"
+                                                                className="hidden"
+                                                                onChange={handleCsvFileSelect}
+                                                            />
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleQueueCsv}
+                                                            disabled={csvLoading}
+                                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 hover:from-blue-700 hover:via-cyan-700 hover:to-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">queue</span>
+                                                            {csvLoading ? 'Queuing...' : 'Add To Queue'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                                <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                    <span className="material-symbols-outlined text-[18px] text-violet-500">insert_drive_file</span>
+                                                    Selected File
+                                                </div>
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                    {csvFile?.name || 'No file selected'}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                    {csvFile ? _formatFileSize(csvFile.size) : 'Pick a CSV file, then add it to the queue.'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px] text-cyan-500">lists</span>
+                                                <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">Queue</h4>
+                                            </div>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{csvQueue.length} item{csvQueue.length === 1 ? '' : 's'}</span>
+                                        </div>
+                                        {csvQueue.length ? (
+                                            <div className="space-y-2">
+                                                {csvQueue.map((job) => (
+                                                    <div key={job.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 px-4 py-3 flex items-center justify-between gap-4">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                                <span className="material-symbols-outlined text-[17px] text-blue-500">description</span>
+                                                                <span className="truncate">{job.file_name || job.fileName}</span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                {job.total_rows ?? job.rowCount ?? 0} row{(job.total_rows ?? job.rowCount ?? 0) === 1 ? '' : 's'}
+                                                                {job.size ? ` • ${_formatFileSize(job.size)}` : ''}
+                                                                {' • '}
+                                                                {_formatDateTime(job.created_at || job.queuedAt)}
+                                                                {typeof job.imported_rows === 'number' || typeof job.failed_rows === 'number'
+                                                                    ? ` • ${job.imported_rows || 0} imported / ${job.failed_rows || 0} failed`
+                                                                    : ''}
+                                                            </div>
+                                                        </div>
+                                                        <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold ${_queueStatusColor(job.status)}`}>
+                                                            {job.status === 'queued' ? 'Queued' : job.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/40 px-4 py-8 text-center">
+                                                <span className="material-symbols-outlined text-[28px] text-blue-400 mb-2">queue</span>
+                                                <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">No CSVs in queue yet</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose a CSV above and add it to the queue.</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <form className="space-y-5" onSubmit={handleSingleImportSubmit}>
+                                    {singleImportMessage ? (
+                                        <div className={`rounded-xl px-4 py-3 text-sm font-medium ${_messageBoxColor(singleImportMessage.type)}`}>
+                                            {singleImportMessage.text}
+                                        </div>
+                                    ) : null}
+
+                                    <div className="rounded-3xl border border-violet-200/80 dark:border-violet-800/60 bg-gradient-to-br from-violet-500/12 via-fuchsia-500/10 to-blue-500/10 dark:from-violet-500/20 dark:via-fuchsia-500/12 dark:to-blue-500/10 p-5">
+                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                            <div className="space-y-2">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-gray-900/40 text-xs font-semibold text-violet-700 dark:text-violet-300">
+                                                    <span className="material-symbols-outlined text-[16px]">travel_explore</span>
+                                                    External Training Sample
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">Prepare one reviewed game for Irwin</h4>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                                        Paste the full game, choose the verdict, and optionally add timings or a custom FEN.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${singleImportSideTone}`}>
+                                                    {singleImportForm.suspectColor === 'white' ? 'White Side' : 'Black Side'}
+                                                </span>
+                                                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${singleImportLabelTone}`}>
+                                                    {singleImportForm.label ? (singleImportForm.label === 'cheat' ? 'Cheat Label' : 'Clean Label') : 'Result Needed'}
+                                                </span>
+                                                <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/80 text-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+                                                    {singleImportStartTone}
+                                                </span>
+                                                <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/80 text-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+                                                    {singleImportTimingTone}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-violet-600 dark:text-violet-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">tactic</span>
+                                                    <span className="text-sm font-semibold">Full move list</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Accepts PGN, SAN, or UCI from outside sites.</div>
+                                            </div>
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">flag</span>
+                                                    <span className="text-sm font-semibold">Manual label</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Clean or cheat becomes the supervised training target.</div>
+                                            </div>
+                                            <div className="rounded-2xl bg-white/75 dark:bg-gray-900/35 border border-white/70 dark:border-white/5 p-3">
+                                                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-300 mb-1">
+                                                    <span className="material-symbols-outlined text-[18px]">timer</span>
+                                                    <span className="text-sm font-semibold">Timing optional</span>
+                                                </div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Leave timings blank if the source does not provide them.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-violet-500">dataset</span>
+                                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">Game Metadata</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                    <span className="material-symbols-outlined text-[18px] text-slate-500">chess</span>
+                                                    Suspect Side
+                                                </label>
+                                                <select
+                                                    value={singleImportForm.suspectColor}
+                                                    onChange={(e) => updateSingleImportField('suspectColor', e.target.value)}
+                                                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-violet-500/30"
+                                                >
+                                                    <option value="white">White</option>
+                                                    <option value="black">Black</option>
+                                                </select>
+                                            </div>
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                    <span className="material-symbols-outlined text-[18px] text-red-500">verified</span>
+                                                    Detection Result
+                                                </label>
+                                                <select
+                                                    value={singleImportForm.label}
+                                                    onChange={(e) => updateSingleImportField('label', e.target.value)}
+                                                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-violet-500/30"
+                                                >
+                                                    <option value="">Select result</option>
+                                                    <option value="clean">Clean</option>
+                                                    <option value="cheat">Cheat</option>
+                                                </select>
+                                            </div>
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                    <span className="material-symbols-outlined text-[18px] text-blue-500">route</span>
+                                                    Move Format
+                                                </label>
+                                                <select
+                                                    value={singleImportForm.moveFormat}
+                                                    onChange={(e) => updateSingleImportField('moveFormat', e.target.value)}
+                                                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-violet-500/30"
+                                                >
+                                                    <option value="auto">Auto detect</option>
+                                                    <option value="pgn">PGN</option>
+                                                    <option value="san">SAN moves</option>
+                                                    <option value="uci">UCI moves</option>
+                                                </select>
+                                            </div>
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                    <span className="material-symbols-outlined text-[18px] text-amber-500">badge</span>
+                                                    External ID
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={singleImportForm.externalId}
+                                                    onChange={(e) => updateSingleImportField('externalId', e.target.value)}
+                                                    placeholder="lichess-abc123"
+                                                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-violet-500/30"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-blue-500">link</span>
+                                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">Source Details</h4>
+                                        </div>
+                                        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 p-4">
+                                            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Source Link / Reference</label>
+                                            <input
+                                                type="text"
+                                                value={singleImportForm.sourceRef}
+                                                onChange={(e) => updateSingleImportField('sourceRef', e.target.value)}
+                                                placeholder="https://lichess.org/... or reviewer note"
+                                                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-violet-500/30"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-violet-100 dark:border-violet-900/40 bg-violet-50/60 dark:bg-violet-900/10 p-5 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-violet-500">tactic</span>
+                                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">Game Moves</h4>
+                                        </div>
+                                        <div className="rounded-2xl border border-violet-200/80 dark:border-violet-800/50 bg-white/90 dark:bg-gray-800/80 p-4">
+                                            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Game Moves / PGN</label>
+                                            <textarea
+                                                value={singleImportForm.moves}
+                                                onChange={(e) => updateSingleImportField('moves', e.target.value)}
+                                                rows={8}
+                                                placeholder="Paste the full PGN, SAN move list, or UCI moves here"
+                                                className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 resize-y focus:ring-2 focus:ring-violet-500/30"
+                                            />
+                                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                                <span className="px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold">Mandatory</span>
+                                                <span className="px-2.5 py-1 rounded-full bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">PGN / SAN / UCI accepted</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5">
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                <span className="material-symbols-outlined text-[18px] text-emerald-500">flag</span>
+                                                Start FEN
+                                            </label>
+                                            <textarea
+                                                value={singleImportForm.startFen}
+                                                onChange={(e) => updateSingleImportField('startFen', e.target.value)}
+                                                rows={5}
+                                                placeholder="Leave blank for normal chess starting position"
+                                                className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 resize-y focus:ring-2 focus:ring-violet-500/30"
+                                            />
+                                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Blank means normal chess start. Fill only for custom positions.</div>
+                                        </div>
+                                        <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5">
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                <span className="material-symbols-outlined text-[18px] text-cyan-500">schedule</span>
+                                                Move Times In Seconds
+                                            </label>
+                                            <textarea
+                                                value={singleImportForm.moveTimes}
+                                                onChange={(e) => updateSingleImportField('moveTimes', e.target.value)}
+                                                rows={5}
+                                                placeholder="12, 8, 15, 6, 20 ..."
+                                                className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 resize-y focus:ring-2 focus:ring-violet-500/30"
+                                            />
+                                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Optional. Use one timing value per ply in game order.</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] gap-4">
+                                        <div className="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-900/20 p-5">
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                                                <span className="material-symbols-outlined text-[18px] text-amber-500">edit_note</span>
+                                                Reviewer Notes
+                                            </label>
+                                            <textarea
+                                                value={singleImportForm.notes}
+                                                onChange={(e) => updateSingleImportField('notes', e.target.value)}
+                                                rows={5}
+                                                placeholder="Why this game is being added to the training set"
+                                                className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 outline-none placeholder:text-gray-400 resize-y focus:ring-2 focus:ring-violet-500/30"
+                                            />
+                                        </div>
+
+                                        <div className="rounded-3xl border border-violet-100 dark:border-violet-900/40 bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-900/10 dark:to-fuchsia-900/10 p-5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="material-symbols-outlined text-[18px] text-violet-500">smart_toy</span>
+                                                <div className="font-bold text-sm text-gray-900 dark:text-gray-100">How Irwin Uses This</div>
+                                            </div>
+                                            <div className="space-y-3 text-xs text-gray-600 dark:text-gray-300">
+                                                <div className="flex gap-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-violet-500 mt-0.5">play_arrow</span>
+                                                    <span>Moves are replayed from the provided FEN, or from the standard chess start if FEN is blank.</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-cyan-500 mt-0.5">timelapse</span>
+                                                    <span>Optional timing values become timing features; if missing, neutral defaults are used.</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-emerald-500 mt-0.5">model_training</span>
+                                                    <span>Your clean/cheat label is saved into the training set and picked up the next time Irwin is retrained.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleSingleImportReset}
+                                            disabled={singleImportLoading}
+                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                                            Reset
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={singleImportLoading}
+                                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600 hover:from-violet-700 hover:via-fuchsia-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-violet-500/25 disabled:opacity-60"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">save</span>
+                                            {singleImportLoading ? 'Saving...' : 'Save Single Import'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
                         </div>
                     </div>
                 </div>
