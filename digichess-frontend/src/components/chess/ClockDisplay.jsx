@@ -30,7 +30,7 @@ function ClockDisplayBase({ seconds, isActive, className = '' }) {
         const elapsed = (Date.now() - anchorRef.current.at) / 1000;
         const expected = anchorRef.current.seconds - elapsed;
         const drift = Math.abs(seconds - expected);
-        if (drift > 2) {
+        if (drift > 0.5) {
             anchorRef.current = { seconds, at: Date.now() };
             setDisplaySeconds(seconds);
         }
