@@ -35,6 +35,7 @@ class MoveResult:
     game: Optional[Game] = None
     state: Optional[Dict[str, Any]] = None
     legal_moves: Optional[List[str]] = None
+    legal_moves_uci: Optional[List[str]] = None
     seq: Optional[int] = None
     finished: bool = False
     finish_reason: Optional[str] = None
@@ -101,8 +102,7 @@ def is_insufficient_material(board: chess.Board) -> bool:
 
 def _evaluate_result(
     board: chess.Board,
-    moves_raw: Optional[str] = None,
-    start_fen: Optional[str] = None,
+    history_board: Optional[chess.Board] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     if board.is_checkmate():
         winner_is_white = board.turn is chess.BLACK
@@ -111,16 +111,14 @@ def _evaluate_result(
         return Game.RESULT_DRAW, "stalemate"
     if is_insufficient_material(board):
         return Game.RESULT_DRAW, "insufficient_material"
-    history_board = board
-    if moves_raw:
-        history_board = build_board_from_moves(moves_raw, start_fen) or board
-    if history_board.is_fivefold_repetition():
+    hb = history_board if history_board is not None else board
+    if hb.is_fivefold_repetition():
         return Game.RESULT_DRAW, "fivefold_repetition"
-    if history_board.is_seventyfive_moves():
+    if hb.is_seventyfive_moves():
         return Game.RESULT_DRAW, "seventyfive_moves"
-    if history_board.is_repetition(3):
+    if hb.is_repetition(3):
         return Game.RESULT_DRAW, "threefold_repetition"
-    if history_board.halfmove_clock >= 100:
+    if hb.halfmove_clock >= 100:
         return Game.RESULT_DRAW, "fifty_moves"
     return None, None
 
@@ -145,7 +143,7 @@ def compute_clock_snapshot(game: Game, now=None, board: Optional[chess.Board] = 
         if is_tournament or move_count >= 2:
             clock_active = True
     if clock_active:
-        elapsed = int((now - game.last_move_at).total_seconds())
+        elapsed = round((now - game.last_move_at).total_seconds(), 1)
         if elapsed < 0:
             elapsed = 0
         if board.turn is chess.WHITE:
@@ -155,9 +153,9 @@ def compute_clock_snapshot(game: Game, now=None, board: Optional[chess.Board] = 
     return {
         "white_time_left": white_left,
         "black_time_left": black_left,
-        "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
+        "last_move_at": round(game.last_move_at.timestamp(), 2) if game.last_move_at else None,
         "turn": "white" if board.turn is chess.WHITE else "black",
-        "server_time": int(now.timestamp()),
+        "server_time": round(now.timestamp(), 2),
         "elapsed": elapsed,
         "move_count": move_count,
     }
@@ -170,7 +168,7 @@ def _update_redis_clock(r, game: Game, board: chess.Board, now) -> None:
             mapping={
                 "white_time_left": game.white_time_left,
                 "black_time_left": game.black_time_left,
-                "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else int(now.timestamp()),
+                "last_move_at": round(game.last_move_at.timestamp(), 2) if game.last_move_at else round(now.timestamp(), 2),
                 "turn": "white" if board.turn is chess.WHITE else "black",
             },
         )
@@ -218,9 +216,9 @@ def _build_state(
     san: Optional[str],
     uci: Optional[str],
     seq: Optional[int],
+    is_tournament: bool = False,
 ) -> Dict[str, Any]:
     move_count = len((game.moves or "").strip().split()) if game.moves else 0
-    is_tournament = TournamentGame.objects.filter(game_id=game.id).exists()
     first_move_deadline = None
     first_move_color = None
     if not is_tournament:
@@ -234,7 +232,7 @@ def _build_state(
 
     return {
         "seq": seq,
-        "ts": int(now.timestamp()),
+        "ts": round(now.timestamp(), 2),
         "game_id": game.id,
         "san": san,
         "uci": uci,
@@ -242,12 +240,13 @@ def _build_state(
         "moves": game.moves,
         "white_time_left": game.white_time_left,
         "black_time_left": game.black_time_left,
-        "last_move_at": int(game.last_move_at.timestamp()) if game.last_move_at else None,
+        "last_move_at": round(game.last_move_at.timestamp(), 2) if game.last_move_at else None,
         "turn": "white" if board.turn is chess.WHITE else "black",
+        "is_check": board.is_check(),
         "status": game.status,
         "result": game.result,
         "draw_offer_by": game.draw_offer_by.id if game.draw_offer_by else None,
-        "server_time": int(now.timestamp()),
+        "server_time": round(now.timestamp(), 2),
         "created_at": game.created_at.isoformat() if game.created_at else None,
         "started_at": game.started_at.isoformat() if game.started_at else None,
         "move_count": move_count,
@@ -285,10 +284,15 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             if game.status in [Game.STATUS_FINISHED, Game.STATUS_ABORTED]:
                 return MoveResult(ok=False, error="Game is not active.")
 
-            try:
-                board = chess.Board(game.current_fen or chess.STARTING_FEN)
-            except Exception:
-                board = chess.Board()
+            move_list = (game.moves or "").strip().split() if game.moves else []
+            move_count = len(move_list)
+
+            board = build_board_from_moves(" ".join(move_list), game.START_FEN) if move_count else None
+            if board is None:
+                try:
+                    board = chess.Board(game.current_fen or chess.STARTING_FEN)
+                except Exception:
+                    board = chess.Board()
 
             current_player = game.white if board.turn is chess.WHITE else game.black
             if player != current_player:
@@ -296,9 +300,6 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
 
             if now is None:
                 now = timezone.now()
-
-            move_list = (game.moves or "").strip().split() if game.moves else []
-            move_count = len(move_list)
 
             # Start game if pending
             if game.status == Game.STATUS_PENDING:
@@ -315,7 +316,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
             is_tournament_move = TournamentGame.objects.filter(game_id=game.id).exists()
             clock_running = game.status == Game.STATUS_ACTIVE and game.last_move_at and (is_tournament_move or move_count >= 2)
             if clock_running:
-                elapsed = int((now - game.last_move_at).total_seconds())
+                elapsed = round((now - game.last_move_at).total_seconds(), 1)
                 if elapsed < 0:
                     elapsed = 0
                 if board.turn is chess.WHITE:
@@ -359,7 +360,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                     )
                 else:
                     seq = None
-                state = _build_state(game, board, now, None, None, seq)
+                state = _build_state(game, board, now, None, None, seq, is_tournament=is_tournament_move)
                 return MoveResult(
                     ok=False,
                     error="Time expired.",
@@ -398,7 +399,7 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
 
             # Track first move time for the black grace period; main clock starts after both moves
             game.last_move_at = now
-            result, reason = _evaluate_result(board, game.moves, game.START_FEN)
+            result, reason = _evaluate_result(board)
             finished = False
             if result:
                 game.status = Game.STATUS_FINISHED
@@ -459,17 +460,22 @@ def apply_move(game_id: int, player, move_str: str, now=None) -> MoveResult:
                 seq = None
 
             legal_moves = []
+            legal_moves_uci = []
             try:
-                legal_moves = [board.san(m) for m in list(board.legal_moves)[:50]]
+                move_list_obj = list(board.legal_moves)
+                legal_moves = [board.san(m) for m in move_list_obj]
+                legal_moves_uci = [m.uci() for m in move_list_obj]
             except Exception:
                 legal_moves = []
+                legal_moves_uci = []
 
-            state = _build_state(game, board, now, san, uci, seq)
+            state = _build_state(game, board, now, san, uci, seq, is_tournament=is_tournament_move)
             return MoveResult(
                 ok=True,
                 game=game,
                 state=state,
                 legal_moves=legal_moves,
+                legal_moves_uci=legal_moves_uci,
                 seq=seq,
                 finished=finished,
                 finish_reason=reason,

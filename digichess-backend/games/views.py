@@ -66,7 +66,7 @@ class GameDetailView(APIView):
 class GameMoveView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def _broadcast_game_state(self, game: Game, state: dict, legal_moves: List[str]):
+    def _broadcast_game_state(self, game: Game, state: dict, legal_moves: List[str], legal_moves_uci: List[str] = None):
         try:
             channel_layer = get_channel_layer()
             if not channel_layer:
@@ -77,17 +77,8 @@ class GameMoveView(APIView):
                 **state,
                 "legal_moves": legal_moves,
             }
-            try:
-                from games.lichess_game_flow import get_game_state_export
-                game_state = get_game_state_export(
-                    state.get("fen") or chess.STARTING_FEN,
-                    state.get("moves") or "",
-                    "standard",
-                )
-                if game_state:
-                    payload["game_state"] = game_state
-            except Exception:
-                pass
+            if legal_moves_uci:
+                payload["legal_moves_uci"] = legal_moves_uci
             async_to_sync(channel_layer.group_send)(
                 f"game_{game.id}",
                 {"type": "game.event", "payload": payload},
@@ -130,7 +121,7 @@ class GameMoveView(APIView):
         if result.state and result.game:
             threading.Thread(
                 target=self._broadcast_game_state,
-                args=(result.game, result.state, result.legal_moves or []),
+                args=(result.game, result.state, result.legal_moves or [], result.legal_moves_uci or []),
                 daemon=True,
             ).start()
             if result.draw_offer_cleared:
@@ -147,17 +138,31 @@ class GameMoveView(APIView):
                 threading.Thread(target=_send_draw_decline, args=(result.game.id,), daemon=True).start()
         if result.game and result.finished:
             result.game.refresh_from_db()
-            if result.game.rated and result.game.result in {
-                Game.RESULT_WHITE,
-                Game.RESULT_BLACK,
-                Game.RESULT_DRAW,
-            }:
-                FinishGameView().update_ratings(result.game, result.game.result)
-            threading.Thread(
-                target=self._broadcast_game_finished,
-                args=(result.game, result.finish_reason),
-                daemon=True,
-            ).start()
+            game_for_finish = result.game
+            game_result_val = result.game.result
+            finish_reason = result.finish_reason
+
+            def _finish_tasks():
+                try:
+                    from django.db import close_old_connections
+                    if game_for_finish.rated and game_result_val in {
+                        Game.RESULT_WHITE,
+                        Game.RESULT_BLACK,
+                        Game.RESULT_DRAW,
+                    }:
+                        FinishGameView().update_ratings(game_for_finish, game_result_val)
+                except Exception:
+                    pass
+                try:
+                    self._broadcast_game_finished(game_for_finish, finish_reason)
+                except Exception:
+                    pass
+                try:
+                    close_old_connections()
+                except Exception:
+                    pass
+
+            threading.Thread(target=_finish_tasks, daemon=True).start()
         return result
 
     def _make_bot_move(self, game: Game, bot_player):
